@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+     draft-rfcxml-general-template-standard-00
+  
+     This template includes examples of the most commonly used features of RFCXML with comments 
+     explaining how to customise them. This template can be quickly turned into an I-D by editing 
+     the examples provided. Look for [REPLACE], [REPLACE/DELETE], [CHECK] and edit accordingly.
+     Note - 'DELETE' means delete the element or attribute, not just the contents.
+     
+     Documentation is at https://authors.ietf.org/en/templates-and-schemas
+-->
+<?xml-model href="rfc7991bis.rnc"?>  <!-- Required for schema validation and schema-aware editing -->
+<!-- <?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?> -->
+<!-- This third-party XSLT can be enabled for direct transformations in XML processors, including most browsers -->
+
+
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+
+
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="std"
+  docName="draft-liu-agent-operation-authorization-00"
+  ipr="trust200902"
+  obsoletes=""
+  updates=""
+  submissionType="IETF"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title>Agent Operation Authorization</title>
+    <seriesInfo name="Internet-Draft" value="draft-liu-agent-operation-authorization-00"/>
+
+    <author fullname="Dapeng Liu" initials="D." surname="Liu">
+      <organization>Alibaba</organization>
+      <address>
+        <email>max.ldp@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Hongru Zhu" initials="H." surname="Zhu">
+      <organization>Alibaba</organization>
+      <address>
+        <email>hongru.zhr@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <date year="2025" month="November" day="25"/>
+    <area>Security</area>
+    <workgroup>oauth</workgroup>
+
+    <abstract>
+    <t>
+      This document specifies the Agent Operation Authorization framework — a structured mechanism that enables verifiable delegation of 
+      actions from human principals to autonomous AI agents with fine-grained agent operation authorization.
+    </t>
+
+    <t>
+      The framework introduces two distinct phases:
+    </t>
+
+    <ul>
+      <li>
+        <strong>Agent Operation Authorization Request:</strong>
+        A human-readable proposal of operations derived from natural language input and converted to a JSON Web Token (JWT).
+      </li>
+      <li>
+        <strong>Agent Operation Authorization Token:</strong>
+        A JSON Web Token representing confirmed authorization for a specific agent operation, enforceable at runtime by agents and verifiers. It cryptographically verifies user intent, prevents unauthorized or hallucinated actions, and ensures auditable traceability of each authorized operation.
+      </li>
+    </ul>
+
+    
+  </abstract>    
+  </front>
+
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>In agent-based systems, especially those involving generative capabilities, it is essential to convey not only what actions are permitted but also the original intent behind them and conditions under which an autonomous agent may act on behalf of a principal.</t>
+
+      <t>
+      This document specifies the Agent Operation Authorization framework — a mechanism that enables verifiable delegation of actions from human principals to autonomous AI agents with fine-grained agent operation authorization. The framework includes Agent Operation Authorization Proposal and Agent Operation Authorization phases.
+      </t>
+
+      <t>This specification defines a new top-level JSON Web Token (JWT) claim, agent_operation, which contains fine-grained and structured operational parameters including agent_operations, constraints, and conditions. Additionally, it supports inclusion of a user-provided prompt whose authenticity is protected via a W3C Verifiable Credential (VC).</t>
+      
+       <t>The AI agent captures the user’s natural-language instruction during interaction, constructs a structured agent_operation_proposal object,includes a prompt evidence subfield carrying the user's natural-language instruction in the form of a JWT-based Verifiable Credential (JWT-VC), and submits the resulting JWT to the Authorization Server (AS) via OAuth 2.0 Pushed Authorization Requests (PAR) [RFC9126].</t>
+
+      
+      <t>This design ensures that downstream verifiers can validate both the policy boundaries and the provenance of the initiating instruction, without dependency on Decentralized Identifiers (DIDs). This enables secure, auditable delegation for autonomous AI Agent.</t>
+
+    
+    <t>
+      Upon successful user confirmation and authentication of the Authorization Proposal during the first phase, the Authorization Server (AS) SHALL issue 
+      an Agent Operation Authorization Token. This token serves as the access token for subsequent interactions.
+    </t>
+
+    <t>
+      The agent MUST present this JWT access token when accessing protected resources at the AS, using the mechanisms defined in OAuth 2.0 [RFC6749] and bearer token usage rules [RFC6750].
+    </t>
+
+    <t>
+      Together, these components ensure that AI systems act only within user-approved boundaries, mitigating risks such as hallucination.
+    </t>
+
+    <t>
+      It is designed for use in autonomous AI Agent system, multi-agent orchestration, and regulated domains such as finance, healthcare, and public services — particularly 
+      where accountability and auditability are important.
+    </t>
+
+    <t>
+      The framework supports enterprise identity providers, and zero-trust architectures.
+    </t>
+
+    
+    </section>
+
+    <section anchor="requirements" title="Requirements Language">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119 [RFC2119].</t>
+    </section>
+
+    <section anchor="agent-operation-claim" title="agent_operation_proposal Token Structure">
+
+     <t>
+        The PAR-JWT (Pushed Authorization Request in JWT format) is used in the first phase. Its purpose is to deliver the user's original input and the agent-proposed operational strategy to the AS, enabling the generation of a high-quality consent UI and establishing an evidentiary starting point.
+    </t>
+
+    <t>
+      Its format is defined as follows:
+    </t>
+        <figure>
+                <artwork name="" type=""><![CDATA[
+
+                {
+                    "iss": "https://client.myassistant.example",
+                    "aud": "https://as.online-shop.example",
+                    "iat": 1731664500,
+                    "exp": 1731665100,
+                    "jti": "par-jwt-123",
+
+                    // ====== User original input prompt ======
+                    "evidence": {
+                      "sourcePromptCredential": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJwd-001IiwiaXNzIjoiaHR0cHM6Ly9jbGllbnQubXlhbnN3ZXIuZXhhbXBsZSIsInN1YiI6InVzZXJfMTIzNDUiLCJpYXQiOjE3MzE2NjQ1MDAsImV4cCI6MTczMTY2ODEwMCwidHlwZSI6InVzZXItaW5wdXQtY3JlZGVudGlhbCIsInByb21wdCI6IkJ1eSBzb21ldGhpbmcgY2hlYXAgb24gTm92IDExIG5pZ2h0IiwidGltZXN0YW1wIjoiMjAyNS0xMS0xMVQyMzozMDowMFoiLCJjaGFubmVsIjoidm9pY2UiLCJkZXZpY2VGaW5nZXJwcmludCI6ImRmcF9hYmMxMjMifQ.SIGNATURE"
+                      }
+
+                    // ====== Agent operation proposal======
+                    "agent_operation_proposal": {
+                      "version": "1.0",
+                      "id": "urn:uuid:op-proposal-456",
+                      "issuer": "https://client.myassistant.example/agent-issuer",
+                      "issuedTo": "user_12345@myassistant.example",
+                      "issuedFor": {
+                        "platform": "personal-agent.myassistant.example",
+                        "client": "mobile-app-v1.myassistant.example",
+                        "clientInstance": "dfp_abc123"
+                      },
+                      "issuanceDate": "2025-11-10T09:58:30Z",
+                      "validFrom": "2025-11-10T10:00:00Z",
+                      "expires": "2025-11-11T06:00:00Z",
+
+                      "operations": [
+                        {
+                          "resources": ["https://api.online-shop.com/cart"],
+                          "actions": ["purchase"]
+                        }
+                      ],
+                      "constraints": {
+                        "usage_limit": 1,
+                        "revocable": true
+                      },
+                      "conditions": {
+                        "language": "cel",
+                        "expression": "transaction.amount <= 50.0 && time.hour < 6"
+                      },
+                      "renderedText": "Buy something cheap on Nov 11 night"
+                    },
+
+                    // ====== Context information======
+                    "context": {
+                      "channel": "mobile-app",
+                      "deviceFingerprint": "dfp_abc123",
+                      "language": "zh-CN"
+                    }
+                }
+
+                ]]></artwork>
+        </figure>
+
+
+<t>
+  The <strong>evidence</strong> field is a JWT in JSON-VC (JSON Web Token-based Verifiable Credential) format, generated by the agent client and included in the agent operation proposal token.
+</t>
+
+<t>
+  Its format is as follows:
+</t>
+
+
+<ul>
+  <li><strong>JWT Header</strong></li>
+</ul>
+
+
+<figure>
+  <artwork name="" type=""><![CDATA[
+
+    {
+      "alg": "RS256",
+      "typ": "JWT",
+      "kid": "https://client.myassistant.example/.well-known/jwks.json#key-01"
+    }
+
+  ]]></artwork>
+</figure>
+
+    <t><strong>alg</strong></t>
+    <t>Uses the RS256 asymmetric signing algorithm (recommended).</t>
+
+    <t><strong>typ</strong></t>
+    <t>Explicitly set to <tt>JWT</tt> to indicate the token type.</t>
+
+    <t><strong>kid</strong></t>
+    <t>The key identifier that references the public key used for verification, enabling the recipient to locate the corresponding public key (e.g., from a JWKS endpoint).</t>
+
+
+<ul>
+<li><strong>JWT Payload</strong></li>
+</ul>
+
+ <figure>
+  <artwork name="" type=""><![CDATA[
+
+    {
+      "jti": "pt-001",
+      "iss": "https://client.myassistant.example",
+      "sub": "user_12345",
+      "iat": 1731664500,
+      "exp": 1731668100,
+
+      // ====== W3C VC Format ======
+      "type": "VerifiableCredential",
+      "credentialSubject": {
+        "type": "UserInputEvidence",
+        "prompt": "Buy something cheap on Nov 11 night",
+        "timestamp": "2025-11-11T23:30:00Z",
+        "channel": "voice",
+        "deviceFingerprint": "dfp_abc123"
+      },
+      "issuer": "https://client.myassistant.example",
+      "issuanceDate": "2025-11-11T23:30:30Z",
+      "expirationDate": "2025-11-12T06:00:00Z",
+
+      // ====== Optional Proof ======
+      "proof": {
+        "type": "JwtProof2020",
+        "created": "2025-11-11T23:30:30Z",
+        "verificationMethod": "https://client.myassistant.example/#key-01"
+      }
+    }
+
+  ]]></artwork>
+</figure>
+
+<ul>
+  <li><strong>Public Key Discovery Mechanism (JWKS)</strong></li>
+</ul>
+
+<t>
+  The client agent publishes its public keys in JSON Web Key Set (JWKS) format at the well-known endpoint <tt>/.well-known/jwks.json</tt>. To retrieve the public keys, a relying party sends an HTTPS GET request to this endpoint.
+</t>
+
+<figure>
+  <artwork><![CDATA[
+GET /.well-known/jwks.json
+Host: client.myassistant.example
+]]></artwork>
+</figure>
+
+
+ <figure>
+  <artwork name="" type=""><![CDATA[
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "key-01",
+      "alg": "RS256",
+      "n": "modulus_in_base64url...",
+      "e": "AQAB"
+    }
+  ]
+}
+  ]]></artwork>
+</figure>
+
+  <ul>
+  <li><strong>Signature</strong></li>
+  </ul>
+  <t>
+  The Issuer (<tt>https://client.myassistant.example</tt>) generates the signature using its private key and the RS256 (RSA Signature with SHA-256) algorithm over the concatenated content: <tt>base64url(header) + '.' + base64url(payload)</tt>.
+  </t>
+
+  <t>Final Output as Standard JWT Tripartite String</t>
+  <t>
+  The resulting JWT is a URL-safe, three-part encoded string in the format:
+  </t>
+  <t>eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Imh0dHBzOi8vY2xpZW50Lm15YW5zd2VyLmV4YW1wbGUvLndlbGwta25vd24vandrLmpzb24ja2V5LTAxIn0.
+  eyJqdGkiOiJwdC0wMDEiLCJpc3MiOiJodHRwczovL2NsaWVudC5teWFuc3dlci5leGFtcGxlIiwic3ViIjoidXNlcl8xMjM0NSIsImlhdCI6MTczMTY2NDUwMCwiZXhwIjoxNzMxNjY4MTAwLCJ0eXBlIjoiVmVyaWZpYWJsZUNyZWRlbnRpYWwiLCJjcmVkZW50aWFsU3ViamVjdCI6eyJ0eXBlIjoiVXNlcklucHV0RXZpZGVuY2UiLCJwcm9tcHQiOiJCdXkgc29tZXRoaW5nIGNoZWFwIG9uIE5vdiAxMSBu
+  .SIGNATURE</t>
+  
+  <ul>
+  <li><strong>Verification Process:</strong></li>
+  </ul>
+  <t>
+    (1) Decode the JWT; 
+    (2) Extract the <tt>kid</tt> from the header; 
+    (3) Retrieve the corresponding public key from <tt>/.well-known/jwks.json</tt>; 
+    (4) Validate the cryptographic signature; 
+    (5) Check policy conditions such as <tt>iss</tt>, time window (<tt>iat</tt>, <tt>exp</tt>), and device fingerprint.
+  </t>
+  
+
+
+<t>
+  The Agent Client sends this PAR-JWT to the Authorization Server (AS) via the Pushed Authorization Request (PAR) mechanism, as defined in <xref target="RFC9126"/> (OAuth 2.0 Pushed Authorization Requests).
+</t>
+
+</section>
+
+
+
+<section anchor="agent-operation-authorization-token" title="Agent Operation Authorization Token">
+
+<t>
+  Upon successful user authorization and authentication, the Authorization Server (AS) issues a <strong>Verifiable Agent Operation Credential</strong> in the form of a JWT token. 
+  The purpose of this credential is to serve as a digitally signed and independently verifiable "authorization letter", which enables the Personal Agent to perform authorized operations on behalf of the user. 
+  The issuer of the credential is the <tt>Authorization Server (AS)</tt>, and the intended recipient is the <tt>Personal Agent</tt> (which may be delivered via the client). 
+  The credential becomes effective immediately after the user clicks "Allow" or "Consent".
+</t>
+
+
+<figure>
+        <artwork name="" type=""><![CDATA[
+
+
+{
+  "iss": "https://as.online-shop.com",
+  "sub": "user_12345@myassistant.example",
+  "aud": "personal-agent.myassistant.example",
+  "iat": 1731665200,
+  "exp": 1732528800,
+  "jti": "urn:uuid:aoc-authz-789",
+
+  // ====== Evidence JWT-VC======
+  "evidence": {
+    "sourcePromptCredential": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...SIGNATURE"
+  },
+
+  // ====== Agent Operation Authorization ======
+  "agent_operation_authorization": {
+    "version": "1.0",
+    "id": "urn:uuid:aoc-authz-789",
+    "issuer": "https://as.online-shop.com",
+    "issuedTo": "user_12345@myassistant.example",
+    "issuedFor": {
+      "platform": "personal-agent.myassistant.example",
+      "client": "mobile-app-v1.myassistant.example",
+      "clientInstance": "dfp_abc123"
+    },
+    "issuanceDate": "2025-11-11T10:08:20Z",
+    "validFrom": "2025-11-11T10:10:00Z",
+    "expires": "2025-11-16T06:00:00Z",
+
+    "operations": [
+      {
+        "resources": ["https://api.online-shop.com/api/cart"],
+        "actions": ["purchase"]
+      }
+    ],
+    "constraints": {
+      "usage_limit": 1,
+      "revocable": true
+    },
+    "conditions": {
+      "language": "cel",
+      "expression": "transaction.amount <= 50.0 && time.hour < 6"
+    },
+    "renderedText": "Purchase items under $50 during the Dec 11 night (00:00–06:00)"
+  },
+
+  // ====== auditTrail ======
+  "auditTrail": {
+      "originalPromptText": "Buy something cheap on Nov 11 night",
+      "renderedOperationText": "Purchase items under $50 during the Dec 11 night (00:00–06:00)",
+      "semanticExpansionLevel": "medium",
+      "userAcknowledgeTimestamp": "2025-11-11T10:23:31Z",
+      "consentInterfaceVersion": "consent-ui-v2.1"
+  },
+
+  // ====== Optional: Reference to Proposal ======
+  "references": {
+    "relatedProposalId": "urn:uuid:op-proposal-456"
+  }
+}
+
+
+
+
+      ]]></artwork>
+</figure>
+
+
+
+    <ul>
+      <li><strong>auditTrail</strong> establishes a complete, semantically traceable chain—from the user's original intent to the system's final executed action—in AI Agent scenarios. This mechanism is known as a <em>Semantic Audit Trail</em>. The specific purposes and their descriptions are outlined in the following table:</li>
+    </ul>
+
+    <table anchor="tbl-audit-trail-purposes">
+      <name>Purposes and Descriptions of the Semantic Audit Trail</name>
+      <thead>
+        <tr>
+          <th align="left">Purpose</th>
+          <th align="left">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1. Intent Provenance</td>
+          <td>Records what the user originally said (e.g., "Buy something cheap on Nov 11 night") to prevent disputes such as: "I didn’t say I wanted to buy anything!"</td>
+        </tr>
+        <tr>
+          <td>2. Action Interpretation</td>
+          <td>Documents how the system interpreted and rendered the input into a concrete operation (e.g., "Purchase under $50 during 00:00–06:00"), reflecting the AI’s reasoning process.</td>
+        </tr>
+        <tr>
+          <td>3. Semantic Transparency</td>
+          <td>Shows whether semantic expansions or default values were applied (e.g., mapping "cheap" to $50, defining "night" as 00:00–06:00).</td>
+        </tr>
+        <tr>
+          <td>4. User Confirmation Evidence</td>
+          <td>Includes timestamps indicating when the user reviewed and confirmed the interpreted action, serving as proof of authorization.</td>
+        </tr>
+        <tr>
+          <td>5. Accountability Support</td>
+          <td>Enables post-hoc analysis in case of erroneous transactions: Was the issue due to ambiguous user input, system misinterpretation, or misleading UI guidance.</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </section> 
+
+
+
+<section anchor="workflow" title="Workflow">
+  <section title="High-Level Flow">
+  
+  <figure>
+          <artwork name="" type=""><![CDATA[
++--------+       +----------------+       +--------+       +------------------+
+|  User  |       |   AI Agent     |       |  AS    |       | Resource Server  |
++--------+       +----------------+       +--------+       +------------------+
+     |                   |                    |                    |
+(1)  |      prompt       |                    |                    |
+     |------------------>|                    |                    |
+     |                   |                    |                    |
+(2)  |                   | Parse & structure  |                    |
+     |                   | operation proposal |                    |
+     |                   |                    |                    |
+(3)  |                   | Generate user's    |                    |
+     |                   | prompt VC          |                    |
+     |                   |                    |                    |
+(4)  |                   | Build operation    |                    |
+     |                   | proposal JWT       |                    |
+     |                   |                    |                    |
+(5)  |                   |                    | POST /par          |
+     |                   |                    | with JWT --------->|
+     |                   |                    |                    |
+(6)  |                   |                    | Return request_uri |
+     |                   |                    |<-------------------|
+     |                   |                    |                    |
+(7)  |                   | Redirect user to   |                    |
+     |                   | /authorize?request_uri=...              |
+     |                   |---------------------------------------->|
+     |                   |                    |                    |
+(8)  | Approve           |                    |                    |
+     |<------------------------------------------------------------|
+     |                   |                    |                    |
+(9)  |                   |                    | Validate JWT       |
+     |                   |                    | Extract operation  |
+     |                   |                    | Issue access token |
+     |                   |                    |<-------------------|
+     |                   |                    |                    |
+(10) |                   | Present access     |                    |
+     |                   | token ------------>| Resource API       |
+     |                   |                    |------------------->|
+     |                   |                    | Enforce operation  |
+     |                   |                    | Execute or deny    |
+     |                   |                    |<-------------------|
+     |                   |                    | Response           |
+     |<------------------------------------------------------------|
+          ]]></artwork>
+        </figure>
+      </section>
+
+<section title="Detailed Process Flow">
+        <figure>
+          <artwork name="" type=""><![CDATA[
+(1) User says: "Buy something cheap on Nov 11 night"
+     |
+     v
+(2) AI Agent parses intent → builds operation proposal object
+     |
+     v
+(3) AS generate the original prompt VC using local private key (bound to issuerKey)
+     |
+     v
+(4) Agent creates evidence section : { "evidence": { "sourcePromptCredential": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...SIGNATURE"} }
+     |
+     v
+(5) Agent creates JWT with operation proposal claim, signs with JWS
+     |
+     v
+(6) Agent sends JWT to AS via PAR: POST /par { "request": "<jwt>" }
+     |
+     v
+(7) AS validates JWS, extracts agent_operation_proposal.prompt.signature and validate
+     |
+     v
+(8) AS issues request_uri to agent
+     |
+     v
+(9) Agent redirects user to /authorize?request_uri=...
+     |
+     v
+(10) User reviews the original prompt and the agent__authorization_operation and approves
+     |
+     v
+
+(11) AS issues Agent Operation Authorization Token as access token
+     |
+     v
+(12) Agent uses token to access Resource Server
+     |
+     v
+(13) AS verifies evidence VC 
+     |
+     v
+(14) RS enforces constraints and conditions
+     |
+     v
+(15) Action executed or denied
+
+
+          ]]></artwork>
+        </figure>
+
+      </section>
+    </section>
+
+
+    <section anchor="security" title="Security Considerations">
+      <t>The combination of JWS and VC provides dual-layer integrity: JWS protects the token, VC protects the prompt.</t>
+      <t>Authorization Servers MUST validate the VC proof using the referenced issuerKey and associated public key material before accepting the request.</t>
+      <t>Public keys referenced by issuerKey MUST be obtained through secure, trusted mechanisms (e.g., pre-registration, PKI).</t>
+      <t>Expression evaluation (e.g., CEL) MUST occur in sandboxed environments.</t>
+      <t>The use of PAR prevents leakage of sensitive operation data in URLs.</t>
+    </section>
+
+<section anchor="iana" title="IANA Considerations">
+  <section title="JWT Claim Registration">
+    <t>
+      This document requests IANA to register the following two claims in the "JSON Web Token Claims" registry, 
+      following the procedure defined in RFC 8126.
+    </t>
+
+    <!-- Claim 1: agent_operation_proposal -->
+    <dl>
+      <dt>Claim Name:</dt>
+      <dd>agent_operation_proposal</dd>
+      <dt>Claim Description:</dt>
+      <dd>
+        A structured representation of an operation proposed by an autonomous agent on behalf of a user. 
+        It includes intended actions, constraints, conditions, and references to verifiable evidence 
+        (e.g., signed user input). Used in delegation flows where user intent is expressed through natural language 
+        and converted into machine-executable proposals.
+      </dd>
+      <dt>Change Controller:</dt>
+      <dd>IETF</dd>
+      <dt>Specification Document:</dt>
+      <dd>This document, Section X.Y ("Agent Operation Proposal")</dd>
+    </dl>
+
+    <!-- Claim 2: agent_operation_authorization -->
+    <dl>
+      <dt>Claim Name:</dt>
+      <dd>agent_operation_authorization</dd>
+      <dt>Claim Description:</dt>
+      <dd>
+        A structured authorization decision issued by an Authorization Server in response to an operation proposal. 
+        It mirrors the structure of the proposal but represents a formally approved scope of execution, 
+        potentially with additional policy-enforced constraints. Enables auditable, revocable, and context-aware 
+        delegation for AI agents.
+      </dd>
+      <dt>Change Controller:</dt>
+      <dd>IETF</dd>
+      <dt>Specification Document:</dt>
+      <dd>This document, Section X.Z ("Agent Operation Authorization")</dd>
+    </dl>
+
+    <t>
+      Both claims are intended to be used within JWTs carrying structured permissions and operational intent 
+      in human-AI collaboration scenarios, particularly in regulated environments requiring traceability, 
+      non-repudiation, and alignment with EU AI Act principles such as transparency and accountability.
+    </t>
+  </section>
+
+  <!-- Optional: JSON Schema Registration (if applicable) -->
+  <section title="JSON Schema Registration (Optional)" anchor="iana-json-schema">
+    <t>
+      Implementers may choose to publish formal JSON Schemas for <tt>agent_operation_proposal</tt> and 
+      <tt>agent_operation_authorization</tt>. If standardized schemas are developed, they can be submitted 
+      to the IANA "JSON Schema Reserved Vocabulary" registry per RFC 9539.
+    </t>
+  </section>
+</section>
+
+
+</middle>
+
+      
+<back>
+    <references>
+      <name>References</name>
+        <references>
+          <name>Normative References</name>
+            <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+            <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+            <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+            <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+      </references>
+    </references>
+
+      
+  
+    <section title="Acknowledgments" numbered="false">
+      <t>The author thanks contributors from the IETF community for their valuable feedback on agent authorization semantics.</t>
+    </section>
+  </back>
+
+</rfc>
