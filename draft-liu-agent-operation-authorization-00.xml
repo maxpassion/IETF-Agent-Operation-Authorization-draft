@@ -763,9 +763,11 @@ Host: client.myassistant.example
       </li>
     </ol>
     <t>
-      If all checks pass, the AS issues a new Agent Operation Authorization Token for Agent B,
-      including a signed <tt>delegation_chain</tt> entry that references Agent A’s token (<tt>jti</tt>) and identity.
-    </t>
+       If all checks pass and the delegation does not require additional user consent (e.g., because the sub-operation is provably within the original authorization scope and delegation was explicitly permitted),
+       the AS issues a new Agent Operation Authorization Token for Agent B without requiring further user interaction.
+       The resulting token includes a signed <tt>delegation_chain</tt> entry that references Agent A’s token (<tt>jti</tt>) and identity,
+       preserving end-to-end auditability back to the original human principal.
+  </t>
   </section>
 
   <section title="Trust Chain Preservation">
