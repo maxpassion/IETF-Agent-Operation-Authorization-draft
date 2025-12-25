@@ -500,7 +500,31 @@ Host: client.myassistant.example
       ]]></artwork>
 </figure>
 
+<t>
+  To support secure agent-to-agent delegation, the Agent Operation Authorization Token MAY include a <strong>delegation_chain</strong> claim.
+  This claim records the sequence of prior delegations, enabling verifiers to reconstruct the full authorization lineage back to the original human principal.
+</t>
 
+<figure>
+  <artwork name="" type=""><![CDATA[
+  // ====== Optional: Delegation Chain (for A2A) ======
+  "delegation_chain": [
+    {
+      "delegator_token_jti": "urn:uuid:token-abc-123",
+      "delegator_agent_identity": { /* agent_identity of Agent A */ },
+      "delegation_timestamp": "2025-12-18T10:15:00Z",
+      "operation_summary": "Delegate inventory check for item X"
+    }
+  ]
+  ]]></artwork>
+</figure>
+
+<t>
+  The <strong>delegation_chain</strong> is an array of delegation records, ordered from most recent to earliest.
+  Each record MUST be cryptographically bound to the issuing Authorization Server during token issuance (see <xref target="a2a-delegation"/>).
+</t>     
+
+     
 <t>The <strong>policy_id</strong> field is a string that serves as an OPA policy reference and MUST match a registered policy in the AS</t>
 
 
@@ -698,6 +722,67 @@ Host: client.myassistant.example
       </section>
     </section>
 
+<section anchor="a2a-delegation" title="Agent-to-Agent Delegation">
+  <t>
+    In multi-agent systems, a primary agent (Agent A) may need to delegate part of its authorized operation to a secondary agent (Agent B).
+    This specification enables such delegation while preserving the chain of trust back to the original human principal.
+  </t>
+
+  <section title="Delegation Request via PAR">
+    <t>
+      When Agent A initiates delegation, it constructs a new Pushed Authorization Request (PAR) JWT that includes:
+    </t>
+    <ul spacing="normal">
+      <li>The original <tt>evidence.sourcePromptCredential</tt> from its own authorization token (unchanged);</li>
+      <li>A new <tt>agent_operation_proposal</tt> representing the sub-operation for Agent B;</li>
+      <li>Its own <tt>agent_identity</tt> as the delegator;</li>
+      <li>An optional <tt>delegation_chain</tt> copied from its current token.</li>
+    </ul>
+    <t>
+      This PAR-JWT is submitted to the same Authorization Server (AS) that issued the original token.
+    </t>
+  </section>
+
+  <section title="Authorization Server Validation">
+    <t>
+      Upon receiving an A2A PAR request, the AS MUST perform the following checks:
+    </t>
+    <ol spacing="normal">
+      <li>
+        Validate the signature and integrity of the included <tt>sourcePromptCredential</tt>.
+      </li>
+      <li>
+        Retrieve the policy associated with the original token (via internal state or by parsing the proposal if first-time delegation).
+      </li>
+      <li>
+        Verify that the new <tt>agent_operation_proposal</tt> is <em>contained within</em> the original authorization scope.
+        This is typically implemented by evaluating whether the new Rego policy implies the original one (e.g., using OPA partial evaluation or pre-registered policy templates).
+      </li>
+      <li>
+        Confirm that the requesting agent (Agent A) is authorized to delegate (e.g., via a <tt>delegation_allowed</tt> flag in its original token or client registration).
+      </li>
+    </ol>
+    <t>
+      If all checks pass, the AS issues a new Agent Operation Authorization Token for Agent B,
+      including a signed <tt>delegation_chain</tt> entry that references Agent A’s token (<tt>jti</tt>) and identity.
+    </t>
+  </section>
+
+  <section title="Trust Chain Preservation">
+    <t>
+      The resulting token for Agent B contains:
+    </t>
+    <ul spacing="normal">
+      <li>The same <tt>evidence.sourcePromptCredential</tt> as the original human-initiated request;</li>
+      <li>A new <tt>policy_id</tt> corresponding to the sub-operation;</li>
+      <li>An extended <tt>delegation_chain</tt> with Agent A’s delegation record.</li>
+    </ul>
+    <t>
+      Resource Servers can thus verify that every action—no matter how many hops—ultimately traces back to a human-confirmed intent,
+      and that no agent has exceeded its granted authority.
+    </t>
+  </section>
+</section>
 
     <section anchor="security" title="Security Considerations">
       <t>The combination of JWS and VC provides dual-layer integrity: JWS protects the token, VC protects the prompt.</t>
@@ -705,6 +790,16 @@ Host: client.myassistant.example
       <t>Public keys referenced by issuerKey MUST be obtained through secure, trusted mechanisms (e.g., pre-registration, PKI).</t>
       <t>Expression evaluation (e.g., CEL) MUST occur in sandboxed environments.</t>
       <t>The use of PAR prevents leakage of sensitive operation data in URLs.</t>
+
+     <t>
+       For Agent-to-Agent delegation, the Authorization Server acts as the central policy enforcer and trust anchor.
+       It MUST NOT issue delegation tokens unless it can cryptographically verify the provenance of the original user intent
+       and confirm that the proposed sub-operation is within the bounds of the original authorization.
+     </t>
+     <t>
+       Implementers SHOULD limit delegation depth (e.g., max 2 hops) to prevent infinite delegation chains.
+       The <tt>delegation_chain</tt> MUST be constructed and signed by the AS—not self-reported by agents—to prevent forgery.
+     </t>
     </section>
 
 <section anchor="iana" title="IANA Considerations">
@@ -774,6 +869,22 @@ Host: client.myassistant.example
       <dt>Specification Document:</dt>
       <dd>This document, Section X.Z ("context")</dd>
     </dl>
+
+     <!-- Claim 5: delegation_chain -->
+     <dl>
+       <dt>Claim Name:</dt>
+       <dd>delegation_chain</dd>
+       <dt>Claim Description:</dt>
+       <dd>
+         An optional array of delegation records that trace the sequence of agent-to-agent authorizations
+         leading to the current token. Each record includes the delegator's token identifier, identity,
+         timestamp, and operation summary. This claim enables end-to-end auditability and trust chain validation.
+       </dd>
+       <dt>Change Controller:</dt>
+       <dd>IETF</dd>
+       <dt>Specification Document:</dt>
+       <dd>This document, Section <xref target="a2a-delegation" format="counter"/>.</dd>
+     </dl>
 
   </section>
 
