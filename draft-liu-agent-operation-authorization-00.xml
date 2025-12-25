@@ -391,10 +391,10 @@ Host: client.myassistant.example
   The <tt>agent_identity</tt> claim can be embedded in a Workload Identity Token (WIT)
   as defined in <xref target="I-D.ietf-wimse-workload-creds"/>.
   This enables backend services to:
-  <list style="numbers">
-    <t>Authenticate the agent as a valid workload (via WIT signature)</t>
-    <t>Authorize operations based on the agent's context and its associated user (via agent_identity)</t>
-  </list>
+  <ol spacing="normal">
+    <li<Authenticate the agent as a valid workload (via WIT signature)</li>
+    <li>Authorize operations based on the agent's context and its associated user (via agent_identity)</li>
+  </ol>
 </t>
 
 <t>
@@ -583,10 +583,10 @@ Host: client.myassistant.example
 
   <t>
     This combination enables a layered security model:
-    <list style="symbols">
+    <ul spacing="normal">
       <t>Layer 1: Workload authentication (via WIT signature and subject)</t>
       <t>Layer 2: User-contextual authorization (via <tt>agent_identity.issuedTo</tt> and scopes)</t>
-    </list>
+    </ul>
     Such a model aligns with zero-trust principles and supports fine-grained
     auditability.
   </t>
@@ -803,7 +803,26 @@ Host: client.myassistant.example
             <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
       </references>
     </references>
-
+    <reference anchor="I-D.ietf-wimse-workload-creds">
+              <front>
+                <title>Workload Identity Credentials</title>
+                <author>
+                  <organization>IETF WIMSE Working Group</organization>
+                </author>
+                <date year="2024" month="October"/>
+              </front>
+              <seriesInfo name="Internet-Draft" value="draft-ietf-wimse-workload-creds"/>
+     </reference>
+                
+     <reference anchor="OpenID" target="https://openid.net/specs/openid-connect-core-1_0.html">
+              <front>
+                <title>OpenID Connect Core 1.0</title>
+                <author>
+                  <organization>OpenID Foundation</organization>
+                </author>
+                <date year="2014" month="November"/>
+              </front>
+     </reference>
       
   
     <section title="Acknowledgments" numbered="false">
