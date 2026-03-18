@@ -13,10 +13,10 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 | # | Draft Name | Category | Purpose | Dependencies |
 |---|------------|----------|---------|--------------|
-| 1 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Foundation | Defines evidence requirements for OAuth authorization decisions | — |
-| 2 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Core Protocol | Multi-hop delegation with cryptographic binding | Evidence |
-| 3 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Identity Binding | Cross-domain user identity binding via ID tokens | Evidence |
-| 4 | [OAuth Rego Policy](#5-oauth-rego-policy) | Policy Engine | Policy-based authorization using Rego language | Evidence, Delegation |
+| 1 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Identity Binding | Cross-domain user identity binding via ID tokens | Evidence |
+| 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy Engine | Policy-based authorization using Rego language | Evidence, Delegation |
+| 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Foundation | Defines evidence requirements for OAuth authorization decisions | — |
+| 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Core Protocol | Multi-hop delegation with cryptographic binding | Evidence |
 | 5 | [AI Agent Authorization Integration](#5-ai-agent-authorization-integration) | Integration | Integrates all mechanisms for AI agent scenarios | All above |
 
 
@@ -39,7 +39,8 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 **Purpose**: Provides cross-domain identity binding mechanism using ID Token hints, enabling seamless user identity mapping across different trust domains during agent-mediated interactions.
 
 ---
-### 2. OAuth Rego Policy
+
+## 2. OAuth Rego Policy
 
 **Draft**: [draft-liu-oauth-rego-policy-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-rego-policy-00.html)
 
@@ -51,7 +52,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ---
 
-### 3. OAuth Authorization Evidence
+## 3. OAuth Authorization Evidence
 
 **Draft**: [draft-liu-oauth-authorization-evidence-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-authorization-evidence-00.html)
 
@@ -63,7 +64,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ---
 
-### 4. OAuth Chain Delegation
+## 4. OAuth Chain Delegation
 
 **Draft**: [draft-liu-oauth-chain-delegation-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-chain-delegation-00.html)
 
