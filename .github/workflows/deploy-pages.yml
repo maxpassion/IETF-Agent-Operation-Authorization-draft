@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -32,79 +32,53 @@ jobs:
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AOA IETF Drafts</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
+        body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
         h1 { color: #24292e; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; }
         .draft-list { list-style: none; padding: 0; }
-        .draft-item { background: #f6f8fa; margin: 10px 0; padding: 15px; border-radius: 6px; border: 1px solid #eaecef; }
+        .draft-item { background: #f6f8fa; margin: 10px 0; padding: 15px; border-radius: 6px; }
         .draft-item a { color: #0366d6; text-decoration: none; font-weight: 600; }
-        .draft-item a:hover { text-decoration: underline; }
-        .format-links { margin-top: 8px; font-size: 0.9em; }
         .format-links a { color: #58a6ff; margin-right: 10px; }
     </style>
 </head>
 <body>
     <h1>📄 AOA IETF Internet-Drafts</h1>
-    <p>Agent Operation Authorization (AOA) specification drafts.</p>
-    
     <ul class="draft-list">
         <li class="draft-item">
             <a href="draft-liu-agent-operation-authorization-00.html">draft-liu-agent-operation-authorization-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-agent-operation-authorization-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-agent-operation-authorization-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-agent-operation-authorization-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
             <a href="draft-liu-ai-agent-authorization-integration-00.html">draft-liu-ai-agent-authorization-integration-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-ai-agent-authorization-integration-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-ai-agent-authorization-integration-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-ai-agent-authorization-integration-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
             <a href="draft-liu-oauth-authorization-evidence-00.html">draft-liu-oauth-authorization-evidence-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-oauth-authorization-evidence-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-oauth-authorization-evidence-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-oauth-authorization-evidence-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
             <a href="draft-liu-oauth-chain-delegation-00.html">draft-liu-oauth-chain-delegation-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-oauth-chain-delegation-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
             <a href="draft-liu-oauth-cross-domain-id-token-hint-00.html">draft-liu-oauth-cross-domain-id-token-hint-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-oauth-cross-domain-id-token-hint-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-oauth-cross-domain-id-token-hint-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-oauth-cross-domain-id-token-hint-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
             <a href="draft-liu-oauth-rego-policy-00.html">draft-liu-oauth-rego-policy-00</a>
-            <div class="format-links">
-                <a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a>
-                <a href="../../source-xml/draft-liu-oauth-rego-policy-00.xml">XML Source</a>
-            </div>
+            <div class="format-links"><a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a></div>
         </li>
     </ul>
-    
-    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eaecef;">
-    <p style="color: #6a737d; font-size: 0.9em;">
-        📚 <a href="https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft">View on GitHub</a>
-    </p>
 </body>
 </html>
 INDEXHTML
     
-    - name: Deploy using gh-pages branch
+    - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./drafts/html
         force_orphan: true
+        user_name: github-actions[bot]
+        user_email: github-actions[bot]@users.noreply.github.com
