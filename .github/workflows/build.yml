@@ -1,0 +1,55 @@
+name: Build IETF Drafts
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    
+    - name: Install xml2rfc
+      run: |
+        pip install xml2rfc
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Install mmark
+      run: |
+        go install github.com/mmarkdown/mmark/v2@latest
+        mmark --version
+    
+    - name: Build HTML and TXT artifacts
+      run: |
+        make clean
+        make all
+    
+    - name: Verify artifacts
+      run: |
+        ls -lh output/html/
+        ls -lh output/txt/ || true
+    
+    - name: Upload HTML artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-drafts
+        path: output/html/*.html
+    
+    - name: Upload TXT artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: txt-drafts
+        path: output/txt/*.txt

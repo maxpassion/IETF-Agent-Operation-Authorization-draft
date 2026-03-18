@@ -1,0 +1,1055 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="rfc7991bis.rnc"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="std"
+  docName="draft-liu-oauth-chain-delegation-00"
+  ipr="trust200902"
+  submissionType="IETF"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title abbrev="OAuth Chain Delegation">Chain Delegation for OAuth 2.0 Access Tokens</title>
+    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-00"/>
+
+    <author fullname="Dapeng Liu" initials="D." surname="Liu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>max.ldp@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Hongru Zhu" initials="H." surname="Zhu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hongru.zhr@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Suresh Krishnan" initials="S." surname="Krishnan">
+      <organization>Cisco</organization>
+      <address>
+        <email>suresh.krishnan@gmail.com</email>
+      </address>
+    </author>
+
+    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
+      <organization>Okta</organization>
+      <address>
+        <email>aaron@parecki.com</email>
+      </address>
+    </author>
+
+    <date year="2026" month="March" day="17"/>
+    <area>Security</area>
+    <workgroup>Web Authorization Protocol</workgroup>
+
+    <keyword>OAuth</keyword>
+    <keyword>Delegation</keyword>
+    <keyword>Chain</keyword>
+    <keyword>Multi-hop</keyword>
+    <keyword>Agent</keyword>
+
+    <abstract>
+      <t>
+        This specification defines the <tt>delegation_chain</tt> JWT claim for 
+        OAuth 2.0 access tokens, enabling secure multi-hop delegation in 
+        agent-to-agent scenarios. It provides a cryptographically verifiable 
+        chain of delegation events, ensuring end-to-end auditability and 
+        preventing privilege escalation across delegation hops.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>
+        In multi-agent systems, a primary agent (Agent A) may need to delegate 
+        a subset of its authorized operations to a secondary agent (Agent B). 
+        While RFC 8693 Token Exchange provides mechanisms for delegation, it 
+        does not define how to maintain a verifiable chain of delegation events 
+        across multiple hops.
+      </t>
+
+      <t>
+        This specification introduces the <tt>delegation_chain</tt> claim, which:
+      </t>
+
+      <ul>
+        <li>Records each delegation hop with cryptographic signatures;</li>
+        <li>Preserves end-to-end auditability back to the original human principal;</li>
+        <li>Prevents privilege escalation beyond the original authorization scope;</li>
+        <li>Enables Resource Servers to validate the complete delegation lineage.</li>
+      </ul>
+
+      <t>
+        This specification complements the <tt>act</tt> claim defined in 
+        <xref target="RFC8693"/> by providing detailed delegation history, 
+        while <tt>act</tt> identifies the immediate actor.
+      </t>
+
+      <section title="Requirements Language">
+        <t>
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", 
+          "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this 
+          document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> 
+          <xref target="RFC8174"/> when, and only when, they appear in all capitals.
+        </t>
+      
+      <section title="Applicability">
+        <t>
+          While this specification is optimized for use with Pushed 
+          Authorization Requests (PAR) <xref target="RFC9126"/>, the 
+          mechanism defined herein is designed to be general-purpose 
+          and MAY be used with various OAuth 2.0 authorization flows, 
+          including but not limited to:
+        </t>
+
+        <ul>
+          <li>
+            Authorization Code Grant (with or without PAR);
+          </li>
+          
+          <li>
+            Client Credentials Grant;
+          </li>
+          
+          <li>
+            Token Exchange <xref target="RFC8693"/>;
+          </li>
+          
+          <li>
+            Resource Owner Password Credentials Grant.
+          </li>
+        </ul>
+
+        <t>
+          Different authorization flows may have different security 
+          considerations when using this specification. Implementations 
+          SHOULD carefully evaluate the security implications based on 
+          their specific deployment scenario.
+        </t>
+      </section>
+</section>
+    </section>
+
+    <section anchor="terminology" title="Terminology">
+      <dl>
+        <dt>Delegator:</dt>
+        <dd>
+          An agent that transfers a subset of its authorization to another agent.
+        </dd>
+
+        <dt>Delegatee:</dt>
+        <dd>
+          An agent that receives delegated authorization from a delegator.
+        </dd>
+
+        <dt>Delegation Hop:</dt>
+        <dd>
+          A single transfer of authorization from one agent to another.
+        </dd>
+
+        <dt>Delegation Chain:</dt>
+        <dd>
+          An ordered sequence of delegation hops from the most recent back to 
+          the original authorization.
+        </dd>
+
+        <dt>Root Authorization:</dt>
+        <dd>
+          The original authorization granted by a human principal, from which 
+          all delegations derive.
+        </dd>
+      </dl>
+    </section>
+
+    <section anchor="delegation-chain-claim" title="The delegation_chain Claim">
+      <section title="Claim Definition">
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>delegation_chain</dd>
+
+          <dt>Claim Type:</dt>
+          <dd>Array of Objects</dd>
+
+          <dt>Usage:</dt>
+          <dd>Access tokens (JWT format)</dd>
+
+          <dt>Specification:</dt>
+          <dd>RFC 7519 (JWT)</dd>
+        </dl>
+      </section>
+
+      <section title="Structure">
+        <t>
+          The <tt>delegation_chain</tt> is an ordered array of delegation records, 
+          from most recent to earliest. Each record represents one delegation hop.
+        </t>
+
+        <figure>
+          <artwork name="delegation_chain structure" type="json"><![CDATA[
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate inventory check for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Delegation Lifecycle">
+        <t>
+          A delegation record transitions through three phases during its lifecycle:
+        </t>
+
+        <ol>
+          <li>
+            <strong>Delegation Proposal Phase:</strong> The delegating agent creates a delegation proposal that includes the delegated policy, delegatee identity, and operation context. This phase corresponds to the policy creation process defined in [I-D.ietf-oauth-rego-policy].
+          </li>
+          
+          <li>
+            <strong>Delegation Enforcement Phase:</strong> The Authorization Server validates the delegation request, verifies user identity (using id_token_hint as defined in [I-D.ietf-oauth-cross-domain-id-token-hint] for the first delegation), and signs the delegation record upon successful validation.
+          </li>
+          
+          <li>
+            <strong>Chain Propagation Phase:</strong> The signed delegation record is embedded into an access token's delegation_chain claim, enabling multi-hop propagation across trust domains.
+          </li>
+        </ol>
+
+        <t>
+          This three-phase model ensures cryptographic binding between user authorization, agent identity, and policy constraints throughout the delegation chain.
+        </t>
+      </section>
+
+      <section title="Field Definitions">
+        <table anchor="tbl-delegation-chain-fields">
+          <name>delegation_chain Record Fields</name>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Requirement</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr>
+              <td>delegator_wit</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>Workload Identity Token (WIT) of the delegating agent.</td>
+            </tr>
+            <tr>
+              <td>delegatee_sub</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>Subject identifier of the receiving agent.</td>
+            </tr>
+            <tr>
+              <td>delegation_timestamp</td>
+              <td>NumericDate</td>
+              <td>REQUIRED</td>
+              <td>When this delegation was authorized.</td>
+            </tr>
+            <tr>
+              <td>delegated_policy</td>
+              <td>object</td>
+              <td>OPTIONAL</td>
+              <td>
+                A subset of the delegator's authorized policy that is being
+                delegated to the delegatee. This field SHOULD follow the structure
+                defined in [I-D.ietf-oauth-rego-policy]. The delegated policy
+                MUST be equal to or more restrictive than the delegator's policy.
+                Policy permission expansion is NOT allowed.
+              </td>
+            </tr>
+            <tr>
+              <td>operation_summary</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>Human-readable description of delegated operation.</td>
+            </tr>
+            <tr>
+              <td>root_evidence_ref</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>
+                Reference to the root authorization evidence record as defined 
+                in the authorization evidence specification. This field MUST be 
+                present for the first delegation (User → Agent A) and SHOULD be 
+                propagated through the chain. The value SHOULD match the 
+                <tt>evidence.id</tt> from the root token.
+              </td>
+            </tr>
+            <tr>
+              <td>delegator_signature</td>
+              <td>string</td>
+              <td>RECOMMENDED</td>
+              <td>
+                Cryptographic signature from the delegating agent's private key 
+                over this delegation record. This provides dual-signature security 
+                alongside <tt>as_signature</tt>, preventing malicious AS from 
+                forging unauthorized delegations and ensuring non-repudiation.
+              </td>
+            </tr>
+            <tr>
+              <td>root_evidence_ref</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>
+                Reference to the root authorization evidence record as defined 
+                in the authorization evidence specification. This field MUST be 
+                present for the first delegation (User → Agent A) and SHOULD be 
+                propagated through the chain. The value SHOULD match the 
+                <tt>evidence.id</tt> from the root token.
+              </td>
+            </tr>
+            <tr>
+              <td>delegator_signature</td>
+              <td>string</td>
+              <td>RECOMMENDED</td>
+              <td>
+                Cryptographic signature from the delegating agent's private key 
+                over this delegation record. This provides dual-signature security 
+                alongside <tt>as_signature</tt>, preventing malicious AS from 
+                forging unauthorized delegations and ensuring non-repudiation.
+              </td>
+            </tr>
+            <tr>
+              <td>as_signature</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>AS signature over this delegation record.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <t>
+          Both <tt>as_signature</tt> and <tt>delegator_signature</tt> MUST be 
+          computed over the same set of fields using JSON Canonicalization Scheme 
+          (JCS) as defined in RFC 8785:
+        </t>
+
+        <ul>
+          <li><tt>delegator_wit</tt></li>
+          <li><tt>delegatee_sub</tt></li>
+          <li><tt>delegation_timestamp</tt></li>
+          <li><tt>delegated_policy</tt> (if present)</li>
+          <li><tt>operation_summary</tt> (if present)</li>
+          <li><tt>root_evidence_ref</tt> (if present)</li>
+        </ul>
+
+        <t>
+          Both signature fields MUST be excluded from their respective signature 
+          computations. The signatures MUST use detached JWS format with 
+          appropriate algorithm identifiers.
+        </t>
+
+        <t>
+          The <tt>delegator_signature</tt> uses the delegating agent's WIT-bound 
+          private key, while <tt>as_signature</tt> uses the Authorization Server's 
+          signing key. This dual-signature approach ensures:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Malicious AS Prevention:</strong> A compromised AS cannot 
+            unilaterally forge delegations without the delegator's consent;
+          </li>
+          <li>
+            <strong>Non-Repudiation:</strong> The delegator cannot deny having 
+            authorized the delegation;
+          </li>
+          <li>
+            <strong>Complete Trust Chain:</strong> User → AS → Delegator → Delegatee.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Chain Ordering">
+        <t>
+          The array MUST be ordered from most recent delegation to earliest:
+        </t>
+
+        <ul>
+          <li>Index 0: Most recent delegation (delegator → current token holder)</li>
+          <li>Index N: Earliest delegation (first agent after human authorization)</li>
+        </ul>
+
+        <t>
+          This ordering allows efficient validation starting from the immediate 
+          delegator.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="protocol-flow" title="Delegation Protocol Flow">
+      <figure>
+        <artwork name="Chain Delegation Flow" type="ascii-art"><![CDATA[
++--------+       +---------+       +--------+       +---------+
+|  User  |       | Agent A |       |   AS   |       | Agent B |
++--------+       +---------+       +--------+       +---------+
+    |                 |                 |                 |
+    | (1) Authorize   |                 |                 |
+    |---------------->|                 |                 |
+    |                 |                 |                 |
+    |                 | (2) PAR         |                 |
+    |                 |---------------->|                 |
+    |                 |                 |                 |
+    | (3) Consent     |                 |                 |
+    |<----------------|---------------->|                 |
+    |                 |                 |                 |
+    |                 | (4) Token A     |                 |
+    |                 | (no chain)      |                 |
+    |                 |<----------------|                 |
+    |                 |                 |                 |
+    |                 | (5) Delegation Request (PAR)      |
+    |                 |----------------------------------> |
+    |                 |  - subject_token (Token A)        |
+    |                 |  - delegatee_wit (Agent B)        |
+    |                 |  - delegated_policy (optional)    |
+    |                 |                 |                 |
+    |                 |                 | (6) Validate    |
+    |                 |                 | - Token A valid |
+    |                 |                 | - Scope subset  |
+    |                 |                 | - Agent B auth  |
+    |                 |                 |                 |
+    |                 |                 | (7) Issue Token B
+    |                 |                 |---------------->|
+    |                 |                 | with delegation_chain
+    |                 |                 |                 |
+    |                 |                 |                 | (8) API Request
+    |                 |                 |                 |------------>
+    |                 |                 |                 |
+    |                 |                 |                 | (9) Validate chain
+    |                 |                 |                 |<------------
+        ]]></artwork>
+      </figure>
+
+      <section title="Step 1-4: Initial Authorization">
+        <t>
+          Agent A obtains authorization from the user through a standard OAuth 
+          flow. The resulting token does not contain a delegation_chain (it is 
+          the root authorization).
+        </t>
+      </section>
+
+      <section title="Step 5: Delegation Request (PAR)">
+        <t>
+          Agent A initiates delegation using Pushed Authorization Request 
+          (PAR) with JWT Secured Authorization Request [RFC9126]. The 
+          delegation parameters are encoded in a JWT, providing integrity 
+          protection and supporting large payloads.
+        </t>
+
+        <figure>
+          <artwork name="Delegation PAR Request (JWT)" type="http"><![CDATA[
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/oauth-authz-req+jwt
+OAuth-Client-Attestation: wit://agent-b.example
+OAuth-Client-Attestation-PoP: <PoP-Signature>
+
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFnZW50LWEta2V5In0.ewogICJpc3MiOiAid2l0Oi8vdHBtMi5udmlkaWEuc2hhMjU2LmFiYzEyMy4uLiIsCiAgImF1ZCI6ICJodHRwczovL2FzLmV4YW1wbGUuY29tIiwKICAicmVzcG9uc2VfdHlwZSI6ICJjb2RlIiwKICAiZ3JhbnRfdHlwZSI6ICJ1cm46aWV0ZjpwYXJhbXM6b2F1dGg6Z3JhbnQtdHlwZTp0b2tlbi1leGNoYW5nZSIsCiAgInN1YmplY3RfdG9rZW4iOiAiPGFnZW50LWEtdG9rZW4-IiwKICAic3ViamVjdF90b2tlbl90eXBlIjogInVybjppZXRmOnBhcmFtczpvYXV0aDp0b2tlbi10eXBlOmFjY2Vzc190b2tlbiIsCiAgInJlcXVlc3RlZF90b2tlbl90eXBlIjogInVybjppZXRmOnBhcmFtczpvYXV0aDp0b2tlbi10eXBlOmFjY2Vzc190b2tlbiIsCiAgInNjb3BlIjogImNhcnQ6cmVhZCIsCiAgImRlbGVnYXRpb25fcmVhc29uIjogIkludmVudG9yeSBjaGVjayBmb3IgaXRlbSBYIiwKICAiZGVsZWdhdGVlX3dpdCI6ICJ3aXQ6Ly9zZ3guaW50ZWwuc2hhMjU2LmRlZjQ1Ni4uLiIKfQ.signature
+          ]]></artwork>
+        </figure>
+
+        <t>
+          The JWT payload (decoded) contains:
+        </t>
+
+        <figure>
+          <artwork name="JWT Payload (Decoded)" type="json"><![CDATA[
+{
+  "iss": "wit://agent-a.example",
+  "aud": "https://as.example.com",
+  "response_type": "code",
+  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+  "subject_token": "<agent-a-token>",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "delegated_policy": {
+    "type": "rego",
+    "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+    "entry_point": "allow"
+  }
+  "delegatee_wit": "wit://agent-b.example"
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Step 6: AS Validation">
+        <t>
+          The AS MUST perform the following validations:
+        </t>
+
+        <ol>
+          <li>
+            Token Validity: Verify Agent A's token is valid and 
+            not revoked.
+          </li>
+          <li>
+            Delegation Permission: Confirm the token permits 
+            delegation (e.g., includes a delegation scope or flag).
+          </li>
+          <li>
+            Scope Subset: Verify the requested scope is a strict 
+            subset of Agent A's authorized scope.
+          </li>
+          <li>
+            Delegatee Authentication: Validate Agent B's 
+            credentials (WIT-SVID).
+          </li>
+          <li>
+            Chain Depth: Optionally enforce maximum delegation 
+            depth.
+          </li>
+        </ol>
+      </section>
+
+      <section title="Step 7: Token Issuance">
+        <t>
+          Upon successful validation, the AS issues a new token for Agent B with:
+        </t>
+
+        <ul>
+          <li><tt>sub</tt>: The original user (unchanged)</li>
+          <li><tt>act</tt>: Agent B's identity</li>
+          <li><tt>delegation_chain</tt>: Extended with a new record for this hop</li>
+          <li>Reduced scope (as requested)</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="chain-extension" title="Chain Extension">
+      <t>
+        When the AS issues a delegated token, it extends the delegation_chain:
+      </t>
+
+      <section title="For First Delegation">
+        <t>
+          If Agent A's token has no delegation_chain (root authorization), the 
+          AS creates a new chain with one entry:
+        </t>
+
+        <figure>
+          <artwork name="First delegation" type="json"><![CDATA[
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}",
+        "entry_point": "allow"
+      },
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="For Subsequent Delegations">
+        <t>
+          If Agent B further delegates to Agent C, the AS prepends a new record:
+        </t>
+
+        <figure>
+          <artwork name="Multi-hop delegation" type="json"><![CDATA[
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-b.example",
+      "delegatee_wit": "wit://agent-c.example",
+      "delegation_timestamp": 1734517800,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Check inventory for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Check inventory for item 123",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    },
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}",
+        "entry_point": "allow"
+      },
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section anchor="rs-validation" title="Resource Server Validation">
+      <t>
+        Resource Servers validate the delegation_chain as follows:
+      </t>
+
+      <section title="Signature Verification">
+        <t>
+          For each record in the chain, verify the <tt>as_signature</tt> using 
+          the AS's public key. This ensures:
+        </t>
+
+        <ul>
+          <li>The delegation was authorized by the AS;</li>
+          <li>The record has not been tampered with;</li>
+          <li>The delegation metadata is authentic.</li>
+        </ul>
+      </section>
+
+      <section title="Root Authorization Anchor">
+        <t>
+          The last record in the chain (highest index) represents the earliest 
+          delegation. Its <tt>delegator_wit</tt> identifies the agent that holds 
+          the root authorization (the token directly authorized by the user).
+        </t>
+
+        <t>
+          The Resource Server MUST verify that:
+        </t>
+
+        <ul>
+          <li>
+            root token (a token without a <tt>delegation_chain</tt> claim);
+          </li>
+          <li>
+            This root token was issued by a trusted AS and has not been revoked.
+          </li>
+          <li>
+            The root token contains valid <tt>evidence</tt> and 
+            <tt>audit_trail</tt> claims as defined in 
+            the authorization evidence draft, providing 
+            cryptographic proof of user consent.
+          </li>
+        </ul>
+
+        <t>
+          If the RS cannot verify the root authorization anchor, it MUST reject 
+          the request.
+        </t>
+      </section>
+
+      <section title="Dual-Signature Verification">
+        <t>
+          For each delegation record, the Resource Server SHOULD verify both:
+        </t>
+
+        <ul>
+          <li>
+            <strong>AS Signature:</strong> Using the Authorization Server's 
+            public key, confirming the delegation was authorized by the AS;
+          </li>
+          <li>
+            <strong>Delegator Signature:</strong> Using the delegating agent's 
+            WIT-bound public key, confirming the delegator explicitly consented 
+            to this delegation.
+          </li>
+        </ul>
+
+        <t>
+          The dual-signature mechanism prevents:
+        </t>
+
+        <ul>
+          <li>
+            Malicious AS from unilaterally forging delegations;
+          </li>
+          <li>
+            Delegators from denying authorized delegations (non-repudiation);
+          </li>
+          <li>
+            Unauthorized privilege escalation through compromised components.
+          </li>
+        </ul>
+      </section>
+
+      <section title="WIT Status Validation">
+        <t>
+          The Resource Server SHOULD verify the current status of all Workload 
+          Identity Tokens (WITs) referenced in the delegation_chain by:
+        </t>
+
+        <ul>
+          <li>Checking WIT revocation lists or status endpoints;</li>
+          <li>Validating WIT expiration timestamps;</li>
+          <li>Querying the issuing Identity Provider for current status.</li>
+        </ul>
+
+        <t>
+          If any WIT in the chain has been revoked or expired, the entire 
+          delegation_chain MUST be considered invalid, even if individual 
+          records remain cryptographically valid.
+        </t>
+      </section>
+
+      <section title="Chain Continuity">
+        <t>
+          Verify the chain is continuous:
+        </t>
+
+        <ul>
+          <li>
+            Each <tt>delegatee_wit</tt> matches the <tt>delegator_wit</tt> of 
+            the previous (more recent) record;
+          </li>
+          <li>
+            The final <tt>delegatee_sub</tt> matches the token's <tt>act.sub</tt>;
+          </li>
+          <li>
+            Timestamps are in descending order.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Scope Validation">
+        <t>
+          Verify scope constraints are progressively narrowing:
+        </t>
+
+        <ul>
+          <li>
+            Each delegation's <tt>delegated_policy</tt> MUST be equal to or more restrictive than 
+            the previous delegation's scope;
+          </li>
+          <li>
+            The final scope MUST cover the requested operation.
+          </li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <section title="Privilege Escalation Prevention">
+        <t>
+          The AS MUST ensure that delegation cannot expand privileges:
+        </t>
+
+        <ul>
+          <li>Delegated scope MUST be a strict subset of delegator's scope;</li>
+          <li>Delegation depth MAY be limited;</li>
+          <li>Certain scopes MAY be marked non-delegatable.</li>
+        </ul>
+      </section>
+
+      <section title="Chain Integrity">
+        <t>
+          The <tt>as_signature</tt> on each record ensures chain integrity. 
+          Agents MUST NOT be able to:
+        </t>
+
+        <ul>
+          <li>Forge delegation records;</li>
+          <li>Modify existing records;</li>
+          <li>Remove records from the chain;</li>
+          <li>Reorder records.</li>
+        </ul>
+      </section>
+
+      <section title="Token Binding">
+        <t>
+          This enables:
+        </t>
+
+        <ul>
+          <li>Revocation of specific delegation paths;</li>
+          <li>Audit trail reconstruction;</li>
+          <li>Detection of token reuse.</li>
+        </ul>
+      </section>
+
+      <section title="Delegation Depth Limits">
+        <t>
+          Implementations SHOULD enforce maximum delegation depth to:
+        </t>
+
+        <ul>
+          <li>Prevent unbounded delegation chains;</li>
+          <li>Limit token size growth;</li>
+          <li>Simplify validation.</li>
+        </ul>
+
+        <t>
+          A RECOMMENDED default maximum depth is 5 hops.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="iana" title="IANA Considerations">
+      <section title="JWT Claims Registration">
+        <t>
+          This specification registers the following claim in the 
+          "JSON Web Token Claims" registry:
+        </t>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>delegation_chain</dd>
+
+          <dt>Claim Description:</dt>
+          <dd>
+            An ordered array of AS-signed delegation records tracing 
+            agent-to-agent authorization transfers, enabling end-to-end 
+            validation of delegation lineage.
+          </dd>
+
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+
+          <dt>Specification Document:</dt>
+          <dd>Section 3 of this document</dd>
+        </dl>
+      </section>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
+      </references>
+
+      <references>
+        <name>Informative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+        <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-ietf-oauth-identity-chaining.xml"/>
+      </references>
+    </references>
+
+    <section title="Complete Multi-Hop Example">
+      <t>
+        The following shows a token held by Agent C after two delegation hops 
+        (User → Agent A → Agent B → Agent C):
+      </t>
+
+      <figure>
+        <artwork name="Complete multi-hop token" type="json"><![CDATA[
+{
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example",
+  "exp": 1734520500,
+  "iat": 1734517800,
+  "act": {
+    "sub": "wit://agent-c.example"
+  },
+  
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-b.example",
+      "delegatee_wit": "wit://agent-c.example",
+      "delegation_timestamp": 1734517800,
+      "root_evidence_ref": "evidence-root",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Check stock for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...sig2-delegator",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs...sig2"
+    },
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}\nallow {\n  input.action == \"inventory_op\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate inventory operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...sig1-delegator",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs...sig1"
+    }
+  ],
+  
+  "evidence": {
+    "id": "evidence-root",
+    "user_confirmation": {
+      "displayed_content": "Allow shopping assistant to manage cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1734516000,
+      "interface_version": "consent-ui-v2.1"
+    },
+    "session_context": {
+      "session_id": "session_xyz789",
+      "channel": "mobile-app"
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiIs...sig0"
+  },
+  
+  "audit_trail": {
+    "evidence_ref": "evidence-root",
+    "semantic_expansion_level": "medium",
+    "interpretation_notes": "User said 'manage cart', delegated to inventory operations"
+  }
+}
+        ]]></artwork>
+      </figure>
+
+      <t>
+        This token shows:
+      </t>
+
+      <ul>
+        <li>Original user: user_12345</li>
+        <li>Current actor: Agent C</li>
+        <li>Delegation path: Agent A → Agent B → Agent C</li>
+        <li>Progressive policy narrowing: cart+inventory → inventory → item:123</li>
+        <li>Original user consent evidence preserved</li>
+      </ul>
+    </section>
+
+    <section anchor="validation-mechanism" title="Validation Mechanism">
+      <t>
+        Each delegation hop MUST be represented as a separate JWT access token.
+        The delegating agent signs each token using its private key, creating
+        a cryptographically verifiable chain of custody.
+      </t>
+
+      <section title="Token Structure">
+        <t>
+          For each delegation from Agent-X to Agent-Y:
+        </t>
+        <ul>
+          <li>
+            The token's "iss" claim MUST be the WIT of the delegating agent
+          </li>
+          <li>
+            The token's "sub" claim MUST be the WIT of the delegatee agent
+          </li>
+          <li>
+            The token MUST be signed by the delegating agent's private key
+          </li>
+          <li>
+            The token's "delegation_chain" claim accumulates all previous hops
+          </li>
+        </ul>
+      </section>
+
+      <section title="Verification Requirements">
+        <t>
+          Resource Servers MUST validate:
+        </t>
+        <ol>
+          <li>The final token's signature matches the claimed issuer</li>
+          <li>Each hop in the delegation_chain has valid timestamps</li>
+          <li>Policy constraints are maintained or reduced (never expanded)</li>
+          <li>The chain is continuous (each "to" matches next "from")</li>
+          <li>The initial delegator matches the original authorization subject</li>
+        </ol>
+      </section>
+
+      <section title="Security Considerations">
+        <t>
+          This per-hop signing approach provides:
+        </t>
+        <ul>
+          <li>
+            Non-repudiation: Each delegator's signature is independent evidence
+          </li>
+          <li>
+            Flexible revocation: Individual hops can be revoked separately
+          </li>
+          <li>
+            Incremental updates: New hops only require generating new tokens
+          </li>
+          <li>
+            Audit-friendly: Each signature represents a discrete authorization event
+          </li>
+        </ul>
+      </section>
+
+      <section title="Comparison with OAuth Identity Chaining">
+        <t>
+          While <xref target="I-D.ietf-oauth-identity-chaining"/> focuses on 
+          static identity federation across organizational boundaries, this 
+          specification targets dynamic AI agent delegation with the following 
+          distinctions:
+        </t>
+        <ul>
+          <li>
+            Trust Model: Attestation-based (WIT) vs. pre-configured PKI trust
+          </li>
+          <li>
+            Scope Control: Mandatory contraction vs. static mapping
+          </li>
+          <li>
+            Time Scale: Task-level (minutes/hours) vs. employment-level (months/years)
+          </li>
+          <li>
+            Target: AI workloads vs. human employees
+          </li>
+        </ul>
+        <t>
+          This makes the mechanism suitable for AI-to-AI scenarios where 
+          agents need temporary, auditable delegation without 
+          pre-established trust relationships. Implementations MAY use 
+          WIT with attestation evidence for enhanced security, but it 
+          is not required by this specification.
+        </t>
+      </section>
+    </section>
+
+  </back>
+
+</rfc>

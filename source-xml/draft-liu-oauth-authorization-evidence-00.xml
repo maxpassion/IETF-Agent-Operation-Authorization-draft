@@ -1,0 +1,786 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="rfc7991bis.rnc"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="std"
+  docName="draft-liu-oauth-authorization-evidence-00"
+  ipr="trust200902"
+  submissionType="IETF"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title abbrev="OAuth Authorization Evidence">Authorization Evidence and Audit Trail for OAuth 2.0 Access Tokens</title>
+    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-00"/>
+
+    <author fullname="Dapeng Liu" initials="D." surname="Liu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>max.ldp@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Hongru Zhu" initials="H." surname="Zhu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hongru.zhr@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Suresh Krishnan" initials="S." surname="Krishnan">
+      <organization>Cisco</organization>
+      <address>
+        <email>suresh.krishnan@gmail.com</email>
+      </address>
+    </author>
+
+    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
+      <organization>Okta</organization>
+      <address>
+        <email>aaron@parecki.com</email>
+      </address>
+    </author>
+
+    <date year="2026" month="March" day="17"/>
+    <area>Security</area>
+    <workgroup>Web Authorization Protocol</workgroup>
+
+    <keyword>OAuth</keyword>
+    <keyword>Evidence</keyword>
+    <keyword>Audit</keyword>
+    <keyword>Consent</keyword>
+    <keyword>User Confirmation</keyword>
+
+    <abstract>
+      <t>
+        This specification defines JWT claims for including authorization evidence 
+        and audit trail information in OAuth 2.0 access tokens. These claims enable 
+        cryptographic proof of user consent, supporting accountability, compliance, 
+        and dispute resolution in scenarios where autonomous agents act on behalf 
+        of users.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>
+        In traditional OAuth 2.0 flows, the Authorization Server records user consent 
+        internally, but this information is not typically conveyed to Resource Servers 
+        or included in access tokens. For many use cases, this is sufficient. However, 
+        emerging scenarios—particularly those involving AI agents acting autonomously 
+        on behalf of users—require stronger guarantees about user intent and consent.
+      </t>
+
+      <t>
+        This specification addresses the need for:
+      </t>
+
+      <ul>
+        <li>
+          Verifiable consent: Cryptographic proof that a user 
+          explicitly authorized a specific operation;
+        </li>
+        <li>
+          Audit trails: Traceable records linking user intent to 
+          system actions;
+        </li>
+        <li>
+          Dispute resolution: Evidence that can be examined if 
+          questions arise about what was authorized;
+        </li>
+        <li>
+          Regulatory compliance: Documentation required by 
+          regulations in finance, healthcare, and other domains.
+        </li>
+      </ul>
+
+      <t>
+        This specification defines two JWT claims: <tt>evidence</tt> for user 
+        confirmation records, and <tt>audit_trail</tt> for semantic traceability 
+        metadata.
+      </t>
+
+      <section title="Requirements Language">
+        <t>
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", 
+          "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this 
+          document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> 
+          <xref target="RFC8174"/> when, and only when, they appear in all capitals.
+        </t>
+      
+      <section title="Applicability">
+        <t>
+          While this specification is optimized for use with Pushed 
+          Authorization Requests (PAR) <xref target="RFC9126"/>, the 
+          mechanism defined herein is designed to be general-purpose 
+          and MAY be used with various OAuth 2.0 authorization flows, 
+          including but not limited to:
+        </t>
+
+        <ul>
+          <li>
+            Authorization Code Grant (with or without PAR);
+          </li>
+          
+          <li>
+            Client Credentials Grant;
+          </li>
+          
+          <li>
+            Token Exchange <xref target="RFC8693"/>;
+          </li>
+          
+          <li>
+            Resource Owner Password Credentials Grant.
+          </li>
+        </ul>
+
+        <t>
+          Different authorization flows may have different security 
+          considerations when using this specification. Implementations 
+          SHOULD carefully evaluate the security implications based on 
+          their specific deployment scenario.
+        </t>
+      </section>
+</section>
+    </section>
+
+    <section anchor="terminology" title="Terminology">
+      <dl>
+        <dt>User Confirmation:</dt>
+        <dd>
+          An explicit action by the user (e.g., clicking "Allow") to approve an 
+          authorization request.
+        </dd>
+
+        <dt>Displayed Content:</dt>
+        <dd>
+          The human-readable description of the operation shown to the user during 
+          the consent flow.
+        </dd>
+
+        <dt>Evidence:</dt>
+        <dd>
+          A cryptographically signed record of user confirmation, including what was 
+          displayed and how the user responded.
+        </dd>
+
+        <dt>Audit Trail:</dt>
+        <dd>
+          Metadata that enables tracing from user intent through system interpretation 
+          to final authorized action.
+        </dd>
+
+        <dt>Semantic Expansion:</dt>
+        <dd>
+          The process of translating user intent (e.g., natural language) into 
+          concrete system operations.
+        </dd>
+      </dl>
+    </section>
+
+    <section anchor="evidence-claim" title="The evidence Claim">
+      <t>
+        The <tt>evidence</tt> claim contains a record of the user's confirmation 
+        action during the authorization process. It is included in access tokens 
+        to provide verifiable proof of user consent.
+      </t>
+
+      <section title="Claim Definition">
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>evidence</dd>
+
+          <dt>Claim Type:</dt>
+          <dd>Object</dd>
+
+          <dt>Usage:</dt>
+          <dd>Access tokens</dd>
+        </dl>
+      </section>
+
+      <section title="Structure">
+        <figure>
+          <artwork name="evidence structure" type="json"><![CDATA[
+{
+  "evidence": {
+    "id": "evidence-abc123",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1731320595,
+      "interface_version": "consent-ui-v2.1"
+    },
+    "session_context": {
+      "session_id": "session_xyz789",
+      "client_instance": "dfp_abc123",
+      "channel": "mobile-app"
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+  }
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Field Definitions">
+        <table anchor="tbl-evidence-fields">
+          <name>evidence Claim Fields</name>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Requirement</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>id</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>Unique identifier for this evidence record.</td>
+            </tr>
+            <tr>
+              <td>user_confirmation</td>
+              <td>object</td>
+              <td>REQUIRED</td>
+              <td>Details of the user's confirmation action.</td>
+            </tr>
+            <tr>
+              <td>session_context</td>
+              <td>object</td>
+              <td>OPTIONAL</td>
+              <td>Session and device context information.</td>
+            </tr>
+            <tr>
+              <td>as_signature</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>AS signature over the confirmation record.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <section title="user_confirmation Object">
+          <table anchor="tbl-user-confirmation-fields">
+            <name>user_confirmation Fields</name>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>displayed_content</td>
+                <td>string</td>
+                <td>REQUIRED</td>
+                <td>The text shown to user for confirmation.</td>
+              </tr>
+              <tr>
+                <td>user_action</td>
+                <td>string</td>
+                <td>REQUIRED</td>
+                <td>How the user confirmed (e.g., button click).</td>
+              </tr>
+              <tr>
+                <td>timestamp</td>
+                <td>NumericDate</td>
+                <td>REQUIRED</td>
+                <td>When the confirmation occurred.</td>
+              </tr>
+              <tr>
+                <td>interface_version</td>
+                <td>string</td>
+                <td>OPTIONAL</td>
+                <td>Version of the consent UI used.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section title="session_context Object">
+          <table anchor="tbl-session-context-fields">
+            <name>session_context Fields</name>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>session_id</td>
+                <td>string</td>
+                <td>OPTIONAL</td>
+                <td>OAuth session identifier.</td>
+              </tr>
+              <tr>
+                <td>client_instance</td>
+                <td>string</td>
+                <td>OPTIONAL</td>
+                <td>Device/client instance fingerprint.</td>
+              </tr>
+              <tr>
+                <td>channel</td>
+                <td>string</td>
+                <td>OPTIONAL</td>
+                <td>Authorization channel (mobile, web, etc.).</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <section title="AS Signature">
+        <t>
+          The <tt>as_signature</tt> field contains a cryptographic signature from 
+          the Authorization Server over the evidence record. This signature:
+        </t>
+
+        <ul>
+          <li>Proves the AS witnessed the user's consent;</li>
+          <li>Ensures the evidence has not been tampered with;</li>
+          <li>Enables non-repudiation for dispute resolution.</li>
+        </ul>
+
+        <t>
+          The signature MUST be computed over the following fields of the 
+          <tt>evidence</tt> object:
+        </t>
+
+        <ul>
+          <li><tt>id</tt></li>
+          <li><tt>user_confirmation</tt> (entire object)</li>
+          <li><tt>session_context</tt> (if present)</li>
+        </ul>
+
+        <t>
+          The <tt>as_signature</tt> field itself MUST be excluded from the 
+          signature computation. The signature input MUST be constructed using 
+          JSON Canonicalization Scheme (JCS) as defined in RFC 8785 to ensure 
+          deterministic serialization. The signature format MUST be a detached 
+          JWS (JSON Web Signature) using the AS's signing key.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="audit-trail-claim" title="The audit_trail Claim">
+      <t>
+        The <tt>audit_trail</tt> claim provides metadata for semantic traceability, 
+        enabling analysis of how user intent was interpreted and translated into 
+        authorized operations.
+      </t>
+
+      <section title="Claim Definition">
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>audit_trail</dd>
+
+          <dt>Claim Type:</dt>
+          <dd>Object</dd>
+
+          <dt>Usage:</dt>
+          <dd>Access tokens</dd>
+        </dl>
+      </section>
+
+      <section title="Structure">
+        <figure>
+          <artwork name="audit_trail structure" type="json"><![CDATA[
+{
+  "audit_trail": {
+    "evidence_ref": "evidence-abc123",
+    "semantic_expansion_level": "medium",
+    "interpretation_notes": "Mapped 'cheap' to '$50 limit'",
+    "proposal_ref": "urn:uuid:proposal-xyz"
+  }
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Field Definitions">
+        <table anchor="tbl-audit-trail-fields">
+          <name>audit_trail Claim Fields</name>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Requirement</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>evidence_ref</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>Reference to the evidence record by ID.</td>
+            </tr>
+            <tr>
+              <td>semantic_expansion_level</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>Degree of interpretation applied (none, low, medium, high).</td>
+            </tr>
+            <tr>
+              <td>interpretation_notes</td>
+              <td>string</td>
+              <td>OPTIONAL</td>
+              <td>Human-readable notes about semantic mapping.</td>
+            </tr>
+            <tr>
+              <td>proposal_ref</td>
+              <td>URI</td>
+              <td>OPTIONAL</td>
+              <td>Reference to the original authorization proposal.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section title="Semantic Expansion Levels">
+        <t>
+          The <tt>semantic_expansion_level</tt> field indicates how much the system 
+          interpreted or expanded the user's original intent:
+        </t>
+
+        <dl>
+          <dt>none:</dt>
+          <dd>No interpretation; user specified exact parameters.</dd>
+
+          <dt>low:</dt>
+          <dd>Minor defaults applied (e.g., default quantity of 1).</dd>
+
+          <dt>medium:</dt>
+          <dd>Significant interpretation (e.g., "cheap" mapped to "$50").</dd>
+
+          <dt>high:</dt>
+          <dd>Substantial expansion (e.g., multi-step plan derived from goal).</dd>
+        </dl>
+      </section>
+    </section>
+
+    <section anchor="purposes" title="Audit Trail Purposes">
+      <t>
+        The evidence and audit trail claims serve several important purposes:
+      </t>
+
+      <table anchor="tbl-purposes">
+        <name>Purposes of Authorization Evidence</name>
+        <thead>
+          <tr>
+            <th>Purpose</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Intent Provenance</td>
+            <td>
+              Records what the user intended, preventing disputes about 
+              authorization scope.
+            </td>
+          </tr>
+          <tr>
+            <td>Action Interpretation</td>
+            <td>
+              Documents how the system translated intent into operations, 
+              showing the reasoning process.
+            </td>
+          </tr>
+          <tr>
+            <td>Semantic Transparency</td>
+            <td>
+              Reveals any expansions or defaults applied, enabling users to 
+              understand what was authorized.
+            </td>
+          </tr>
+          <tr>
+            <td>User Confirmation</td>
+            <td>
+              Provides timestamped proof that the user reviewed and approved 
+              the operation.
+            </td>
+          </tr>
+          <tr>
+            <td>Accountability Support</td>
+            <td>
+              Enables post-hoc analysis to determine responsibility for 
+              erroneous transactions.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section anchor="as-processing" title="Authorization Server Processing">
+      <section title="Evidence Generation">
+        <t>
+          When issuing an access token with evidence, the AS MUST:
+        </t>
+
+        <ol>
+          <li>
+            Record the exact content displayed to the user during consent;
+          </li>
+          <li>
+            Capture the user's confirmation action and timestamp;
+          </li>
+          <li>
+            Generate a unique evidence identifier;
+          </li>
+          <li>
+            Sign the user_confirmation object with the AS's private key;
+          </li>
+          <li>
+            Include the evidence claim in the access token.
+          </li>
+        </ol>
+      </section>
+
+      <section title="Storage Requirements">
+        <t>
+          The AS SHOULD retain evidence records for a configurable period to support:
+        </t>
+
+        <ul>
+          <li>Dispute resolution;</li>
+          <li>Regulatory compliance;</li>
+          <li>Audit requests;</li>
+          <li>Token introspection with evidence details.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="rs-processing" title="Resource Server Processing">
+      <section title="Evidence Verification">
+        <t>
+          Resource Servers MAY verify the evidence claim by:
+        </t>
+
+        <ol>
+          <li>
+            Extracting the <tt>as_signature</tt> from the evidence;
+          </li>
+          <li>
+            Verifying the signature using the AS's public key;
+          </li>
+          <li>
+            Confirming the displayed_content matches the requested operation;
+          </li>
+          <li>
+            Checking the timestamp is within acceptable bounds.
+          </li>
+        </ol>
+      </section>
+
+      <section title="Audit Logging">
+        <t>
+          Resource Servers SHOULD log evidence information for audit purposes, 
+          including:
+        </t>
+
+        <ul>
+          <li>Evidence ID;</li>
+          <li>User confirmation timestamp;</li>
+          <li>Displayed content summary;</li>
+          <li>Operation performed;</li>
+          <li>Outcome (success/failure).</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <section title="Signature Verification">
+        <t>
+          The AS signature over user_confirmation is critical for evidence integrity. 
+          Implementations MUST:
+        </t>
+
+        <ul>
+          <li>Use strong cryptographic algorithms (e.g., RS256, ES256);</li>
+          <li>Protect AS signing keys appropriately;</li>
+          <li>Rotate keys periodically with proper key management.</li>
+        </ul>
+      </section>
+
+      <section title="Evidence Tampering">
+        <t>
+          The evidence claim is protected by the access token's signature. However, 
+          the <tt>as_signature</tt> field provides an additional layer of protection 
+          specifically for the user confirmation record.
+        </t>
+      </section>
+
+      <section title="Replay Attacks">
+        <t>
+          Evidence records are bound to specific access tokens. The evidence ID and 
+          timestamp help detect attempts to reuse evidence across different 
+          authorization contexts.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="privacy" title="Privacy Considerations">
+      <section title="Displayed Content">
+        <t>
+          The <tt>displayed_content</tt> field may contain sensitive information about 
+          the user's intent. Implementations SHOULD:
+        </t>
+
+        <ul>
+          <li>Minimize information in displayed_content to what is necessary;</li>
+          <li>Avoid including personal data unless required;</li>
+          <li>Consider encryption for highly sensitive content.</li>
+        </ul>
+      </section>
+
+      <section title="Evidence Retention">
+        <t>
+          Evidence records may be subject to data protection regulations. 
+          Implementations MUST:
+        </t>
+
+        <ul>
+          <li>Define retention periods appropriate to regulatory requirements;</li>
+          <li>Provide mechanisms for evidence deletion when required;</li>
+          <li>Limit access to evidence records to authorized parties.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="iana" title="IANA Considerations">
+      <section title="JWT Claims Registration">
+        <t>
+          This specification registers the following claims in the 
+          "JSON Web Token Claims" registry:
+        </t>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>evidence</dd>
+          <dt>Claim Description:</dt>
+          <dd>
+            User confirmation evidence with AS signature for authorization 
+            proof and audit purposes.
+          </dd>
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+          <dt>Specification Document:</dt>
+          <dd>Section 3 of this document</dd>
+        </dl>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>audit_trail</dd>
+          <dt>Claim Description:</dt>
+          <dd>
+            Semantic traceability metadata linking user intent to authorized 
+            operations.
+          </dd>
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+          <dt>Specification Document:</dt>
+          <dd>Section 4 of this document</dd>
+        </dl>
+      </section>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
+      </references>
+
+      <references>
+        <name>Informative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
+      </references>
+    </references>
+
+    <section title="Complete Example">
+      <t>
+        The following shows a complete access token with both evidence and 
+        audit_trail claims:
+      </t>
+
+      <figure>
+        <artwork name="Complete Access Token Example" type="json"><![CDATA[
+{
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-abc-123",
+  
+  "act": {
+    "sub": "spiffe://myassistant.example/agent"
+  },
+  
+  "evidence": {
+    "id": "evidence-abc123",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart during Nov 11 sale",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1731320595,
+      "interface_version": "consent-ui-v2.1"
+    },
+    "session_context": {
+      "session_id": "session_xyz789",
+      "client_instance": "dfp_abc123",
+      "channel": "mobile-app"
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+  },
+  
+  "audit_trail": {
+    "evidence_ref": "evidence-abc123",
+    "semantic_expansion_level": "medium",
+    "interpretation_notes": "User said 'cheap items', mapped to '$50 limit'",
+    "proposal_ref": "urn:uuid:proposal-xyz"
+  },
+  
+  "policy_ref": {
+    "id": "policy-cart-50",
+    "endpoint": "https://as.example.com/policies/policy-cart-50"
+  }
+}
+        ]]></artwork>
+      </figure>
+    </section>
+
+    <section title="Acknowledgments" numbered="false">
+      <t>
+        The authors would like to thank Brian Campbell for his valuable 
+        feedback and insightful discussions during the development of this 
+        specification. His contributions helped shape key design decisions.
+      </t>
+    </section>
+  </back>
+
+</rfc>

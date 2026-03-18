@@ -1,0 +1,863 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="rfc7991bis.rnc"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="info"
+  docName="draft-liu-ai-agent-authorization-integration-00"
+  ipr="trust200902"
+  submissionType="IETF"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title abbrev="AI Agent Authorization">AI Agent Authorization Integration Framework</title>
+    <seriesInfo name="Internet-Draft" value="draft-liu-ai-agent-authorization-integration-00"/>
+
+    <author fullname="Dapeng Liu" initials="D." surname="Liu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>max.ldp@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Hongru Zhu" initials="H." surname="Zhu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hongru.zhr@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Suresh Krishnan" initials="S." surname="Krishnan">
+      <organization>Cisco</organization>
+      <address>
+        <email>suresh.krishnan@gmail.com</email>
+      </address>
+    </author>
+
+    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
+      <organization>Okta</organization>
+      <address>
+        <email>aaron@parecki.com</email>
+      </address>
+    </author>
+
+    <date year="2026" month="March" day="17"/>
+    <area>Applications</area>
+    <workgroup></workgroup>
+
+    <keyword>AI Agent</keyword>
+    <keyword>Authorization</keyword>
+    <keyword>OAuth</keyword>
+    <keyword>Integration</keyword>
+
+    <abstract>
+      <t>
+        This document describes how to integrate multiple OAuth 2.0 extensions 
+        to enable secure authorization for AI agents acting on behalf of users. 
+        It combines cross-domain identity, policy-based authorization, user 
+        consent evidence, and multi-hop delegation into a cohesive framework 
+        for autonomous agent authorization.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>
+        AI agents increasingly need to access protected resources on behalf of 
+        users across different trust domains. Traditional OAuth 2.0 provides 
+        basic delegation mechanisms, but AI agent scenarios require additional 
+        capabilities:
+      </t>
+
+      <ul>
+        <li>Cross-domain user identity verification;</li>
+        <li>Fine-grained, policy-based authorization;</li>
+        <li>Verifiable user consent evidence;</li>
+        <li>Secure multi-agent delegation chains.</li>
+      </ul>
+
+      <t>
+        This document describes how to combine several OAuth 2.0 extensions into 
+        an integrated framework for AI agent authorization. It does not define 
+        new protocol mechanisms, but rather profiles existing specifications for 
+        this use case.
+      </t>
+
+      <section title="Component Specifications">
+        <t>
+          This framework integrates the following specifications:
+        </t>
+
+        <table anchor="tbl-components">
+          <name>Framework Components</name>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Specification</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Agent Authentication</td>
+              <td>draft-ietf-oauth-spiffe-client-auth</td>
+              <td>Agent workload identity via SPIFFE/WIT-SVID</td>
+            </tr>
+            <tr>
+              <td>User Identity</td>
+              <td>draft-liu-oauth-cross-domain-id-token-hint</td>
+              <td>Cross-domain user identity assertion</td>
+            </tr>
+            <tr>
+              <td>Policy Authorization</td>
+              <td>draft-liu-oauth-rego-policy</td>
+              <td>Fine-grained Rego policy support</td>
+            </tr>
+            <tr>
+              <td>Consent Evidence</td>
+              <td>draft-liu-oauth-authorization-evidence</td>
+              <td>User confirmation records</td>
+            </tr>
+            <tr>
+              <td>Multi-hop Delegation</td>
+              <td>draft-liu-oauth-chain-delegation</td>
+              <td>Agent-to-agent delegation chains</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+
+    <section anchor="authorization-model" title="Authorization Model: Policy vs Scope">
+      <t>
+        AOA uses a policy-based authorization model that replaces traditional OAuth 2.0 
+        scopes with fine-grained Rego policies. This section clarifies the relationship 
+        between scopes and policies in AOA.
+      </t>
+
+      <section title="Rego Policy as Primary Authorization Mechanism">
+        <t>
+          In AOA, the primary authorization mechanism is Rego policy, not OAuth 2.0 scopes. 
+          The <tt>policy_proposal</tt> and <tt>policy_ref</tt> claims defined in 
+          <xref target="I-D.liu-oauth-rego-policy"/> carry the authorization logic:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Authorization Request:</strong> Clients submit 
+            <tt>policy_proposal</tt> containing Rego policy that defines permitted 
+            operations (e.g., "allow add_to_cart if amount &lt;= 50").
+          </li>
+          <li>
+            <strong>Access Token:</strong> AS issues token with <tt>policy_ref</tt> 
+            referencing the registered policy.
+          </li>
+          <li>
+            <strong>Resource Server:</strong> RS evaluates the policy at runtime using 
+            OPA engine with request context.
+          </li>
+        </ul>
+
+        <t>
+          This approach enables dynamic, context-aware authorization that goes beyond 
+          static scope lists.
+        </t>
+      </section>
+
+      <section title="Scope as Optional Supplement">
+        <t>
+          Traditional OAuth 2.0 <tt>scope</tt> parameter is OPTIONAL in AOA and serves 
+          different purposes:
+        </t>
+
+        <ul>
+          <li>
+            <strong>When to use scope:</strong> For coarse-grained resource categorization 
+            (e.g., "read", "write") or backward compatibility with existing OAuth deployments.
+          </li>
+          <li>
+            <strong>When NOT to use scope:</strong> When fine-grained, conditional 
+            authorization is required. In this case, Rego policy provides all necessary 
+            authorization logic.
+          </li>
+          <li>
+            <strong>Relationship:</strong> If both scope and policy are present, the 
+            policy takes precedence. Scope acts as an outer boundary, while policy 
+            defines specific conditions.
+          </li>
+        </ul>
+
+        <figure>
+          <artwork name="Scope vs Policy" type=""><![CDATA[
++-----------------------------------------------------------+
+|  Authorization Boundary                                   |
++-----------------------------------------------------------+
+|  +-----------------------------------------------------+  |
+|  |  
+|  |                                                     |  |
+|  |  +-----------------------------------------------+  |  |
+|  |  |  Policy (Primary)                             |  |  |
+|  |  |  "allow if amount <= 50 AND time < 6pm"       |  |  |
+|  |  |  - Fine-grained conditions                    |  |  |
+|  |  +-----------------------------------------------+  |  |
+|  +-----------------------------------------------------+  |
++-----------------------------------------------------------+
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Complete Authorization Mechanism">
+        <t>
+          AOA's complete authorization mechanism comprises four integrated components:
+        </t>
+
+        <ol>
+          <li>
+            <strong>Cross-Domain Identity</strong> 
+            (<xref target="I-D.liu-oauth-cross-domain-id-token-hint"/>): 
+            Proves "who the user is" across trust domains.
+          </li>
+          <li>
+            <strong>Consent Evidence</strong> 
+            (<xref target="I-D.liu-oauth-authorization-evidence"/>): 
+            Provides cryptographic proof of "what the user agreed to".
+          </li>
+          <li>
+            <strong>Chain Delegation</strong> 
+            (<xref target="I-D.liu-oauth-chain-delegation"/>): 
+            Enables secure "agent-to-agent transfer" of authorization.
+          </li>
+          <li>
+            <strong>Rego Policy</strong> 
+            (<xref target="I-D.liu-oauth-rego-policy"/>): 
+            Defines "what operations are allowed" with fine-grained conditions.
+          </li>
+        </ol>
+
+        <t>
+          Together, these components provide end-to-end authorization for AI agents:
+        </t>
+
+        <figure>
+          <artwork name="AOA Authorization Stack" type=""><![CDATA[
++---------------------------------------------------------+
+|  Integration Framework (This Draft)                     |
+|  "How to combine all components"                        |
++---------------------------------------------------------+
+|  +-------------+  +-------------+  +-------------+      |
+|  |  Identity   |  |  Evidence   |  | Delegation  |      |
+|  |  (Who)      |  |  (What)     |  | (Transfer)  |      |
+|  +-------------+  +-------------+  +-------------+      |
+|                                                         |
+|  +---------------------------------------------------+  |
+|  |           Policy Engine (Rules)                   |  |
+|  |         "Under what conditions allow"             |  |
+|  +---------------------------------------------------+  |
++---------------------------------------------------------+
+|           OAuth 2.0 Core + PAR + OIDC                   |
++---------------------------------------------------------+
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+
+    <section anchor="architecture" title="Architecture">
+      <section title="Participants">
+        <figure>
+          <artwork name="Architecture Participants" type="ascii-art"><![CDATA[
++------------------+     +------------------+     +------------------+
+|    Home IdP      |     |   AI Agent       |     |   External AS    |
+|                  |     |                  |     |                  |
+| - User authn     |     | - SPIFFE identity|     | - Policy engine  |
+| - ID Token issue |     | - PAR client     |     | - Token issuance |
++------------------+     +------------------+     +------------------+
+        |                        |                        |
+        |   ID Token             |                        |
+        |----------------------->|                        |
+        |                        |                        |
+        |                        |   PAR + id_token_hint  |
+        |                        |----------------------->|
+        |                        |                        |
+        |                        |   Access Token         |
+        |                        |<-----------------------|
+        |                        |                        |
+        |                        |                  +------------------+
+        |                        |                  | Resource Server  |
+        |                        |                  |                  |
+        |                        |   API Request   | - Token validation|
+        |                        |---------------->| - OPA enforcement |
+        |                        |                  +------------------+
+          ]]></artwork>
+        </figure>
+
+        <dl>
+          <dt>Home Identity Provider (Home IdP):</dt>
+          <dd>
+            Authenticates the user and issues ID Tokens. This is the user's 
+            trusted identity service.
+          </dd>
+
+          <dt>AI Agent:</dt>
+          <dd>
+            An autonomous software agent acting on behalf of the user. Has its 
+            own workload identity (SPIFFE/WIT-SVID).
+          </dd>
+
+          <dt>External Authorization Server (AS):</dt>
+          <dd>
+            Issues access tokens for resources in its domain. Validates cross-domain 
+            identity and policy proposals.
+          </dd>
+
+          <dt>Resource Server (RS):</dt>
+          <dd>
+            Hosts protected resources. Validates access tokens and enforces 
+            policies using OPA.
+          </dd>
+        </dl>
+      </section>
+
+      <section title="Token Structure">
+        <t>
+          The framework uses JWT access tokens following OAuth 2.0 standards. 
+          Key claim semantics:
+        </t>
+
+        <ul>
+          <li>
+            <strong><tt>sub</tt> (Subject)</strong>: MUST contain the user's 
+            identifier at the Resource Application (third-party app), NOT the 
+            Agent's internal user identifier. This enables the Resource Server 
+            to immediately identify the resource owner without additional 
+            identity mapping lookups. The AS extracts this value from the 
+            <tt>third_party_binding.user_id</tt> claim in the 
+            <tt>id_token_hint</tt>.
+          </li>
+          <li>
+            <strong><tt>act</tt> (Actor)</strong>: Identifies the entity 
+            exercising delegated authority. Contains:</strong>
+            <ul>
+              <li>
+                <tt>sub</tt>: The Agent's WIT URI, identifying which agent is 
+                acting on behalf of the user;
+              </li>
+              <li>
+                <tt>agent_user_id</tt> (OPTIONAL): The user's identifier at the 
+                Agent system, enabling audit trail correlation at the Agent side.
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <figure>
+          <artwork name="Access Token Structure" type="json"><![CDATA[
+{
+  // Standard OAuth claims
+  "iss": "https://as.external.example",
+  "sub": "user_12345",                    // Resource App user ID
+  "aud": "https://api.external.example",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-abc-123",
+  
+  // Actor claim (RFC 8693) - identifies the agent acting on behalf of the user
+  "act": {
+    "sub": "wit://agent.example/sha256.abc123...",
+    "agent_user_id": "agent_user_001"     // Optional: for agent-side audit
+  },
+  
+  // Policy reference
+  "policy_ref": {
+    "id": "policy-abc123",
+    "endpoint": "https://as.external.example/policies/..."
+  },
+  
+  // User consent evidence
+  "evidence": {
+    "id": "evidence-xyz",
+    "user_confirmation": { ... },
+    "as_signature": "..."
+  },
+  
+  // Semantic traceability
+  "audit_trail": {
+    "evidence_ref": "evidence-xyz",
+    "semantic_expansion_level": "medium"
+  },
+  
+  // Delegation chain (if delegated)
+  "delegation_chain": [ ... ]
+}
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section anchor="workflow" title="Authorization Workflow">
+      <section title="Overview">
+        <figure>
+          <artwork name="Complete Authorization Flow" type="ascii-art"><![CDATA[
++-------+    +-------+    +--------+    +-------+    +-------+    +-----+
+| User  |    | Home  |    |  AI    |    |External    |  RS   |    | OPA |
+|       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
++-------+    +-------+    +--------+    +-------+    +-------+    +-----+
+    |            |             |            |            |           |
+(1) | Authn     |             |            |            |           |
+    |----------->|             |            |            |           |
+    |            |             |            |            |           |
+(2) |  ID Token (aud=agent)   |            |            |           |
+    |<------------------------->            |            |           |
+    |            |             |            |            |           |
+(3) |            |   Agent builds PAR:     |            |           |
+    |            |   - id_token_hint       |            |           |
+    |            |   - policy_proposal     |            |           |
+    |            |   - policy_context      |            |           |
+    |            |             |            |            |           |
+(4) |            |   PAR Request           |            |           |
+    |            |   + SPIFFE client auth  |            |           |
+    |            |             |----------->|            |           |
+    |            |             |            |            |           |
+(5) |            |             |  Validate: |            |           |
+    |            |             |  - SPIFFE  |            |           |
+    |            |             |  - ID Token|            |           |
+    |            |             |  - aud bind|            |           |
+    |            |             |  - policy  |            |           |
+    |            |             |            |            |           |
+(6) | Consent UI (via redirect or CIBA)    |            |           |
+    |<-------------------------------------|            |           |
+    |            |             |            |            |           |
+(7) | User confirms            |            |            |           |
+    |------------------------------------->|            |           |
+    |            |             |            |            |           |
+(8) |            |             |  Issue token with:     |           |
+    |            |             |  - act                 |           |
+    |            |             |  - policy_ref         |           |
+    |            |             |  - evidence           |           |
+    |            |             |<-----------|            |           |
+    |            |             |            |            |           |
+(9) |            |             | API Request|            |           |
+    |            |             |------------------------>|           |
+    |            |             |            |            |           |
+(10)|            |             |            |  Validate  |           |
+    |            |             |            |  token     |           |
+    |            |             |            |            |           |
+(11)|            |             |            |  Policy    |           |
+    |            |             |            |  eval      |---------->|
+    |            |             |            |            |           |
+(12)|            |             |            |  Decision  |           |
+    |            |             |            |            |<----------|
+    |            |             |            |            |           |
+(13)|            |             | Response   |            |           |
+    |            |             |<------------------------|           |
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Step-by-Step Description">
+        <ol>
+          <li>
+            <t><strong>User Authentication at Agent:</strong> User 
+            authenticates with the Agent's Identity Provider (IdP). 
+            The Agent's IdP issues an ID Token containing:</t>
+            <ul>
+              <li>
+                <tt>sub</tt>: The user's identifier at the Agent system 
+                (e.g., <tt>agent_user_001</tt>);
+              </li>
+              <li>
+                <tt>aud</tt>: The agent's SPIFFE ID, binding this token 
+                to the specific agent;
+              </li>
+              <li>
+                <tt>third_party_binding</tt> (OPTIONAL): If the user has 
+                completed OAuth login with a third-party Resource Application 
+                (e.g., shop.example), this claim asserts the user's identity 
+                at that application (e.g., <tt>user_12345</tt>). This enables 
+                lazy binding scenarios where users authenticate with third-party 
+                apps on-demand rather than pre-registering.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <t><strong>ID Token as id_token_hint:</strong> The Agent uses 
+            this ID Token as the <tt>id_token_hint</tt> parameter in the PAR 
+            request. The AS validates the Agent IdP's signature and extracts 
+            the user's Resource Application identity from the 
+            <tt>third_party_binding</tt> claim if present.</t>
+          </li>
+          <li>
+            <t>PAR Construction: Agent builds a PAR request including:</t>
+            <ul>
+              <li><tt>id_token_hint</tt>: The user's ID Token;</li>
+              <li><tt>policy_proposal</tt>: Rego policy defining operations;</li>
+              <li><tt>policy_context</tt>: Context data for policy evaluation.</li>
+            </ul>
+          </li>
+          <li>
+            <t>PAR Submission: Agent sends PAR to External AS with 
+            SPIFFE client authentication (WIT-SVID in headers).</t>
+          </li>
+          <li>
+            <t>AS Validation: AS validates:</t>
+            <ul>
+              <li>SPIFFE client credentials;</li>
+              <li>ID Token signature from Home IdP;</li>
+              <li>Audience binding (id_token_hint.aud == agent's SPIFFE ID);</li>
+              <li>Policy syntax and safety.</li>
+            </ul>
+          </li>
+          <li>
+            <t>User Consent: AS presents consent UI showing the 
+            interpreted operation (redirect or CIBA push).</t>
+          </li>
+          <li>
+            <t>User Confirmation: User reviews and approves the 
+            operation.</t>
+          </li>
+          <li>
+            <t>Token Issuance: AS issues access token containing:</t>
+            <ul>
+              <li><tt>act</tt>: Agent's SPIFFE ID;</li>
+              <li><tt>policy_ref</tt>: Reference to registered policy;</li>
+              <li><tt>evidence</tt>: Signed user confirmation record.</li>
+            </ul>
+          </li>
+          <li>
+            <t>API Request: Agent presents token to Resource Server.</t>
+          </li>
+          <li>
+            <t>Token Validation: RS validates token signature and claims.</t>
+          </li>
+          <li>
+            <t>Policy Evaluation: RS sends policy and request context 
+            to OPA.</t>
+          </li>
+          <li>
+            <t>Authorization Decision: OPA returns allow/deny decision.</t>
+          </li>
+          <li>
+            <t>Response: RS executes (or denies) the operation and 
+            returns response.</t>
+          </li>
+        </ol>
+      </section>
+    </section>
+
+    <section anchor="delegation" title="Agent-to-Agent Delegation">
+      <t>
+        When Agent A needs to delegate operations to Agent B, the framework 
+        extends the basic workflow:
+      </t>
+
+      <figure>
+        <artwork name="Delegation Flow" type="ascii-art"><![CDATA[
++---------+       +---------+       +--------+       +---------+
+| Agent A |       |   AS    |       | Agent B|       |   RS    |
++---------+       +---------+       +--------+       +---------+
+     |                 |                 |                |
+     | (has token)     |                 |                |
+     |                 |                 |                |
+     | Delegation PAR  |                 |                |
+     | - subject_token |                 |                |
+     | - Agent B creds |                 |                |
+     | - sub-scope     |                 |                |
+     |---------------->|                 |                |
+     |                 |                 |                |
+     |                 | Validate:       |                |
+     |                 | - Token A valid |                |
+     |                 | - Scope subset  |                |
+     |                 | - Agent B auth  |                |
+     |                 |                 |                |
+     |                 | Issue Token B   |                |
+     |                 | with delegation_chain            |
+     |                 |---------------->|                |
+     |                 |                 |                |
+     |                 |                 | API Request    |
+     |                 |                 |--------------->|
+     |                 |                 |                |
+     |                 |                 |     Validate   |
+     |                 |                 |     chain      |
+     |                 |                 |                |
+     |                 |                 | Response       |
+     |                 |                 |<---------------|
+        ]]></artwork>
+      </figure>
+
+      <t>
+        The resulting token for Agent B includes a <tt>delegation_chain</tt> 
+        recording the delegation hop, as defined in 
+        draft-liu-oauth-chain-delegation.
+      </t>
+    </section>
+
+    <section anchor="consent-modes" title="User Consent Modes">
+      <t>
+        The framework supports multiple consent mechanisms:
+      </t>
+
+      <section title="Redirect-Based Consent">
+        <t>
+          Traditional OAuth redirect flow where the agent redirects the user 
+          to the AS's consent page.
+        </t>
+      </section>
+
+      <section title="CIBA-Based Consent">
+        <t>
+          Client-Initiated Backchannel Authentication (CIBA) for out-of-band 
+          consent, useful when the agent cannot redirect the user.
+        </t>
+      </section>
+
+      <section title="Consent-Only Flow">
+        <t>
+          When the user has a valid, non-expired ID Token and the agent's 
+          identity is already trusted, the AS MAY skip re-authentication and 
+          only prompt for consent to the specific operation.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <section title="Trust Boundaries">
+        <t>
+          The framework establishes clear trust boundaries:
+        </t>
+
+        <ul>
+          <li>
+            Home IdP → Agent: ID Token with agent in audience;
+          </li>
+          <li>
+            Agent → External AS: SPIFFE authentication + ID Token hint;
+          </li>
+          <li>
+            External AS → RS: Signed access token with policy reference;
+          </li>
+          <li>
+            Delegation: AS-signed delegation chain entries.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Threat Mitigations">
+        <table anchor="tbl-threats">
+          <name>Threat Mitigations</name>
+          <thead>
+            <tr>
+              <th>Threat</th>
+              <th>Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Token substitution</td>
+              <td>Audience binding (id_token_hint.aud == agent ID)</td>
+            </tr>
+            <tr>
+              <td>Privilege escalation</td>
+              <td>Scope subset validation in delegation</td>
+            </tr>
+            <tr>
+              <td>Unauthorized actions</td>
+              <td>OPA policy enforcement at RS</td>
+            </tr>
+            <tr>
+              <td>Consent forgery</td>
+              <td>AS-signed evidence records</td>
+            </tr>
+            <tr>
+              <td>Delegation chain tampering</td>
+              <td>AS signature on each chain entry</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section title="LLM Threat Model">
+        <t>
+          This framework assumes the agent implementation (including authorization 
+          logic) is trusted, while the Large Language Model (LLM) used to derive 
+          operations is NOT trusted. The policy-based authorization ensures:
+        </t>
+
+        <ul>
+          <li>LLM cannot directly control authorization decisions;</li>
+          <li>All operations are bounded by user-approved policies;</li>
+          <li>Audit trails enable post-hoc verification.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="iana" title="IANA Considerations">
+      <t>
+        This document has no IANA actions. All claims and parameters are defined 
+        in the referenced component specifications.
+      </t>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+
+        <reference anchor="I-D.ietf-oauth-spiffe-client-auth">
+          <front>
+            <title>OAuth SPIFFE Client Authentication</title>
+            <author initials="A." surname="Schwenkschuster"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-spiffe-client-auth"/>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-cross-domain-id-token-hint">
+          <front>
+            <title>Cross-Domain ID Token Hint for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-cross-domain-id-token-hint"/>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-rego-policy">
+          <front>
+            <title>Rego Policy Language for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy"/>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-authorization-evidence">
+          <front>
+            <title>Authorization Evidence for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence"/>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-chain-delegation">
+          <front>
+            <title>Chain Delegation for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation"/>
+        </reference>
+
+        <reference anchor="I-D.ietf-oauth-transaction-tokens">
+          <front>
+            <title>Transaction Tokens</title>
+            <author initials="A." surname="Tulshibagwale"/>
+            <author initials="G." surname="Fletcher"/>
+            <author initials="P." surname="Kasselman"/>
+            <date year="2024"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-transaction-tokens"/>
+        </reference>
+      </references>
+
+      <references>
+        <name>Informative References</name>
+        <reference anchor="CIBA" target="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html">
+          <front>
+            <title>OpenID Connect CIBA Core</title>
+            <author>
+              <organization>OpenID Foundation</organization>
+            </author>
+            <date year="2021"/>
+          </front>
+        </reference>
+
+        <reference anchor="OPA" target="https://www.openpolicyagent.org/">
+          <front>
+            <title>Open Policy Agent</title>
+            <author>
+              <organization>CNCF</organization>
+            </author>
+            <date year="2024"/>
+          </front>
+        </reference>
+      </references>
+    </references>
+
+    <section title="Complete Example">
+      <section title="PAR Request">
+        <figure>
+          <artwork name="Complete PAR Request" type="http"><![CDATA[
+POST /par HTTP/1.1
+Host: as.shop.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
+OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
+
+client_id=spiffe://myassistant.example/agent
+&id_token_hint=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
+&redirect_uri=https://myassistant.example/callback
+&policy_proposal={"type":"rego","content":"package agent...","entry_point":"allow"}
+&policy_context={"user":{"id":"user_12345"},"action":"add_to_cart"}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Access Token">
+        <figure>
+          <artwork name="Complete Access Token" type="json"><![CDATA[
+{
+  "iss": "https://as.shop.example",
+  "sub": "user_12345",                    // Third-party app user ID
+  "aud": "https://api.shop.example",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-shop-123",
+  
+  "act": {
+    "sub": "wit://myassistant.example/sha256.xyz789...",
+    "agent_user_id": "agent_user_001"     // Optional: correlation at agent side
+  },
+  
+  "policy_ref": {
+    "id": "policy-cart-50",
+    "endpoint": "https://as.shop.example/policies/policy-cart-50"
+  },
+  
+  "evidence": {
+    "id": "evidence-consent-abc",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1731320595
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..."
+  }
+}
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section title="Acknowledgments" numbered="false">
+      <t>
+        The authors would like to thank Brian Campbell for his valuable 
+        feedback and insightful discussions on OAuth extension design. 
+        His contributions helped shape key aspects of this framework.
+      </t>
+    </section>
+  </back>
+
+</rfc>

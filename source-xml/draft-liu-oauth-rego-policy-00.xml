@@ -1,0 +1,977 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="rfc7991bis.rnc"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+
+<rfc
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  category="std"
+  docName="draft-liu-oauth-rego-policy-00"
+  ipr="trust200902"
+  submissionType="IETF"
+  xml:lang="en"
+  version="3">
+
+  <front>
+    <title abbrev="Rego Policy in OAuth">Rego Policy Language for OAuth 2.0 Authorization</title>
+    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
+
+    <author fullname="Dapeng Liu" initials="D." surname="Liu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>max.ldp@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Hongru Zhu" initials="H." surname="Zhu">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hongru.zhr@alibaba-inc.com</email>
+      </address>
+    </author>
+
+    <author fullname="Suresh Krishnan" initials="S." surname="Krishnan">
+      <organization>Cisco</organization>
+      <address>
+        <email>suresh.krishnan@gmail.com</email>
+      </address>
+    </author>
+
+    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
+      <organization>Okta</organization>
+      <address>
+        <email>aaron@parecki.com</email>
+      </address>
+    </author>
+
+    <date year="2026" month="March" day="17"/>
+    <area>Security</area>
+    <workgroup>Web Authorization Protocol</workgroup>
+
+    <keyword>OAuth</keyword>
+    <keyword>Rego</keyword>
+    <keyword>OPA</keyword>
+    <keyword>Policy</keyword>
+    <keyword>Authorization</keyword>
+
+    <abstract>
+      <t>
+        This specification defines how to use the Rego policy language in OAuth 2.0 
+        authorization flows. It introduces JWT claims for carrying policy proposals 
+        in authorization requests and policy references in access tokens, enabling 
+        fine-grained, dynamic authorization decisions that go beyond traditional 
+        scope-based access control.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>
+        Traditional OAuth 2.0 authorization relies on static scopes to define access 
+        permissions. While scopes work well for coarse-grained access control, they 
+        are insufficient for scenarios requiring dynamic, context-aware authorization 
+        decisions—particularly in AI agent systems where the permitted operations may 
+        depend on runtime conditions such as transaction amounts, time windows, or 
+        resource attributes.
+      </t>
+
+      <t>
+        This specification extends OAuth 2.0 to support the Rego policy language, 
+        as used by Open Policy Agent (OPA). Rego enables expressive, declarative 
+        policies that can encode complex authorization rules. By integrating Rego 
+        into OAuth flows, this specification enables:
+      </t>
+
+      <ul>
+        <li>Clients to propose fine-grained operation policies in authorization requests;</li>
+        <li>Authorization Servers to validate, register, and reference policies;</li>
+        <li>Resource Servers to enforce policies at runtime using OPA.</li>
+      </ul>
+
+      <section title="Requirements Language">
+        <t>
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", 
+          "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this 
+          document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> 
+          <xref target="RFC8174"/> when, and only when, they appear in all capitals.
+        </t>
+      </section>
+
+      <section title="Applicability">
+        <t>
+          While this specification is optimized for use with Pushed 
+          Authorization Requests (PAR) <xref target="RFC9126"/>, the 
+          policy proposal mechanism is designed to be general-purpose 
+          and MAY be used with various OAuth 2.0 authorization flows, 
+          including but not limited to:
+        </t>
+
+        <ul>
+          <li>
+            Authorization Code Grant (with or without PAR);
+          </li>
+          
+          <li>
+            Client Credentials Grant;
+          </li>
+          
+          <li>
+            Token Exchange <xref target="RFC8693"/>;
+          </li>
+          
+          <li>
+            Resource Owner Password Credentials Grant.
+          </li>
+        </ul>
+
+        <t>
+          Different authorization flows may have different security 
+          considerations when using policy proposals. Implementations 
+          SHOULD carefully evaluate the security implications discussed 
+          in Section 7 based on their specific deployment scenario.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="terminology" title="Terminology">
+      <dl>
+        <dt>Rego:</dt>
+        <dd>
+          A declarative policy language designed for Open Policy Agent (OPA). Rego 
+          policies define rules that evaluate to allow or deny decisions based on 
+          input data.
+        </dd>
+
+        <dt>Open Policy Agent (OPA):</dt>
+        <dd>
+          A general-purpose policy engine that evaluates Rego policies against 
+          structured input data.
+        </dd>
+
+        <dt>Policy Proposal:</dt>
+        <dd>
+          A Rego policy string submitted by a client in an authorization request, 
+          describing the operations the client wishes to perform.
+        </dd>
+
+        <dt>Policy Reference:</dt>
+        <dd>
+          An identifier for a policy that has been validated and registered by the 
+          Authorization Server, included in access tokens.
+        </dd>
+
+        <dt>Policy Context:</dt>
+        <dd>
+          Structured input data provided to OPA for policy evaluation, including 
+          user attributes, resource attributes, and environmental conditions.
+        </dd>
+      </dl>
+    </section>
+
+    <section anchor="claims" title="JWT Claims">
+      <t>
+        This specification defines the following JWT claims for Rego policy support:
+      </t>
+
+      <section anchor="policy-proposal-claim" title="policy_proposal Claim">
+        <t>
+          The <tt>policy_proposal</tt> claim carries a Rego policy string in 
+          authorization requests. It is used by clients to propose the operations 
+          they wish to perform.
+        </t>
+
+        <section title="Claim Definition">
+          <dl>
+            <dt>Claim Name:</dt>
+            <dd>policy_proposal</dd>
+
+            <dt>Claim Type:</dt>
+            <dd>Object</dd>
+
+            <dt>Usage:</dt>
+            <dd>Authorization requests (PAR)</dd>
+          </dl>
+        </section>
+
+        <section title="Structure">
+          <figure>
+            <artwork name="policy_proposal structure" type="json"><![CDATA[
+{
+  "policy_proposal": {
+    "type": "rego",
+    "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount <= 50.0\n}",
+    "entry_point": "allow"
+  }
+}
+            ]]></artwork>
+          </figure>
+
+          <t>Fields:</t>
+
+          <dl>
+            <dt>type:</dt>
+            <dd>
+              REQUIRED. The policy language type. MUST be "rego" for this specification. 
+              Future extensions MAY define additional types (e.g., "cel", "opa-bundle").
+            </dd>
+
+            <dt>content:</dt>
+            <dd>
+              REQUIRED (if uri not present). The Rego policy as a string. The policy 
+              MUST be syntactically valid Rego.
+            </dd>
+
+            <dt>uri:</dt>
+            <dd>
+              OPTIONAL. A URI reference to an externally hosted policy. If provided, 
+              the AS MAY fetch the policy from this location.
+            </dd>
+
+            <dt>entry_point:</dt>
+            <dd>
+              REQUIRED. The rule name that serves as the policy entry point. For 
+              authorization decisions, this MUST be "allow".
+            </dd>
+          </dl>
+        </section>
+
+        <section title="Policy Requirements">
+          <t>
+            Rego policies used with this specification MUST adhere to the following 
+            requirements:
+          </t>
+
+          <ol>
+            <li>
+              Entry Point: The policy MUST define an <tt>allow</tt> 
+              rule as the entry point. This rule MUST evaluate to a boolean value.
+            </li>
+            <li>
+              Package Declaration: The policy MUST include a package 
+              declaration. The recommended package name is "agent" or a domain-specific 
+              namespace.
+            </li>
+            <li>
+              Default Deny: The policy SHOULD include 
+              <tt>default allow = false</tt> to ensure deny-by-default behavior.
+            </li>
+            <li>
+              Input Reference: The policy accesses context data via 
+              the <tt>input</tt> object, which is populated by the policy_context claim.
+            </li>
+          </ol>
+
+          <figure>
+            <artwork name="Minimal Rego policy" type="rego"><![CDATA[
+package agent
+
+default allow = false
+
+allow {
+  # Authorization rules here
+  input.action == "read"
+  input.resource.owner == input.user.id
+}
+            ]]></artwork>
+          </figure>
+        </section>
+      </section>
+
+      <section anchor="policy-ref-claim" title="policy_ref Claim">
+        <t>
+          The <tt>policy_ref</tt> claim is included in access tokens to reference a 
+          policy that has been validated and registered by the Authorization Server.
+        </t>
+
+        <section title="Claim Definition">
+          <dl>
+            <dt>Claim Name:</dt>
+            <dd>policy_ref</dd>
+
+            <dt>Claim Type:</dt>
+            <dd>Object</dd>
+
+            <dt>Usage:</dt>
+            <dd>Access tokens</dd>
+          </dl>
+        </section>
+
+        <section title="Structure">
+          <figure>
+            <artwork name="policy_ref structure" type="json"><![CDATA[
+{
+  "policy_ref": {
+    "id": "policy-abc123",
+    "version": "1",
+    "hash": "sha256-2jmj7l5rSw0yVb_vlWAYkK_YBwk=",
+    "endpoint": "https://as.example.com/policies/policy-abc123"
+  }
+}
+            ]]></artwork>
+          </figure>
+
+          <dl>
+            <dt>id:</dt>
+            <dd>
+              REQUIRED. A unique identifier for the registered policy, assigned by 
+              the Authorization Server.
+            </dd>
+
+            <dt>version:</dt>
+            <dd>
+              OPTIONAL. The version of the policy. Useful for policy updates.
+            </dd>
+
+            <dt>hash:</dt>
+            <dd>
+              OPTIONAL. A cryptographic hash of the policy content using the format 
+              <tt>algorithm-base64value</tt> (e.g., "sha256-..."). When present, 
+              the Resource Server MUST verify that the fetched policy content matches 
+              this hash before evaluating the policy. This prevents tampering with 
+              policy content during transmission.
+            </dd>
+
+            <dt>endpoint:</dt>
+            <dd>
+              OPTIONAL. A URL where the Resource Server can fetch the full policy 
+              content if needed.
+            </dd>
+          </dl>
+        </section>
+      </section>
+
+      <section anchor="policy-context-claim" title="policy_context Claim">
+        <t>
+          The <tt>policy_context</tt> claim provides structured input data for policy 
+          evaluation. This data is passed to OPA as the <tt>input</tt> object.
+        </t>
+
+        <section title="Structure">
+          <figure>
+            <artwork name="policy_context structure" type="json"><![CDATA[
+{
+  "policy_context": {
+    "user": {
+      "id": "user_12345",
+      "roles": ["customer"],
+      "tier": "premium"
+    },
+    "agent": {
+      "id": "spiffe://myassistant.example/agent",
+      "platform": "personal-agent.myassistant.example",
+      "instance": "dfp_abc123",
+      "client": "mobile-app-v1.myassistant.example"
+    },
+    "environment": {
+      "channel": "mobile-app",
+      "time": "2026-03-01T10:30:00Z",
+      "location": "US",
+      "language": "zh-CN",
+      "device_fingerprint": "dfp_abc123"
+    }
+  }
+}
+            ]]></artwork>
+          </figure>
+
+          <t>
+            The structure of policy_context is flexible and can include any attributes 
+            relevant to policy evaluation. Common categories include:
+          </t>
+
+          <ul>
+            <li>user: User identity and attributes;</li>
+            <li>agent: Agent identity, platform, instance, and client metadata;</li>
+            <li>resource: Target resource attributes;</li>
+            <li>action: Requested action details;</li>
+            <li>environment: Contextual conditions (time, location, channel, language, device fingerprint).</li>
+          </ul>
+        </section>
+      </section>
+    </section>
+
+    <section anchor="protocol-flow" title="Protocol Flow">
+      <figure>
+        <artwork name="Rego Policy Flow" type="ascii-art"><![CDATA[
++--------+       +--------+       +--------+       +--------+
+| Client |       |   AS   |       |   RS   |       |  OPA   |
++--------+       +--------+       +--------+       +--------+
+    |                |                |                |
+    | (1) PAR with   |                |                |
+    | policy_proposal|                |                |
+    | policy_context |                |                |
+    |--------------->|                |                |
+    |                |                |                |
+    |                | (2) Validate   |                |
+    |                | policy syntax  |                |
+    |                |                |                |
+    |                | (3) Register   |                |
+    |                | policy         |                |
+    |                |                |                |
+    | (4) request_uri|                |                |
+    |<---------------|                |                |
+    |                |                |                |
+    | (5) Authorization flow          |                |
+    |<-------------->|                |                |
+    |                |                |                |
+    | (6) Access Token                |                |
+    | with policy_ref                 |                |
+    |<---------------|                |                |
+    |                |                |                |
+    | (7) API Request with token      |                |
+    |-------------------------------->|                |
+    |                |                |                |
+    |                |                | (8) Fetch      |
+    |                |                | policy         |
+    |                |                |--------------->|
+    |                |                |                |
+    |                |                | (9) Evaluate   |
+    |                |                | policy         |
+    |                |                |<---------------|
+    |                |                |                |
+    |                |                | (10) Enforce   |
+    |                |                | decision       |
+    |                |                |                |
+    | (11) Response  |                |                |
+    |<--------------------------------|                |
+        ]]></artwork>
+      </figure>
+
+      <section title="Step Details">
+        <ol>
+          <li>
+            Policy Proposal: Client sends PAR request with 
+            <tt>policy_proposal</tt> and <tt>policy_context</tt> claims.
+          </li>
+          <li>
+            Syntax Validation: AS validates that the Rego policy 
+            is syntactically correct and safe to execute.
+          </li>
+          <li>
+            Policy Registration: AS registers the policy and 
+            assigns a unique identifier.
+          </li>
+          <li>
+            Request URI: AS returns request_uri for authorization flow.
+          </li>
+          <li>
+            Authorization: User consent flow (if required).
+          </li>
+          <li>
+            Token Issuance: AS issues access token with 
+            <tt>policy_ref</tt> claim.
+          </li>
+          <li>
+            API Request: Client presents token to Resource Server.
+          </li>
+          <li>
+            Policy Fetch: RS retrieves the full policy from AS 
+            (if not cached).
+          </li>
+          <li>
+            Policy Evaluation: RS sends policy and input to OPA.
+          </li>
+          <li>
+            Enforcement: RS enforces OPA's allow/deny decision.
+          </li>
+          <li>
+            Response: RS returns result to client.
+          </li>
+        </ol>
+      </section>
+    </section>
+
+    <section anchor="as-processing" title="Authorization Server Processing">
+      <section title="Policy Validation">
+        <t>
+          Upon receiving a policy_proposal, the AS MUST perform the following 
+          validation steps:
+        </t>
+
+        <ol>
+          <li>
+            Syntax Check: Parse the Rego policy and verify it is 
+            syntactically valid.
+          </li>
+          <li>
+            Entry Point Check: Verify the policy defines an 
+            <tt>allow</tt> rule.
+          </li>
+          <li>
+            Safety Check: Ensure the policy does not contain 
+            dangerous operations (e.g., infinite loops, external HTTP calls in 
+            restricted environments).
+          </li>
+          <li>
+            Scope Check: Optionally verify the policy does not 
+            exceed the client's registered permissions.
+          </li>
+        </ol>
+      </section>
+
+      <section title="Policy Registration">
+        <t>
+          After validation, the AS registers the policy:
+        </t>
+
+        <ol>
+          <li>Assign a unique policy identifier;</li>
+          <li>Store the policy content (or reference);</li>
+          <li>Associate the policy with the authorization session;</li>
+          <li>Optionally, pre-compile the policy for faster evaluation.</li>
+        </ol>
+      </section>
+
+      <section title="Error Responses">
+        <t>
+          If policy validation fails, the AS MUST return an error:
+        </t>
+
+        <figure>
+          <artwork name="Policy Error Response" type="json"><![CDATA[
+{
+  "error": "invalid_request",
+  "error_description": "Invalid Rego policy: syntax error at line 5"
+}
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section anchor="rs-enforcement" title="Resource Server Enforcement">
+      <section title="Policy Retrieval">
+        <t>
+          When the RS receives an access token with a <tt>policy_ref</tt> claim, 
+          it retrieves the policy using one of the following methods:
+        </t>
+
+        <ul>
+          <li>
+            Fetch from AS: Use the <tt>endpoint</tt> URL in the 
+            policy_ref to retrieve the policy.
+          </li>
+          <li>
+            Local Cache: Use a cached copy if available and not 
+            expired.
+          </li>
+          <li>
+            Introspection: Include policy content in token 
+            introspection response.
+          </li>
+        </ul>
+      </section>
+
+      <section title="OPA Integration">
+        <t>
+          The RS evaluates the policy using OPA:
+        </t>
+
+        <figure>
+          <artwork name="OPA Query" type="json"><![CDATA[
+POST /v1/data/agent/allow HTTP/1.1
+Host: opa.example.com
+Content-Type: application/json
+
+{
+  "input": {
+    "user": {
+      "id": "user_12345",
+      "tier": "premium"
+    },
+    "action": "add_to_cart",
+    "resource": {
+      "type": "cart",
+      "id": "cart_789"
+    },
+    "amount": 45.00
+  }
+}
+          ]]></artwork>
+        </figure>
+
+        <figure>
+          <artwork name="OPA Response" type="json"><![CDATA[
+{
+  "result": true
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Enforcement Decision">
+        <t>
+          Based on OPA's response:
+        </t>
+
+        <ul>
+          <li>If <tt>result</tt> is <tt>true</tt>: Allow the operation;</li>
+          <li>If <tt>result</tt> is <tt>false</tt>: Deny with 403 Forbidden;</li>
+          <li>If evaluation fails: Deny with 500 Internal Server Error.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section anchor="multi-scenario" title="Applicability to Different Authorization Flows">
+      <t>
+        The policy proposal mechanism defined in this specification 
+        is designed to be flexible and applicable to various OAuth 2.0 
+        authorization flows. This section provides examples for common 
+        use cases beyond PAR.
+      </t>
+
+      <section title="Authorization Code Grant (without PAR)">
+        <t>
+          When using traditional authorization code grant without PAR,
+          the policy proposal and policy_context SHOULD be included in 
+          a JWT using the "request" parameter as defined in 
+          [RFC9101]. This mechanism, known as JWT-Secured Authorization 
+          Request (JAR), is specifically designed for redirect-based 
+          flows and provides integrity protection while maintaining 
+          consistency with the PAR mechanism.
+        </t>
+
+        <figure>
+          <artwork name="Auth Code with JWT Request" type="http"><![CDATA[
+GET /authorize?
+  response_type=code&
+  client_id=spiffe://agent.example/agent&
+  request=eyJhbGciOiJSUzI1NiIsImtpZCI6ImFnZW50LWtleSJ9.ewogICJyZXNwb25zZV90eXBlIjogImNvZGUiLAogICJjbGllbnRfaWQiOiAic3BpZmZlOi8vYWdlbnQuZXhhbXBsZS9hZ2VudCIsCiAgInBvbGljeV9wcm9wb3NhbCI6IHsidHlwZSI6ICJyZWdvIiwiY29udGVudCI6ICIuLi4iLCJlbnRyeV9wb2ludCI6ICJhbGxvdyJ9LAogICJwb2xpY3lfY29udGV4dCI6IHsuLi59LAogICJyZWRpcmVjdF91cmkiOiAiaHR0cHM6Ly9hZ2VudC5leGFtcGxlL2NhbGxiYWNrIiwKICAic3RhdGUiOiAieHl6MTIzIn0.signature&
+  state=xyz123 HTTP/1.1
+Host: as.example.com
+          ]]></artwork>
+        </figure>
+
+        <t>
+          The JWT payload (decoded) contains:
+        </t>
+
+        <figure>
+          <artwork name="JWT Request Payload" type="json"><![CDATA[
+{
+  "response_type": "code",
+  "client_id": "spiffe://agent.example/agent",
+  "policy_proposal": {
+    "type": "rego",
+    "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \\"read\\"\\n}",
+    "entry_point": "allow"
+  },
+  "policy_context": {
+    "user": {"id": "user_123"},
+    "agent": {"id": "spiffe://agent.example/agent"}
+  },
+  "redirect_uri": "https://agent.example/callback",
+  "state": "xyz123"
+}
+          ]]></artwork>
+        </figure>
+
+        <t>
+          Using the JWT request parameter provides the following 
+          benefits:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Integrity Protection:</strong> The JWT signature 
+            prevents tampering with the policy proposal and context;
+          </li>
+          
+          <li>
+            <strong>Privacy:</strong> Policy content is not exposed in 
+            URLs, server logs, or browser history;
+          </li>
+          
+          <li>
+            <strong>Consistency:</strong> Same structure as PAR, just 
+            different transport mechanism;
+          </li>
+          
+          <li>
+            <strong>No Length Limits:</strong> Avoids URL length 
+            restrictions that affect query parameters.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MUST validate the JWT signature before 
+          processing the policy proposal. The client's public key can 
+          be obtained through pre-registration or dynamic client 
+          registration.
+        </t>
+      </section>
+
+      <section title="Client Credentials Grant">
+        <t>
+          In machine-to-machine scenarios using client credentials, 
+          the policy proposal can be included in the token request:
+        </t>
+
+        <figure>
+          <artwork name="Client Credentials with Policy" type="http"><![CDATA[
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/json
+
+{
+  "grant_type": "client_credentials",
+  "client_id": "spiffe://agent.example/agent",
+  "client_secret": "...",
+  "policy_proposal": {
+    "type": "rego",
+    "content": "...",
+    "entry_point": "allow"
+  }
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Token Exchange (RFC 8693)">
+        <t>
+          When exchanging tokens, a new policy proposal can be 
+          provided to refine or extend the authorized operations:
+        </t>
+
+        <figure>
+          <artwork name="Token Exchange with Policy" type="http"><![CDATA[
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+&subject_token=eyJhbGciOiJSUzI1NiJ9...
+&policy_proposal={"type":"rego","content":"...","entry_point":"allow"}
+          ]]></artwork>
+        </figure>
+
+        <t>
+          The resulting access token will include both the original 
+          permissions and the new policy constraints.
+        </t>
+      </section>
+
+      <section title="Security Considerations by Flow">
+        <t>
+          Different authorization flows have different security 
+          characteristics when using policy proposals:
+        </t>
+
+        <dl>
+          <dt>PAR (Recommended):</dt>
+          <dd>
+            Full JWT signature validation before authorization 
+            begins. Highest security.
+          </dd>
+
+          <dt>Authorization Code:</dt>
+          <dd>
+            Policy transmitted in URL; MUST use HTTPS and consider 
+            signing to prevent tampering.
+          </dd>
+
+          <dt>Client Credentials:</dt>
+          <dd>
+            Direct AS communication; standard TLS and client auth 
+            usually sufficient.
+          </dd>
+
+          <dt>Token Exchange:</dt>
+          <dd>
+            Similar to PAR; ensure policy binding to exchanged token.
+          </dd>
+        </dl>
+      </section>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <section title="Policy Injection">
+        <t>
+          Rego policies submitted by clients are executable code. The AS MUST:
+        </t>
+
+        <ul>
+          <li>Validate policy syntax before registration;</li>
+          <li>Execute policies in sandboxed environments;</li>
+          <li>Limit policy execution time and resource usage;</li>
+          <li>Restrict dangerous built-in functions (e.g., http.send).</li>
+        </ul>
+      </section>
+
+      <section title="Policy Scope Escalation">
+        <t>
+          Clients MUST NOT be able to propose policies that exceed their registered 
+          permissions. The AS SHOULD maintain policy templates or scope hierarchies 
+          to enforce this.
+        </t>
+      </section>
+
+      <section title="Policy Integrity">
+        <t>
+          The policy_ref in access tokens MUST reference policies stored securely 
+          by the AS. Resource Servers MUST fetch policies only from trusted sources.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="iana" title="IANA Considerations">
+      <section title="JWT Claims Registration">
+        <t>
+          This specification registers the following claims in the 
+          "JSON Web Token Claims" registry:
+        </t>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>policy_proposal</dd>
+          <dt>Claim Description:</dt>
+          <dd>
+            A Rego policy proposed by a client for authorization evaluation.
+          </dd>
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+          <dt>Specification Document:</dt>
+          <dd>Section 3.1 of this document</dd>
+        </dl>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>policy_ref</dd>
+          <dt>Claim Description:</dt>
+          <dd>
+            A reference to a registered policy in access tokens.
+          </dd>
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+          <dt>Specification Document:</dt>
+          <dd>Section 3.2 of this document</dd>
+        </dl>
+
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>policy_context</dd>
+          <dt>Claim Description:</dt>
+          <dd>
+            Structured input data for policy evaluation.
+          </dd>
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+          <dt>Specification Document:</dt>
+          <dd>Section 3.3 of this document</dd>
+        </dl>
+      </section>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+      <references>
+        <name>Normative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+      </references>
+
+      <references>
+        <name>Informative References</name>
+        <reference anchor="OPA" target="https://www.openpolicyagent.org/">
+          <front>
+            <title>Open Policy Agent</title>
+            <author>
+              <organization>Cloud Native Computing Foundation</organization>
+            </author>
+            <date year="2024"/>
+          </front>
+        </reference>
+
+        <reference anchor="Rego" target="https://www.openpolicyagent.org/docs/latest/policy-language/">
+          <front>
+            <title>Rego Policy Language</title>
+            <author>
+              <organization>Open Policy Agent</organization>
+            </author>
+            <date year="2024"/>
+          </front>
+        </reference>
+      </references>
+    </references>
+
+    <section title="Example Policies">
+      <section title="Amount-Based Authorization">
+        <figure>
+          <artwork name="Amount policy" type="rego"><![CDATA[
+package agent
+
+default allow = false
+
+# Allow transactions up to $50
+allow {
+  input.action == "purchase"
+  input.amount <= 50.0
+}
+
+# Allow cart modifications without amount limit
+allow {
+  input.action == "add_to_cart"
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Time-Window Authorization">
+        <figure>
+          <artwork name="Time window policy" type="rego"><![CDATA[
+package agent
+
+default allow = false
+
+# Allow during business hours
+allow {
+  input.action == "submit_order"
+  time.clock(time.now_ns())[0] >= 9
+  time.clock(time.now_ns())[0] < 18
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Role-Based Authorization">
+        <figure>
+          <artwork name="Role-based policy" type="rego"><![CDATA[
+package agent
+
+default allow = false
+
+# Premium users can access all features
+allow {
+  input.user.tier == "premium"
+}
+
+# Standard users limited to basic actions
+allow {
+  input.user.tier == "standard"
+  input.action == "read"
+}
+          ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section title="Acknowledgments" numbered="false">
+      <t>
+        The authors would like to thank Brian Campbell for his valuable 
+        feedback and insightful discussions during the development of this 
+        specification. His contributions helped shape key design decisions.
+      </t>
+    </section>
+  </back>
+
+</rfc>

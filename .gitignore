@@ -1,0 +1,21 @@
+# Build artifacts
+output/
+*.html
+*.txt
+
+# Editor files
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
