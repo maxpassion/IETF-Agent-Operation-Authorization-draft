@@ -39,17 +39,17 @@ jobs:
     
     - name: Verify artifacts
       run: |
-        ls -lh output/html/
-        ls -lh output/txt/ || true
+        ls -lh drafts/html/
+        ls -lh drafts/txt/ || true
     
     - name: Upload HTML artifacts
       uses: actions/upload-artifact@v4
       with:
         name: html-drafts
-        path: output/html/*.html
+        path: drafts/html/*.html
     
     - name: Upload TXT artifacts
       uses: actions/upload-artifact@v4
       with:
         name: txt-drafts
-        path: output/txt/*.txt
+        path: drafts/txt/*.txt
