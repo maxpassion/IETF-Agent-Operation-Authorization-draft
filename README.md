@@ -12,7 +12,7 @@ The AOA (Agent Operation Authorization) framework provides standardized protocol
 The AOA framework consists of multiple interconnected IETF drafts, each addressing specific aspects of agent authorization:
 
 | # | Draft Name | Purpose |
-|---|------------|---------||
+|---|------------|---------|
 | 1 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Cross-domain user identity binding via ID tokens |
 | 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy-based authorization using Rego language |
 | 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Defines evidence requirements for OAuth authorization decisions |
