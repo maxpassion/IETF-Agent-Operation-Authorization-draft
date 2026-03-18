@@ -11,13 +11,13 @@ The AOA (Agent Operation Authorization) framework provides standardized protocol
 
 The AOA framework consists of multiple interconnected IETF drafts, each addressing specific aspects of agent authorization:
 
-| # | Draft Name | Category | Purpose |
-|---|------------|----------|---------||
-| 1 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Identity Binding | Cross-domain user identity binding via ID tokens |
-| 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy Engine | Policy-based authorization using Rego language |
-| 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Foundation | Defines evidence requirements for OAuth authorization decisions |
-| 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Core Protocol | Multi-hop delegation with cryptographic binding |
-| 5 | [AI Agent Authorization Integration](#5-ai-agent-authorization-integration) | Integration | Integrates all mechanisms for AI agent scenarios |
+| # | Draft Name | Purpose |
+|---|------------|---------||
+| 1 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Cross-domain user identity binding via ID tokens |
+| 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy-based authorization using Rego language |
+| 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Defines evidence requirements for OAuth authorization decisions |
+| 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Multi-hop delegation with cryptographic binding |
+| 5 | [AI Agent Authorization Integration](#5-ai-agent-authorization-integration) | Integrates all mechanisms for AI agent scenarios |
 
 
 
