@@ -34,7 +34,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-cross-domain-id-token-hint-00.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/tree/main/source-xml/draft-liu-oauth-cross-domain-id-token-hint-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-cross-domain-id-token-hint-00.xml
 
 **Purpose**: Provides cross-domain identity binding mechanism using ID Token hints, enabling seamless user identity mapping across different trust domains during agent-mediated interactions.
 
@@ -46,7 +46,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-rego-policy-00.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/tree/main/source-xml/draft-liu-oauth-rego-policy-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-rego-policy-00.xml
 
 **Purpose**: Integrates Open Policy Agent (OPA) Rego language for flexible, declarative policy evaluation in OAuth authorization servers. Supports complex authorization logic including evidence validation and delegation chain verification.
 
@@ -58,7 +58,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-authorization-evidence-00.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/tree/main/source-xml/draft-liu-oauth-authorization-evidence-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-authorization-evidence-00.xml
 
 **Purpose**: Defines the foundational evidence types required for making informed authorization decisions in agent-to-agent interactions. Establishes the base layer for trust establishment.
 
@@ -70,7 +70,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-chain-delegation-00.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/tree/main/source-xml/draft-liu-oauth-chain-delegation-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-chain-delegation-00.xml
 
 **Purpose**: Enables secure multi-hop delegation chains with cryptographic binding between each hop. Extends OAuth 2.0 to support transitive authorization relationships in agent ecosystems.
 
@@ -82,7 +82,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-ai-agent-authorization-integration-00.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/tree/main/source-xml/draft-liu-ai-agent-authorization-integration-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-ai-agent-authorization-integration-00.xml
 
 **Purpose**: Comprehensive integration framework that combines all AOA mechanisms for AI agent authorization scenarios. This is the top-level specification that orchestrates evidence collection, chain delegation, cross-domain identity binding, and policy enforcement.
 
