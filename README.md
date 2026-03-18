@@ -2,12 +2,12 @@
 
 Agent Operation Authorization (AOA) specification drafts for IETF standardization.
 
-## 📚 Background
+## Background
 
 The AOA (Agent Operation Authorization) framework provides standardized protocols for agent-to-agent authorization in OAuth 2.0 ecosystems. These drafts address emerging security requirements for AI agent interactions, cross-domain delegation, and cryptographic evidence binding.
 
 
-## 📚 Draft Relationships Overview
+## Draft Relationships Overview
 
 The AOA framework consists of multiple interconnected IETF drafts, each addressing specific aspects of agent authorization:
 
@@ -23,7 +23,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ---
 
-## 📄 Available Drafts
+## Available Drafts
 
 
 ---
