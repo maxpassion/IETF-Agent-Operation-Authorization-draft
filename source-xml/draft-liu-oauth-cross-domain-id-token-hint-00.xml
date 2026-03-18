@@ -367,6 +367,7 @@ client_id=spiffe://myassistant.example/agent
           the user's identity at the Resource Application.
         </t>
 
+        <t>
           WIT-SVID's <tt>sub</tt> claim), binding this ID Token to the specific agent:
         </t>
 

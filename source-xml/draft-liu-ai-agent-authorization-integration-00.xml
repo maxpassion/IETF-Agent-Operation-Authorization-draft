@@ -343,8 +343,10 @@
             <tt>id_token_hint</tt>.
           </li>
           <li>
-            <strong><tt>act</tt> (Actor)</strong>: Identifies the entity 
-            exercising delegated authority. Contains:</strong>
+            <t>
+              <strong><tt>act</tt> (Actor)</strong>: Identifies the entity 
+              exercising delegated authority. Contains:
+            </t>
             <ul>
               <li>
                 <tt>sub</tt>: The Agent's WIT URI, identifying which agent is 
