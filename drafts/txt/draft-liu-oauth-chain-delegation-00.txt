@@ -1,0 +1,1232 @@
+
+
+
+
+Web Authorization Protocol                                        D. Liu
+Internet-Draft                                                    H. Zhu
+Intended status: Standards Track                           Alibaba Group
+Expires: 18 September 2026                                   S. Krishnan
+                                                                   Cisco
+                                                              A. Parecki
+                                                                    Okta
+                                                           17 March 2026
+
+
+              Chain Delegation for OAuth 2.0 Access Tokens
+                  draft-liu-oauth-chain-delegation-00
+
+Abstract
+
+   This specification defines the delegation_chain JWT claim for OAuth
+   2.0 access tokens, enabling secure multi-hop delegation in agent-to-
+   agent scenarios.  It provides a cryptographically verifiable chain of
+   delegation events, ensuring end-to-end auditability and preventing
+   privilege escalation across delegation hops.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 18 September 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 1]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   3
+       1.1.1.  Applicability . . . . . . . . . . . . . . . . . . . .   3
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   3.  The delegation_chain Claim  . . . . . . . . . . . . . . . . .   4
+     3.1.  Claim Definition  . . . . . . . . . . . . . . . . . . . .   4
+     3.2.  Structure . . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.3.  Delegation Lifecycle  . . . . . . . . . . . . . . . . . .   5
+     3.4.  Field Definitions . . . . . . . . . . . . . . . . . . . .   6
+     3.5.  Chain Ordering  . . . . . . . . . . . . . . . . . . . . .   9
+   4.  Delegation Protocol Flow  . . . . . . . . . . . . . . . . . .   9
+     4.1.  Step 1-4: Initial Authorization . . . . . . . . . . . . .  10
+     4.2.  Step 5: Delegation Request (PAR)  . . . . . . . . . . . .  11
+     4.3.  Step 6: AS Validation . . . . . . . . . . . . . . . . . .  11
+     4.4.  Step 7: Token Issuance  . . . . . . . . . . . . . . . . .  12
+   5.  Chain Extension . . . . . . . . . . . . . . . . . . . . . . .  12
+     5.1.  For First Delegation  . . . . . . . . . . . . . . . . . .  12
+     5.2.  For Subsequent Delegations  . . . . . . . . . . . . . . .  13
+   6.  Resource Server Validation  . . . . . . . . . . . . . . . . .  14
+     6.1.  Signature Verification  . . . . . . . . . . . . . . . . .  14
+     6.2.  Root Authorization Anchor . . . . . . . . . . . . . . . .  15
+     6.3.  Dual-Signature Verification . . . . . . . . . . . . . . .  15
+     6.4.  WIT Status Validation . . . . . . . . . . . . . . . . . .  15
+     6.5.  Chain Continuity  . . . . . . . . . . . . . . . . . . . .  16
+     6.6.  Scope Validation  . . . . . . . . . . . . . . . . . . . .  16
+   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  16
+     7.1.  Privilege Escalation Prevention . . . . . . . . . . . . .  16
+     7.2.  Chain Integrity . . . . . . . . . . . . . . . . . . . . .  16
+     7.3.  Token Binding . . . . . . . . . . . . . . . . . . . . . .  17
+     7.4.  Delegation Depth Limits . . . . . . . . . . . . . . . . .  17
+   8.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  17
+     8.1.  JWT Claims Registration . . . . . . . . . . . . . . . . .  17
+   9.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  17
+     9.1.  Normative References  . . . . . . . . . . . . . . . . . .  17
+     9.2.  Informative References  . . . . . . . . . . . . . . . . .  18
+   Appendix A.  Complete Multi-Hop Example . . . . . . . . . . . . .  18
+   Appendix B.  Validation Mechanism . . . . . . . . . . . . . . . .  20
+     B.1.  Token Structure . . . . . . . . . . . . . . . . . . . . .  20
+     B.2.  Verification Requirements . . . . . . . . . . . . . . . .  21
+     B.3.  Security Considerations . . . . . . . . . . . . . . . . .  21
+     B.4.  Comparison with OAuth Identity Chaining . . . . . . . . .  21
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  22
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 2]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+1.  Introduction
+
+   In multi-agent systems, a primary agent (Agent A) may need to
+   delegate a subset of its authorized operations to a secondary agent
+   (Agent B).  While RFC 8693 Token Exchange provides mechanisms for
+   delegation, it does not define how to maintain a verifiable chain of
+   delegation events across multiple hops.
+
+   This specification introduces the delegation_chain claim, which:
+
+   *  Records each delegation hop with cryptographic signatures;
+
+   *  Preserves end-to-end auditability back to the original human
+      principal;
+
+   *  Prevents privilege escalation beyond the original authorization
+      scope;
+
+   *  Enables Resource Servers to validate the complete delegation
+      lineage.
+
+   This specification complements the act claim defined in [RFC8693] by
+   providing detailed delegation history, while act identifies the
+   immediate actor.
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals.
+
+1.1.1.  Applicability
+
+   While this specification is optimized for use with Pushed
+   Authorization Requests (PAR) [RFC9126], the mechanism defined herein
+   is designed to be general-purpose and MAY be used with various OAuth
+   2.0 authorization flows, including but not limited to:
+
+   *  Authorization Code Grant (with or without PAR);
+
+   *  Client Credentials Grant;
+
+   *  Token Exchange [RFC8693];
+
+   *  Resource Owner Password Credentials Grant.
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 3]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   Different authorization flows may have different security
+   considerations when using this specification.  Implementations SHOULD
+   carefully evaluate the security implications based on their specific
+   deployment scenario.
+
+2.  Terminology
+
+   Delegator:  An agent that transfers a subset of its authorization to
+      another agent.
+
+   Delegatee:  An agent that receives delegated authorization from a
+      delegator.
+
+   Delegation Hop:  A single transfer of authorization from one agent to
+      another.
+
+   Delegation Chain:  An ordered sequence of delegation hops from the
+      most recent back to the original authorization.
+
+   Root Authorization:  The original authorization granted by a human
+      principal, from which all delegations derive.
+
+3.  The delegation_chain Claim
+
+3.1.  Claim Definition
+
+   Claim Name:  delegation_chain
+
+   Claim Type:  Array of Objects
+
+   Usage:  Access tokens (JWT format)
+
+   Specification:  RFC 7519 (JWT)
+
+3.2.  Structure
+
+   The delegation_chain is an ordered array of delegation records, from
+   most recent to earliest.  Each record represents one delegation hop.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 4]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate inventory check for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+
+                               Figure 1
+
+3.3.  Delegation Lifecycle
+
+   A delegation record transitions through three phases during its
+   lifecycle:
+
+   1.  *Delegation Proposal Phase:* The delegating agent creates a
+       delegation proposal that includes the delegated policy, delegatee
+       identity, and operation context.  This phase corresponds to the
+       policy creation process defined in [I-D.ietf-oauth-rego-policy].
+
+   2.  *Delegation Enforcement Phase:* The Authorization Server
+       validates the delegation request, verifies user identity (using
+       id_token_hint as defined in [I-D.ietf-oauth-cross-domain-id-
+       token-hint] for the first delegation), and signs the delegation
+       record upon successful validation.
+
+   3.  *Chain Propagation Phase:* The signed delegation record is
+       embedded into an access token's delegation_chain claim, enabling
+       multi-hop propagation across trust domains.
+
+   This three-phase model ensures cryptographic binding between user
+   authorization, agent identity, and policy constraints throughout the
+   delegation chain.
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 5]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+3.4.  Field Definitions
+
+   +======================+===========+=============+==================+
+   | Field                |Type       | Requirement | Description      |
+   +======================+===========+=============+==================+
+   | delegator_wit        |string     | REQUIRED    | Workload         |
+   |                      |           |             | Identity Token   |
+   |                      |           |             | (WIT) of the     |
+   |                      |           |             | delegating       |
+   |                      |           |             | agent.           |
+   +----------------------+-----------+-------------+------------------+
+   | delegatee_sub        |string     | REQUIRED    | Subject          |
+   |                      |           |             | identifier of    |
+   |                      |           |             | the receiving    |
+   |                      |           |             | agent.           |
+   +----------------------+-----------+-------------+------------------+
+   | delegation_timestamp |NumericDate| REQUIRED    | When this        |
+   |                      |           |             | delegation was   |
+   |                      |           |             | authorized.      |
+   +----------------------+-----------+-------------+------------------+
+   | delegated_policy     |object     | OPTIONAL    | A subset of the  |
+   |                      |           |             | delegator's      |
+   |                      |           |             | authorized       |
+   |                      |           |             | policy that is   |
+   |                      |           |             | being delegated  |
+   |                      |           |             | to the           |
+   |                      |           |             | delegatee.       |
+   |                      |           |             | This field       |
+   |                      |           |             | SHOULD follow    |
+   |                      |           |             | the structure    |
+   |                      |           |             | defined in [I-   |
+   |                      |           |             | D.ietf-oauth-    |
+   |                      |           |             | rego-policy].    |
+   |                      |           |             | The delegated    |
+   |                      |           |             | policy MUST be   |
+   |                      |           |             | equal to or      |
+   |                      |           |             | more             |
+   |                      |           |             | restrictive      |
+   |                      |           |             | than the         |
+   |                      |           |             | delegator's      |
+   |                      |           |             | policy.  Policy  |
+   |                      |           |             | permission       |
+   |                      |           |             | expansion is     |
+   |                      |           |             | NOT allowed.     |
+   +----------------------+-----------+-------------+------------------+
+   | operation_summary    |string     | OPTIONAL    | Human-readable   |
+   |                      |           |             | description of   |
+   |                      |           |             | delegated        |
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 6]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   |                      |           |             | operation.       |
+   +----------------------+-----------+-------------+------------------+
+   | root_evidence_ref    |string     | OPTIONAL    | Reference to     |
+   |                      |           |             | the root         |
+   |                      |           |             | authorization    |
+   |                      |           |             | evidence record  |
+   |                      |           |             | as defined in    |
+   |                      |           |             | the              |
+   |                      |           |             | authorization    |
+   |                      |           |             | evidence         |
+   |                      |           |             | specification.   |
+   |                      |           |             | This field MUST  |
+   |                      |           |             | be present for   |
+   |                      |           |             | the first        |
+   |                      |           |             | delegation       |
+   |                      |           |             | (User → Agent    |
+   |                      |           |             | A) and SHOULD    |
+   |                      |           |             | be propagated    |
+   |                      |           |             | through the      |
+   |                      |           |             | chain.  The      |
+   |                      |           |             | value SHOULD     |
+   |                      |           |             | match the        |
+   |                      |           |             | evidence.id      |
+   |                      |           |             | from the root    |
+   |                      |           |             | token.           |
+   +----------------------+-----------+-------------+------------------+
+   | delegator_signature  |string     | RECOMMENDED | Cryptographic    |
+   |                      |           |             | signature from   |
+   |                      |           |             | the delegating   |
+   |                      |           |             | agent's private  |
+   |                      |           |             | key over this    |
+   |                      |           |             | delegation       |
+   |                      |           |             | record.  This    |
+   |                      |           |             | provides dual-   |
+   |                      |           |             | signature        |
+   |                      |           |             | security         |
+   |                      |           |             | alongside        |
+   |                      |           |             | as_signature,    |
+   |                      |           |             | preventing       |
+   |                      |           |             | malicious AS     |
+   |                      |           |             | from forging     |
+   |                      |           |             | unauthorized     |
+   |                      |           |             | delegations and  |
+   |                      |           |             | ensuring non-    |
+   |                      |           |             | repudiation.     |
+   +----------------------+-----------+-------------+------------------+
+   | root_evidence_ref    |string     | OPTIONAL    | Reference to     |
+   |                      |           |             | the root         |
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 7]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   |                      |           |             | authorization    |
+   |                      |           |             | evidence record  |
+   |                      |           |             | as defined in    |
+   |                      |           |             | the              |
+   |                      |           |             | authorization    |
+   |                      |           |             | evidence         |
+   |                      |           |             | specification.   |
+   |                      |           |             | This field MUST  |
+   |                      |           |             | be present for   |
+   |                      |           |             | the first        |
+   |                      |           |             | delegation       |
+   |                      |           |             | (User → Agent    |
+   |                      |           |             | A) and SHOULD    |
+   |                      |           |             | be propagated    |
+   |                      |           |             | through the      |
+   |                      |           |             | chain.  The      |
+   |                      |           |             | value SHOULD     |
+   |                      |           |             | match the        |
+   |                      |           |             | evidence.id      |
+   |                      |           |             | from the root    |
+   |                      |           |             | token.           |
+   +----------------------+-----------+-------------+------------------+
+   | delegator_signature  |string     | RECOMMENDED | Cryptographic    |
+   |                      |           |             | signature from   |
+   |                      |           |             | the delegating   |
+   |                      |           |             | agent's private  |
+   |                      |           |             | key over this    |
+   |                      |           |             | delegation       |
+   |                      |           |             | record.  This    |
+   |                      |           |             | provides dual-   |
+   |                      |           |             | signature        |
+   |                      |           |             | security         |
+   |                      |           |             | alongside        |
+   |                      |           |             | as_signature,    |
+   |                      |           |             | preventing       |
+   |                      |           |             | malicious AS     |
+   |                      |           |             | from forging     |
+   |                      |           |             | unauthorized     |
+   |                      |           |             | delegations and  |
+   |                      |           |             | ensuring non-    |
+   |                      |           |             | repudiation.     |
+   +----------------------+-----------+-------------+------------------+
+   | as_signature         |string     | REQUIRED    | AS signature     |
+   |                      |           |             | over this        |
+   |                      |           |             | delegation       |
+   |                      |           |             | record.          |
+   +----------------------+-----------+-------------+------------------+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 8]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+                  Table 1: delegation_chain Record Fields
+
+   Both as_signature and delegator_signature MUST be computed over the
+   same set of fields using JSON Canonicalization Scheme (JCS) as
+   defined in RFC 8785:
+
+   *  delegator_wit
+
+   *  delegatee_sub
+
+   *  delegation_timestamp
+
+   *  delegated_policy (if present)
+
+   *  operation_summary (if present)
+
+   *  root_evidence_ref (if present)
+
+   Both signature fields MUST be excluded from their respective
+   signature computations.  The signatures MUST use detached JWS format
+   with appropriate algorithm identifiers.
+
+   The delegator_signature uses the delegating agent's WIT-bound private
+   key, while as_signature uses the Authorization Server's signing key.
+   This dual-signature approach ensures:
+
+   *  *Malicious AS Prevention:* A compromised AS cannot unilaterally
+      forge delegations without the delegator's consent;
+
+   *  *Non-Repudiation:* The delegator cannot deny having authorized the
+      delegation;
+
+   *  *Complete Trust Chain:* User → AS → Delegator → Delegatee.
+
+3.5.  Chain Ordering
+
+   The array MUST be ordered from most recent delegation to earliest:
+
+   *  Index 0: Most recent delegation (delegator → current token holder)
+
+   *  Index N: Earliest delegation (first agent after human
+      authorization)
+
+   This ordering allows efficient validation starting from the immediate
+   delegator.
+
+4.  Delegation Protocol Flow
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 9]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
++--------+       +---------+       +--------+       +---------+
+|  User  |       | Agent A |       |   AS   |       | Agent B |
++--------+       +---------+       +--------+       +---------+
+    |                 |                 |                 |
+    | (1) Authorize   |                 |                 |
+    |---------------->|                 |                 |
+    |                 |                 |                 |
+    |                 | (2) PAR         |                 |
+    |                 |---------------->|                 |
+    |                 |                 |                 |
+    | (3) Consent     |                 |                 |
+    |<----------------|---------------->|                 |
+    |                 |                 |                 |
+    |                 | (4) Token A     |                 |
+    |                 | (no chain)      |                 |
+    |                 |<----------------|                 |
+    |                 |                 |                 |
+    |                 | (5) Delegation Request (PAR)      |
+    |                 |----------------------------------> |
+    |                 |  - subject_token (Token A)        |
+    |                 |  - delegatee_wit (Agent B)        |
+    |                 |  - delegated_policy (optional)    |
+    |                 |                 |                 |
+    |                 |                 | (6) Validate    |
+    |                 |                 | - Token A valid |
+    |                 |                 | - Scope subset  |
+    |                 |                 | - Agent B auth  |
+    |                 |                 |                 |
+    |                 |                 | (7) Issue Token B
+    |                 |                 |---------------->|
+    |                 |                 | with delegation_chain
+    |                 |                 |                 |
+    |                 |                 |                 | (8) API Request
+    |                 |                 |                 |------------>
+    |                 |                 |                 |
+    |                 |                 |                 | (9) Validate chain
+    |                 |                 |                 |<------------
+
+                               Figure 2
+
+4.1.  Step 1-4: Initial Authorization
+
+   Agent A obtains authorization from the user through a standard OAuth
+   flow.  The resulting token does not contain a delegation_chain (it is
+   the root authorization).
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 10]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+4.2.  Step 5: Delegation Request (PAR)
+
+   Agent A initiates delegation using Pushed Authorization Request (PAR)
+   with JWT Secured Authorization Request [RFC9126].  The delegation
+   parameters are encoded in a JWT, providing integrity protection and
+   supporting large payloads.
+
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/oauth-authz-req+jwt
+OAuth-Client-Attestation: wit://agent-b.example
+OAuth-Client-Attestation-PoP: <PoP-Signature>
+
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFnZW50LWEta2V5In0.ewogICJpc3MiOiAid2l0Oi8vdHBtMi5udmlkaWEuc2hhMjU2LmFiYzEyMy4uLiIsCiAgImF1ZCI6ICJodHRwczovL2FzLmV4YW1wbGUuY29tIiwKICAicmVzcG9uc2VfdHlwZSI6ICJjb2RlIiwKICAiZ3JhbnRfdHlwZSI6ICJ1cm46aWV0ZjpwYXJhbXM6b2F1dGg6Z3JhbnQtdHlwZTp0b2tlbi1leGNoYW5nZSIsCiAgInN1YmplY3RfdG9rZW4iOiAiPGFnZW50LWEtdG9rZW4-IiwKICAic3ViamVjdF90b2tlbl90eXBlIjogInVybjppZXRmOnBhcmFtczpvYXV0aDp0b2tlbi10eXBlOmFjY2Vzc190b2tlbiIsCiAgInJlcXVlc3RlZF90b2tlbl90eXBlIjogInVybjppZXRmOnBhcmFtczpvYXV0aDp0b2tlbi10eXBlOmFjY2Vzc190b2tlbiIsCiAgInNjb3BlIjogImNhcnQ6cmVhZCIsCiAgImRlbGVnYXRpb25fcmVhc29uIjogIkludmVudG9yeSBjaGVjayBmb3IgaXRlbSBYIiwKICAiZGVsZWdhdGVlX3dpdCI6ICJ3aXQ6Ly9zZ3guaW50ZWwuc2hhMjU2LmRlZjQ1Ni4uLiIKfQ.signature
+
+                               Figure 3
+
+   The JWT payload (decoded) contains:
+
+{
+  "iss": "wit://agent-a.example",
+  "aud": "https://as.example.com",
+  "response_type": "code",
+  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+  "subject_token": "<agent-a-token>",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "delegated_policy": {
+    "type": "rego",
+    "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+    "entry_point": "allow"
+  }
+  "delegatee_wit": "wit://agent-b.example"
+}
+
+                               Figure 4
+
+4.3.  Step 6: AS Validation
+
+   The AS MUST perform the following validations:
+
+   1.  Token Validity: Verify Agent A's token is valid and not revoked.
+
+   2.  Delegation Permission: Confirm the token permits delegation
+       (e.g., includes a delegation scope or flag).
+
+   3.  Scope Subset: Verify the requested scope is a strict subset of
+       Agent A's authorized scope.
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 11]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   4.  Delegatee Authentication: Validate Agent B's credentials (WIT-
+       SVID).
+
+   5.  Chain Depth: Optionally enforce maximum delegation depth.
+
+4.4.  Step 7: Token Issuance
+
+   Upon successful validation, the AS issues a new token for Agent B
+   with:
+
+   *  sub: The original user (unchanged)
+
+   *  act: Agent B's identity
+
+   *  delegation_chain: Extended with a new record for this hop
+
+   *  Reduced scope (as requested)
+
+5.  Chain Extension
+
+   When the AS issues a delegated token, it extends the
+   delegation_chain:
+
+5.1.  For First Delegation
+
+   If Agent A's token has no delegation_chain (root authorization), the
+   AS creates a new chain with one entry:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 12]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}",
+        "entry_point": "allow"
+      },
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Delegate cart operations",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+
+                               Figure 5
+
+5.2.  For Subsequent Delegations
+
+   If Agent B further delegates to Agent C, the AS prepends a new
+   record:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 13]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+{
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-b.example",
+      "delegatee_wit": "wit://agent-c.example",
+      "delegation_timestamp": 1734517800,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Check inventory for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...",
+      "operation_summary": "Check inventory for item 123",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    },
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root-abc123",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}",
+        "entry_point": "allow"
+      },
+      "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    }
+  ]
+}
+
+                               Figure 6
+
+6.  Resource Server Validation
+
+   Resource Servers validate the delegation_chain as follows:
+
+6.1.  Signature Verification
+
+   For each record in the chain, verify the as_signature using the AS's
+   public key.  This ensures:
+
+   *  The delegation was authorized by the AS;
+
+   *  The record has not been tampered with;
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 14]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   *  The delegation metadata is authentic.
+
+6.2.  Root Authorization Anchor
+
+   The last record in the chain (highest index) represents the earliest
+   delegation.  Its delegator_wit identifies the agent that holds the
+   root authorization (the token directly authorized by the user).
+
+   The Resource Server MUST verify that:
+
+   *  root token (a token without a delegation_chain claim);
+
+   *  This root token was issued by a trusted AS and has not been
+      revoked.
+
+   *  The root token contains valid evidence and audit_trail claims as
+      defined in the authorization evidence draft, providing
+      cryptographic proof of user consent.
+
+   If the RS cannot verify the root authorization anchor, it MUST reject
+   the request.
+
+6.3.  Dual-Signature Verification
+
+   For each delegation record, the Resource Server SHOULD verify both:
+
+   *  *AS Signature:* Using the Authorization Server's public key,
+      confirming the delegation was authorized by the AS;
+
+   *  *Delegator Signature:* Using the delegating agent's WIT-bound
+      public key, confirming the delegator explicitly consented to this
+      delegation.
+
+   The dual-signature mechanism prevents:
+
+   *  Malicious AS from unilaterally forging delegations;
+
+   *  Delegators from denying authorized delegations (non-repudiation);
+
+   *  Unauthorized privilege escalation through compromised components.
+
+6.4.  WIT Status Validation
+
+   The Resource Server SHOULD verify the current status of all Workload
+   Identity Tokens (WITs) referenced in the delegation_chain by:
+
+   *  Checking WIT revocation lists or status endpoints;
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 15]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   *  Validating WIT expiration timestamps;
+
+   *  Querying the issuing Identity Provider for current status.
+
+   If any WIT in the chain has been revoked or expired, the entire
+   delegation_chain MUST be considered invalid, even if individual
+   records remain cryptographically valid.
+
+6.5.  Chain Continuity
+
+   Verify the chain is continuous:
+
+   *  Each delegatee_wit matches the delegator_wit of the previous (more
+      recent) record;
+
+   *  The final delegatee_sub matches the token's act.sub;
+
+   *  Timestamps are in descending order.
+
+6.6.  Scope Validation
+
+   Verify scope constraints are progressively narrowing:
+
+   *  Each delegation's delegated_policy MUST be equal to or more
+      restrictive than the previous delegation's scope;
+
+   *  The final scope MUST cover the requested operation.
+
+7.  Security Considerations
+
+7.1.  Privilege Escalation Prevention
+
+   The AS MUST ensure that delegation cannot expand privileges:
+
+   *  Delegated scope MUST be a strict subset of delegator's scope;
+
+   *  Delegation depth MAY be limited;
+
+   *  Certain scopes MAY be marked non-delegatable.
+
+7.2.  Chain Integrity
+
+   The as_signature on each record ensures chain integrity.  Agents MUST
+   NOT be able to:
+
+   *  Forge delegation records;
+
+   *  Modify existing records;
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 16]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   *  Remove records from the chain;
+
+   *  Reorder records.
+
+7.3.  Token Binding
+
+   This enables:
+
+   *  Revocation of specific delegation paths;
+
+   *  Audit trail reconstruction;
+
+   *  Detection of token reuse.
+
+7.4.  Delegation Depth Limits
+
+   Implementations SHOULD enforce maximum delegation depth to:
+
+   *  Prevent unbounded delegation chains;
+
+   *  Limit token size growth;
+
+   *  Simplify validation.
+
+   A RECOMMENDED default maximum depth is 5 hops.
+
+8.  IANA Considerations
+
+8.1.  JWT Claims Registration
+
+   This specification registers the following claim in the "JSON Web
+   Token Claims" registry:
+
+   Claim Name:  delegation_chain
+
+   Claim Description:  An ordered array of AS-signed delegation records
+      tracing agent-to-agent authorization transfers, enabling end-to-
+      end validation of delegation lineage.
+
+   Change Controller:  IETF
+
+   Specification Document:  Section 3 of this document
+
+9.  References
+
+9.1.  Normative References
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 17]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/info/rfc7515>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/info/rfc7519>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/info/rfc8693>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/info/rfc8785>.
+
+9.2.  Informative References
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/info/rfc9126>.
+
+   [I-D.ietf-oauth-identity-chaining]
+              Schwenkschuster, A., Kasselman, P., Burgin, K., Jenkins,
+              M. J., and B. Campbell, "OAuth Identity and Authorization
+              Chaining Across Domains", Work in Progress, Internet-
+              Draft, draft-ietf-oauth-identity-chaining-08, 9 February
+              2026, <https://datatracker.ietf.org/doc/html/draft-ietf-
+              oauth-identity-chaining-08>.
+
+Appendix A.  Complete Multi-Hop Example
+
+   The following shows a token held by Agent C after two delegation hops
+   (User → Agent A → Agent B → Agent C):
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 18]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+{
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example",
+  "exp": 1734520500,
+  "iat": 1734517800,
+  "act": {
+    "sub": "wit://agent-c.example"
+  },
+
+  "delegation_chain": [
+    {
+      "delegator_wit": "wit://agent-b.example",
+      "delegatee_wit": "wit://agent-c.example",
+      "delegation_timestamp": 1734517800,
+      "root_evidence_ref": "evidence-root",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Check stock for item 123",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...sig2-delegator",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs...sig2"
+    },
+    {
+      "delegator_wit": "wit://agent-a.example",
+      "delegatee_wit": "wit://agent-b.example",
+      "delegation_timestamp": 1734516900,
+      "root_evidence_ref": "evidence-root",
+      "delegated_policy": {
+        "type": "rego",
+        "content": "package agent\ndefault allow = false\n\nallow {\n  input.action == \"cart_op\"\n}\nallow {\n  input.action == \"inventory_op\"\n}",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate inventory operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiIs...sig1-delegator",
+      "as_signature": "eyJhbGciOiJSUzI1NiIs...sig1"
+    }
+  ],
+
+  "evidence": {
+    "id": "evidence-root",
+    "user_confirmation": {
+      "displayed_content": "Allow shopping assistant to manage cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1734516000,
+      "interface_version": "consent-ui-v2.1"
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 19]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+    },
+    "session_context": {
+      "session_id": "session_xyz789",
+      "channel": "mobile-app"
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiIs...sig0"
+  },
+
+  "audit_trail": {
+    "evidence_ref": "evidence-root",
+    "semantic_expansion_level": "medium",
+    "interpretation_notes": "User said 'manage cart', delegated to inventory operations"
+  }
+}
+
+                               Figure 7
+
+   This token shows:
+
+   *  Original user: user_12345
+
+   *  Current actor: Agent C
+
+   *  Delegation path: Agent A → Agent B → Agent C
+
+   *  Progressive policy narrowing: cart+inventory → inventory →
+      item:123
+
+   *  Original user consent evidence preserved
+
+Appendix B.  Validation Mechanism
+
+   Each delegation hop MUST be represented as a separate JWT access
+   token.  The delegating agent signs each token using its private key,
+   creating a cryptographically verifiable chain of custody.
+
+B.1.  Token Structure
+
+   For each delegation from Agent-X to Agent-Y:
+
+   *  The token's "iss" claim MUST be the WIT of the delegating agent
+
+   *  The token's "sub" claim MUST be the WIT of the delegatee agent
+
+   *  The token MUST be signed by the delegating agent's private key
+
+   *  The token's "delegation_chain" claim accumulates all previous hops
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 20]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+B.2.  Verification Requirements
+
+   Resource Servers MUST validate:
+
+   1.  The final token's signature matches the claimed issuer
+
+   2.  Each hop in the delegation_chain has valid timestamps
+
+   3.  Policy constraints are maintained or reduced (never expanded)
+
+   4.  The chain is continuous (each "to" matches next "from")
+
+   5.  The initial delegator matches the original authorization subject
+
+B.3.  Security Considerations
+
+   This per-hop signing approach provides:
+
+   *  Non-repudiation: Each delegator's signature is independent
+      evidence
+
+   *  Flexible revocation: Individual hops can be revoked separately
+
+   *  Incremental updates: New hops only require generating new tokens
+
+   *  Audit-friendly: Each signature represents a discrete authorization
+      event
+
+B.4.  Comparison with OAuth Identity Chaining
+
+   While [I-D.ietf-oauth-identity-chaining] focuses on static identity
+   federation across organizational boundaries, this specification
+   targets dynamic AI agent delegation with the following distinctions:
+
+   *  Trust Model: Attestation-based (WIT) vs. pre-configured PKI trust
+
+   *  Scope Control: Mandatory contraction vs. static mapping
+
+   *  Time Scale: Task-level (minutes/hours) vs. employment-level
+      (months/years)
+
+   *  Target: AI workloads vs. human employees
+
+   This makes the mechanism suitable for AI-to-AI scenarios where agents
+   need temporary, auditable delegation without pre-established trust
+   relationships.  Implementations MAY use WIT with attestation evidence
+   for enhanced security, but it is not required by this specification.
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 21]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
+Authors' Addresses
+
+   Dapeng Liu
+   Alibaba Group
+   Email: max.ldp@alibaba-inc.com
+
+
+   Hongru Zhu
+   Alibaba Group
+   Email: hongru.zhr@alibaba-inc.com
+
+
+   Suresh Krishnan
+   Cisco
+   Email: suresh.krishnan@gmail.com
+
+
+   Aaron Parecki
+   Okta
+   Email: aaron@parecki.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 22]

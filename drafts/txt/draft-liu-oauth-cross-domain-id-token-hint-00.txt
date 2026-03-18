@@ -1,0 +1,1008 @@
+
+
+
+
+Web Authorization Protocol                                        D. Liu
+Internet-Draft                                                    H. Zhu
+Intended status: Standards Track                           Alibaba Group
+Expires: 18 September 2026                                   S. Krishnan
+                                                                   Cisco
+                                                              A. Parecki
+                                                                    Okta
+                                                           17 March 2026
+
+
+ Cross-Domain ID Token Hint for OAuth 2.0 Pushed Authorization Requests
+             draft-liu-oauth-cross-domain-id-token-hint-00
+
+Abstract
+
+   This specification defines a mechanism for including an ID Token from
+   an external Identity Provider as a hint in OAuth 2.0 Pushed
+   Authorization Requests (PAR).  This enables scenarios where a client
+   (such as an AI agent) needs to prove user identity to an
+   Authorization Server in a different trust domain, while maintaining
+   cryptographic binding between the user identity and the requesting
+   client.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 18 September 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 1]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   3
+     1.2.  Applicability . . . . . . . . . . . . . . . . . . . . . .   3
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   3.  Protocol Flow . . . . . . . . . . . . . . . . . . . . . . . .   4
+   4.  PAR Request with Cross-Domain ID Token Hint . . . . . . . . .   6
+     4.1.  Request Parameters  . . . . . . . . . . . . . . . . . . .   6
+     4.2.  Example Request . . . . . . . . . . . . . . . . . . . . .   6
+   5.  Authorization Server Validation . . . . . . . . . . . . . . .   8
+     5.1.  Client Authentication Validation  . . . . . . . . . . . .   8
+     5.2.  ID Token Signature Validation . . . . . . . . . . . . . .   9
+     5.3.  Audience Binding Validation . . . . . . . . . . . . . . .  10
+     5.4.  Freshness Validation  . . . . . . . . . . . . . . . . . .  11
+     5.5.  Replay Prevention . . . . . . . . . . . . . . . . . . . .  11
+   6.  Access Token Issuance . . . . . . . . . . . . . . . . . . . .  11
+     6.1.  Subject (sub) Claim . . . . . . . . . . . . . . . . . . .  11
+     6.2.  Actor (act) Claim . . . . . . . . . . . . . . . . . . . .  12
+   7.  Comparison with Token Exchange  . . . . . . . . . . . . . . .  13
+     7.1.  Token Exchange (RFC 8693) . . . . . . . . . . . . . . . .  13
+     7.2.  Cross-Domain ID Token Hint (This Specification) . . . . .  13
+     7.3.  Recommended Usage . . . . . . . . . . . . . . . . . . . .  14
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  14
+     8.1.  Trust Establishment . . . . . . . . . . . . . . . . . . .  14
+     8.2.  Audience Binding Security . . . . . . . . . . . . . . . .  14
+     8.3.  ID Token Confidentiality  . . . . . . . . . . . . . . . .  15
+     8.4.  Token Lifetime  . . . . . . . . . . . . . . . . . . . . .  15
+   9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  15
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
+     10.1.  OAuth Parameters Registration  . . . . . . . . . . . . .  15
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  16
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  16
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  16
+   Appendix A.  Relationship to OAuth 2.0 Attestation-Based Client
+           Authentication  . . . . . . . . . . . . . . . . . . . . .  17
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  17
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  17
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 2]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+1.  Introduction
+
+   In modern distributed systems, particularly those involving
+   autonomous AI agents, there is a need for clients to prove user
+   identity to Authorization Servers that are external to the user's
+   home Identity Provider.  Traditional OAuth 2.0 flows assume the
+   Authorization Server and Identity Provider share a trust
+   relationship, but cross-domain scenarios require additional
+   mechanisms.
+
+   This specification extends the use of id_token_hint parameter in
+   Pushed Authorization Requests (PAR) [RFC9126] to support cross-domain
+   identity assertions.  It defines:
+
+   *  How to include an externally-issued ID Token in a PAR request;
+
+   *  Security requirements for Authorization Server validation;
+
+   *  Mandatory audience binding to prevent token misuse;
+
+   *  Freshness and replay prevention requirements;
+
+   *  Integration with OAuth 2.0 Attestation-Based Client Authentication
+      [I-D.ietf-oauth-attestation-based-client-auth], which
+      Authorization Servers MUST support for AI agent authorization
+      scenarios.
+
+   A key use case is AI agent authorization: an agent operating on
+   behalf of a user needs to access resources at a third-party service.
+   The agent can present the user's ID Token (issued by the user's
+   Identity Provider) to the third-party's Authorization Server, proving
+   that the agent is authorized to act for that user.
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+1.2.  Applicability
+
+   While this specification is optimized for use with Pushed
+   Authorization Requests (PAR) [RFC9126], the mechanism defined herein
+   is designed to be general-purpose and MAY be used with various OAuth
+   2.0 authorization flows, including but not limited to:
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 3]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   *  Authorization Code Grant (with or without PAR);
+
+   *  Client Credentials Grant;
+
+   *  Token Exchange [RFC8693];
+
+   *  Resource Owner Password Credentials Grant.
+
+   Different authorization flows may have different security
+   considerations when using this specification.  Implementations SHOULD
+   carefully evaluate the security implications based on their specific
+   deployment scenario.
+
+2.  Terminology
+
+   This specification uses the following terms:
+
+   Home Identity Provider (Home IdP):  The OpenID Provider that
+      authenticates the user and issues ID Tokens.  This is typically
+      the user's primary identity service.
+
+   External Authorization Server (External AS):  An OAuth 2.0
+      Authorization Server in a different trust domain from the Home
+      IdP.  The External AS needs to verify the user's identity before
+      granting access.
+
+   Client:  The OAuth 2.0 client requesting authorization.  In the AI
+      agent context, the client is authenticated using a workload
+      identity through OAuth 2.0 Attestation-Based Client Authentication
+      [I-D.ietf-oauth-attestation-based-client-auth] or OAuth SPIFFE
+      Client Authentication [I-D.ietf-oauth-spiffe-client-auth].
+
+   Cross-Domain ID Token:  An ID Token issued by the Home IdP, presented
+      to an External AS as proof of user identity.
+
+3.  Protocol Flow
+
+   The cross-domain ID Token hint flow operates as follows:
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 4]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   +--------+                               +----------+
+   |  User  |                               |  Home    |
+   |        |                               |   IdP    |
+   +--------+                               +----------+
+        |                                        |
+        | (1) Authenticate                       |
+        |--------------------------------------->|
+        |                                        |
+        | (2) ID Token (aud=client_id)           |
+        |<---------------------------------------|
+        |                                        |
+        v                                        |
+   +--------+       +-------------+
+   | Client |       |  External   |
+   | (Agent)|       |     AS      |
+   +--------+       +-------------+
+        |                  |
+        | (3) PAR Request  |
+        |   + id_token_hint|
+        |   + client_auth  |
+        |----------------->|
+        |                  |
+        |                  | (4) Validate:
+        |                  |  - id_token_hint
+        |                  |  - aud binding
+        |                  |  - client_auth
+        |                  |
+        | (5) request_uri  |
+        |<-----------------|
+        |                  |
+        | (6) Authorization Flow (if needed)
+        |<---------------->|
+        |                  |
+        | (7) Token Issuance (standard OAuth)
+        |<-----------------|
+
+                                  Figure 1
+
+   The steps are:
+
+   1.  The user authenticates with their Home IdP through the client
+       (agent).
+
+   2.  The Home IdP issues an ID Token with the client's identifier in
+       the aud claim, binding the token to that specific client.
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 5]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   3.  The client sends a PAR request to the External AS, including the
+       ID Token as id_token_hint and authenticating using its client
+       credentials (via OAuth-Client-Attestation and OAuth-Client-
+       Attestation-PoP headers).
+
+   4.  The External AS validates the ID Token, verifies the audience
+       binding, and confirms the client authentication matches.
+
+   5.  The AS returns a request_uri for the authorization flow.
+
+   6.  If additional user consent is required, the authorization flow
+       proceeds.  If the ID Token is sufficient (consent-only flow),
+       this step may be skipped.
+
+   7.  The AS issues a token following standard OAuth 2.0 procedures.
+       Subsequent token usage is out of scope of this specification.
+
+4.  PAR Request with Cross-Domain ID Token Hint
+
+4.1.  Request Parameters
+
+   When using a cross-domain ID Token hint, the PAR request MUST include
+   the following parameters:
+
+   id_token_hint:  REQUIRED.  The ID Token issued by the Home IdP.  This
+      token MUST be a valid JWT signed by the Home IdP.
+
+   client_id:  REQUIRED.  The client identifier at the External AS.
+      When using OAuth 2.0 Attestation-Based Client Authentication [I-
+      D.ietf-oauth-attestation-based-client-auth] or OAuth SPIFFE Client
+      Authentication [I-D.ietf-oauth-spiffe-client-auth], this
+      identifier MUST be derived from the attestation token's (WIT or
+      SVID) sub claim, which typically contains a SPIFFE ID that
+      uniquely identifies the workload.
+
+   id_token_hint_issuer:  OPTIONAL.  The issuer identifier of the Home
+      IdP.  If not provided, the AS MUST extract this from the iss claim
+      of the ID Token.
+
+4.2.  Example Request
+
+   The following is an example PAR request using a cross-domain ID Token
+   hint with OAuth 2.0 Attestation-Based Client Authentication:
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 6]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+POST /par HTTP/1.1
+Host: as.external-service.example
+Content-Type: application/oauth-authz-req+jwt
+OAuth-Client-Attestation: eyJhbGciOiJFUzI1NiIsInR5cCI6IndpdCtqd3QifQ.ewogICJpc3MiOiAic3BpZmZlOi8vZXhhbXBsZS5jb20iLAogICJzdWIiOiAic3BpZmZlOi8vbXlhc3Npc3RhbnQuZXhhbXBsZS9hZ2VudCIsCiAgImF1ZCI6ICJodHRwczovL2FzLmV4dGVybmFsLXNlcnZpY2UuZXhhbXBsZSIsCiAgImV4cCI6IDE3MzEzNjk1NDAsCiAgImNuZiI6IHsiandrIjogeyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6Ii4uLiIsInkiOiIuLi4ifX19.signature
+OAuth-Client-Attestation-PoP: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNsaWVudC1hdHRlc3RhdGlvbi1wb3Arand0In0.ewogICJpc3MiOiAic3BpZmZlOi8vbXlhc3Npc3RhbnQuZXhhbXBsZS9hZ2VudCIsCiAgImF1ZCI6ICJodHRwczovL2FzLmV4dGVybmFsLXNlcnZpY2UuZXhhbXBsZSIsCiAgImlhdCI6IDE3MzEzMjA0MDAsCiAgImV4cCI6IDE3MzEzMjQwMDB9.pop_signature
+
+client_id=spiffe://myassistant.example/agent
+&id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+&redirect_uri=https://myassistant.example/callback
+
+                               Figure 2
+
+   The OAuth-Client-Attestation header contains a WIT-SVID with:
+
+   *  typ: wit+jwt: Identifies this as a Workload Identity Token;
+
+   *  sub: The SPIFFE ID of the client (spiffe://myassistant.example/
+      agent);
+
+   *  cnf: Contains the public key that will be used for proof-of-
+      possession;
+
+   *  attestation: (Optional) Embedded attestation evidence from the
+      workload environment.
+
+   The OAuth-Client-Attestation-PoP header contains a JWT signed with
+   the private key corresponding to the public key in the WIT's cnf
+   claim, demonstrating that the client holds the key.
+
+   The id_token_hint contains an ID Token issued by the Agent's Identity
+   Provider (IdP).  This ID Token serves two purposes:
+
+   1.  *Prove Agent Legitimacy:* The AS verifies that the requesting
+       agent is legitimate and has authenticated the user;
+
+   2.  *Assert Third-Party Binding:* The ID Token MAY include an
+       extension claim asserting the user's identity at a third-party
+       Resource Application, obtained through on-demand OAuth login.
+
+   The aud claim contains the agent's identifier (from the WIT's sub
+   claim), binding this ID Token to the specific agent.  The sub claim
+   contains the user's identifier at the Agent's IdP.  For cross-domain
+   scenarios involving third-party applications, the ID Token SHOULD
+   include a third_party_binding claim conveying the user's identity at
+   the Resource Application.
+
+   WIT-SVID's sub claim), binding this ID Token to the specific agent:
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 7]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   {
+     "iss": "https://idp.agent-a.example",
+     "sub": "agent_user_001",
+     "aud": "spiffe://agent-a.example",
+     "exp": 1731369540,
+     "iat": 1731320400,
+     "nonce": "n-0S6_WzA2Mj",
+     "auth_time": 1731320380,
+
+     "third_party_binding": {
+       "app": "shop.example",
+       "user_id": "user_12345",
+       "bound_at": 1731320400,
+       "oauth_flow_completed": true
+     }
+   }
+
+                                  Figure 3
+
+   In the lazy binding scenario (recommended for AI agent workflows),
+   the user does not pre-register with all possible third-party
+   applications.  Instead, when the agent detects intent to invoke a
+   specific third-party application during conversation, it triggers an
+   on-demand OAuth 2.0 Authorization Code Flow with that application.
+   Upon successful user authentication, the third-party application
+   issues an ID Token containing the user's identifier (e.g.,
+   user_12345).  The Agent's IdP then asserts this binding in the
+   third_party_binding claim, enabling the AS to issue an access token
+   with the correct Resource Application user identifier.
+
+5.  Authorization Server Validation
+
+   Upon receiving a PAR request with a cross-domain ID Token hint, the
+   Authorization Server MUST perform the following validation steps:
+
+5.1.  Client Authentication Validation
+
+   The Authorization Server MUST support OAuth 2.0 Attestation-Based
+   Client Authentication [I-D.ietf-oauth-attestation-based-client-auth]
+   for AI agent authorization scenarios.  This specification requires
+   the use of attestation-based client authentication to ensure strong
+   cryptographic binding between the client identity and the user
+   identity conveyed in the id_token_hint.
+
+   Before validating the ID Token hint, the AS MUST first authenticate
+   the client using OAuth 2.0 Attestation-Based Client Authentication
+   [I-D.ietf-oauth-attestation-based-client-auth] or OAuth SPIFFE Client
+   Authentication [I-D.ietf-oauth-spiffe-client-auth].
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 8]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   The AS MUST validate the client authentication as follows:
+
+   1.  *Accept Valid Header Types*: The AS MUST accept wit+jwt as a
+       valid value of the typ JWT header parameter in the OAuth-Client-
+       Attestation header, in addition to oauth-client-attestation-jwt.
+
+   2.  *Validate WIT/WIT-SVID*: The WIT or WIT-SVID MUST be validated
+       according to Section 3.1 of [I-D.ietf-wimse-workload-creds] or
+       the equivalent validation rules in
+       [I-D.ietf-oauth-spiffe-client-auth].  This includes:
+
+       *  Verifying the JWT signature using the trust domain's public
+          keys;
+
+       *  Verifying that the WIT has not expired (check the exp claim);
+
+       *  Extracting the client identifier from the sub claim.
+
+   3.  *Validate Proof-of-Possession*: The OAuth-Client-Attestation-PoP
+       JWT MUST be validated according to Section 5.2 of
+       [I-D.ietf-oauth-attestation-based-client-auth].  The AS MUST
+       verify that the PoP JWT is signed with the private key
+       corresponding to the public key bound in the WIT's cnf claim.
+
+   After successful client authentication, the AS extracts the client
+   identifier from the WIT's sub claim and uses it for audience binding
+   validation with the id_token_hint.
+
+5.2.  ID Token Signature Validation
+
+   The AS MUST validate the ID Token signature using the public keys of
+   the Home IdP.  The AS MUST obtain these keys through one of the
+   following methods:
+
+   *  Pre-configured trust: The AS has a pre-established trust
+      relationship with the Home IdP and has access to its signing keys.
+
+   *  OpenID Discovery: The AS fetches the IdP's metadata from /.well-
+      known/openid-configuration and retrieves the JWKS.
+
+   *  Federation: The AS participates in an identity federation that
+      includes the Home IdP.
+
+   If the AS cannot validate the ID Token signature, it MUST reject the
+   request with an invalid_request error.
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 9]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+5.3.  Audience Binding Validation
+
+   The AS MUST verify that the ID Token's aud claim matches the
+   authenticated client identity.  This binding ensures that the ID
+   Token was issued specifically for the requesting client.
+
+   The validation rule is:
+
+   id_token_hint.aud MUST contain client_id
+
+                                  Figure 4
+
+   When using OAuth 2.0 Attestation-Based Client Authentication or OAuth
+   SPIFFE Client Authentication, the client_id is derived from the WIT's
+   or SVID's sub claim.  The AS MUST perform the following validation
+   sequence:
+
+   1.  First, cryptographically verify the WIT/SVID signature using the
+       trusted issuer's public key.  The WIT/SVID MUST be valid and not
+       expired.
+
+   2.  Only after signature verification succeeds, extract the sub claim
+       from the WIT/SVID.
+
+   3.  Verify that the ID Token's aud claim matches the WIT/SVID's sub
+       claim:
+
+   id_token_hint.aud == WIT.sub
+
+                                  Figure 5
+
+   This sequence ensures that the audience binding comparison is only
+   performed against a cryptographically verified client identity.
+
+   If the audience does not match, the AS MUST reject the request with
+   an invalid_request error and the following error description:
+
+{
+  "error": "invalid_request",
+  "error_description": "id_token_hint audience does not match client identity"
+}
+
+                               Figure 6
+
+   This audience binding is critical for security.  It prevents an
+   attacker from obtaining a user's ID Token intended for one client and
+   presenting it to an AS while impersonating a different client.
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 10]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+5.4.  Freshness Validation
+
+   The AS MUST verify that the ID Token is fresh and has not expired:
+
+   *  The exp claim MUST be in the future.
+
+   *  The AS MAY enforce a maximum age for the ID Token (e.g., the token
+      MUST have been issued within the last 5 minutes for high-security
+      operations).
+
+   *  If the AS requires a specific nonce, it MUST verify the nonce
+      value matches the expected value.
+
+5.5.  Replay Prevention
+
+   To prevent replay attacks, the AS SHOULD implement one or more of the
+   following mechanisms:
+
+   *  Nonce validation: Require a nonce claim in the ID Token that
+      matches a value previously communicated to the client.
+
+   *  One-time use: Track used ID Tokens by their jti claim (if present)
+      and reject duplicates.
+
+   *  Short expiry: Enforce a short maximum age for ID Tokens used as
+      hints (e.g., 5 minutes).
+
+   *  DPoP binding: If the client uses DPoP for the PAR request, the AS
+      MAY require the ID Token to contain a cnf claim binding it to the
+      same public key used in the DPoP proof.  Note that this requires
+      the Home IdP to support key-bound ID Tokens.
+
+6.  Access Token Issuance
+
+   Upon successful validation of the id_token_hint, the AS issues an
+   Access Token.  The Access Token structure follows OAuth 2.0 standards
+   with specific considerations for cross-domain AI agent scenarios.
+
+6.1.  Subject (sub) Claim
+
+   The sub claim in the Access Token MUST contain the user's identifier
+   at the Resource Application (third-party app), NOT the Agent's
+   internal user identifier.  This design enables the Resource Server to
+   immediately identify the resource owner without additional identity
+   mapping lookups.
+
+   sub = third_party_app_user_id
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 11]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+                                  Figure 7
+
+   For example, if the user authenticated with shop.example and obtained
+   the identifier user_12345, the Access Token's sub claim MUST be
+   user_12345, even though the Agent's IdP issued the id_token_hint with
+   a different identifier (agent_user_001).
+
+   The AS extracts the Resource Application user identifier from the
+   third_party_binding.user_id claim in the id_token_hint and uses it as
+   the sub claim value in the Access Token.  This is based on trust in
+   the Agent's IdP, which has verified the OAuth login flow with the
+   Resource Application.
+
+6.2.  Actor (act) Claim
+
+   The AS SHOULD include the act claim as defined in [RFC8693] to
+   indicate that the client is acting on behalf of the user.  The act
+   claim contains:
+
+   *  sub: The Agent's WIT URI, identifying the entity exercising
+      delegated authority;
+
+   *  agent_user_id (OPTIONAL): The user's identifier at the Agent
+      system, enabling audit trail correlation at the Agent side.
+
+   {
+     "iss": "https://as.agent-a.example",
+     "sub": "user_12345",
+     "aud": "https://api.shop.example",
+     "exp": 1734520500,
+     "iat": 1734516900,
+
+     "act": {
+       "sub": "wit://agent-a.example",
+       "agent_user_id": "agent_user_001"
+     },
+
+     "delegation_chain": [...],
+     "evidence": {
+       "id": "evidence-root",
+       "as_signature": "..."
+     }
+   }
+
+                                  Figure 8
+
+   In this example:
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 12]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   *  *sub: "user_12345"*: The user's identifier at shop.example (the
+      Resource Application).  This is what the Resource Server uses to
+      identify the resource owner.
+
+   *  *act.sub: "wit://agent-a.example"*: The Agent's WIT URI,
+      identifying which agent is exercising delegated authority.
+
+   *  *act.agent_user_id: "agent_user_001"*: Optional field for Agent-
+      side audit purposes, allowing correlation back to the Agent's
+      internal user account.
+
+7.  Comparison with Token Exchange
+
+   OAuth 2.0 Token Exchange [RFC8693] provides another mechanism for
+   cross-domain token operations.  This section clarifies when to use
+   each approach.
+
+7.1.  Token Exchange (RFC 8693)
+
+   Token Exchange is designed for scenarios where a token needs to be
+   exchanged for another token, typically with different scope,
+   audience, or token type.  Common use cases include:
+
+   *  Service-to-service delegation chains where each hop requires a new
+      token;
+
+   *  Impersonation scenarios where an administrator acts as another
+      user;
+
+   *  Converting token types (e.g., access token to refresh token).
+
+   Token Exchange requires implementing a dedicated token exchange
+   endpoint and supporting the urn:ietf:params:oauth:grant-type:token-
+   exchange grant type.
+
+7.2.  Cross-Domain ID Token Hint (This Specification)
+
+   This specification addresses a different use case: proving user
+   identity across trust domains during the authorization request phase.
+   Key characteristics include:
+
+   *  The ID Token serves as a hint, not as input for token exchange;
+
+   *  Integrates with existing PAR infrastructure without new endpoints;
+
+   *  Audience binding ensures the token was issued specifically for
+      this client;
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 13]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   *  Lower implementation complexity for Authorization Servers.
+
+7.3.  Recommended Usage
+
+   Use this specification when:
+
+   *  An AI agent needs to prove it represents a specific user to an
+      external service;
+
+   *  The goal is to obtain authorization, not to exchange existing
+      tokens;
+
+   *  Client identity binding (via audience) is a security requirement.
+
+   Use Token Exchange when:
+
+   *  An existing token needs to be converted to a different token type;
+
+   *  Backend services need to propagate delegated authority through
+      multiple hops;
+
+   *  Impersonation or delegation semantics are explicitly required.
+
+8.  Security Considerations
+
+8.1.  Trust Establishment
+
+   The External AS must establish trust in the Home IdP before accepting
+   ID Tokens.  This trust can be established through:
+
+   *  Pre-configured trust relationships;
+
+   *  Federation membership;
+
+   *  Dynamic trust establishment with appropriate verification.
+
+   The AS MUST NOT accept ID Tokens from untrusted issuers.
+
+8.2.  Audience Binding Security
+
+   The audience binding requirement (Section 5.3) is essential for
+   preventing token substitution attacks.  Without this binding, an
+   attacker could:
+
+   1.  Obtain a user's ID Token issued to a legitimate client;
+
+   2.  Present the token while authenticating as a different (malicious)
+       client;
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 14]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   3.  Gain unauthorized access on behalf of the user.
+
+   The audience binding ensures that only the intended client can use
+   the ID Token.
+
+8.3.  ID Token Confidentiality
+
+   ID Tokens used as hints contain user identity information and MUST be
+   protected in transit.  The PAR endpoint MUST be accessed over TLS.
+
+   Clients SHOULD treat ID Tokens as sensitive credentials and MUST NOT
+   log or store them unnecessarily.
+
+8.4.  Token Lifetime
+
+   ID Tokens used for cross-domain hints SHOULD have short lifetimes to
+   minimize the window for replay attacks.  The AS MAY reject ID Tokens
+   that are older than a configured threshold, even if they have not
+   technically expired.
+
+9.  Privacy Considerations
+
+   Cross-domain ID Token hints involve sharing user identity information
+   between trust domains.  Implementations MUST consider:
+
+   *  User consent: The user should be aware that their identity is
+      being shared with an external service.
+
+   *  Minimal disclosure: The ID Token should contain only the claims
+      necessary for the authorization decision.
+
+   *  Pairwise identifiers: Where possible, use pairwise subject
+      identifiers to prevent correlation across services.
+
+10.  IANA Considerations
+
+10.1.  OAuth Parameters Registration
+
+   This specification registers the following parameter in the "OAuth
+   Parameters" registry:
+
+   Parameter name:  id_token_hint_issuer
+
+   Parameter usage location:  authorization request, token request
+
+   Change Controller:  IETF
+
+   Specification Document:  Section 4.1 of this document
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 15]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+11.  References
+
+11.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/info/rfc7519>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/info/rfc9126>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/info/rfc8693>.
+
+   [OpenID.Core]
+              OpenID Foundation, "OpenID Connect Core 1.0", November
+              2014,
+              <https://openid.net/specs/openid-connect-core-1_0.html>.
+
+11.2.  Informative References
+
+   [I-D.ietf-oauth-attestation-based-client-auth]
+              Campbell, B. and A. Schwenkschuster, "OAuth 2.0
+              Attestation-Based Client Authentication", Work in
+              Progress, Internet-Draft, draft-ietf-oauth-attestation-
+              based-client-auth-00, March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              attestation-based-client-auth-00>.
+
+   [I-D.ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., "OAuth SPIFFE Client Authentication",
+              Work in Progress, Internet-Draft, draft-ietf-oauth-spiffe-
+              client-auth-01, March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth-01>.
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 16]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   [I-D.ietf-wimse-workload-creds]
+              Campbell, B. and A. Schwenkschuster, "WIMSE Workload
+              Credentials", Work in Progress, Internet-Draft, draft-
+              ietf-wimse-workload-creds-00, March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
+              workload-creds-00>.
+
+Appendix A.  Relationship to OAuth 2.0 Attestation-Based Client
+             Authentication
+
+   This specification relies on OAuth 2.0 Attestation-Based Client
+   Authentication [I-D.ietf-oauth-attestation-based-client-auth] and
+   OAuth SPIFFE Client Authentication
+   [I-D.ietf-oauth-spiffe-client-auth] for client authentication.  These
+   specifications work together:
+
+   *  OAuth 2.0 Attestation-Based Client Authentication: Defines the
+      general framework for using attestation tokens as OAuth client
+      credentials, including the HTTP header format (OAuth-Client-
+      Attestation and OAuth-Client-Attestation-PoP).
+
+   *  OAuth SPIFFE Client Authentication: Specializes the attestation-
+      based authentication for SPIFFE environments, defining how to use
+      JWT-SVID or WIT-SVID as client credentials.
+
+   *  WIMSE Workload Credentials [I-D.ietf-wimse-workload-creds]:
+      Defines the structure of Workload Identity Tokens (WIT) and
+      Workload Proof Tokens (WPT), which can be used within the OAuth
+      attestation framework.
+
+   *  Cross-Domain ID Token Hint: Conveys the user's identity from an
+      external Identity Provider, bound to the client identity
+      established through attestation-based authentication.
+
+   Together, these specifications enable a complete solution for AI
+   agent authorization where the agent proves both its own identity
+   (using attestation-backed workload credentials) and the user's
+   identity to an external Authorization Server.
+
+Acknowledgments
+
+   The authors would like to thank Brian Campbell for his valuable
+   feedback and insightful discussions during the development of this
+   specification.  His contributions helped shape key design decisions.
+
+Authors' Addresses
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 17]
+
+Internet-Draft         Cross-Domain ID Token Hint             March 2026
+
+
+   Dapeng Liu
+   Alibaba Group
+   Email: max.ldp@alibaba-inc.com
+
+
+   Hongru Zhu
+   Alibaba Group
+   Email: hongru.zhr@alibaba-inc.com
+
+
+   Suresh Krishnan
+   Cisco
+   Email: suresh.krishnan@gmail.com
+
+
+   Aaron Parecki
+   Okta
+   Email: aaron@parecki.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 18]
