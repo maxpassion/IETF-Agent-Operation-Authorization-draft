@@ -67,9 +67,9 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ## 2. OAuth Rego Policy
 
-**Draft**: [draft-liu-oauth-rego-policy-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-rego-policy-00.html)
+**Draft**: [draft-liu-oauth-rego-policy-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-rego-policy-00.html)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-rego-policy-00.html
+- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-rego-policy-00.html
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-rego-policy-00.xml
 
@@ -79,9 +79,9 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ## 3. OAuth Authorization Evidence
 
-**Draft**: [draft-liu-oauth-authorization-evidence-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-authorization-evidence-00.html)
+**Draft**: [draft-liu-oauth-authorization-evidence-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-authorization-evidence-00.html)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-authorization-evidence-00.html
+- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-authorization-evidence-00.html
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-authorization-evidence-00.xml
 
@@ -91,9 +91,9 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ## 4. OAuth Chain Delegation
 
-**Draft**: [draft-liu-oauth-chain-delegation-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-chain-delegation-00.html)
+**Draft**: [draft-liu-oauth-chain-delegation-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-00.html)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-chain-delegation-00.html
+- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-00.html
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-chain-delegation-00.xml
 
@@ -103,9 +103,9 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ### 5. AI Agent Authorization Integration
 
-**Draft**: [draft-liu-ai-agent-authorization-integration-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-ai-agent-authorization-integration-00.html)
+**Draft**: [draft-liu-ai-agent-authorization-integration-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-ai-agent-authorization-integration-00.html)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-ai-agent-authorization-integration-00.html
+- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-ai-agent-authorization-integration-00.html
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-ai-agent-authorization-integration-00.xml
 
