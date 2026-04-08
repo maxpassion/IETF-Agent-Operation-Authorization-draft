@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?xml-model href="rfc7991bis.rnc"?>
+<!--
+  ============================================================================
+  ARCHIVED DRAFT
+  ============================================================================
+  
+  This draft has been superseded by ID-JAG (Identity Assertion JWT 
+  Authorization Grant) with Token Exchange (RFC 8693).
+  
+  Reason for archival:
+  - ID-JAG provides better privacy protection through Token Exchange
+  - ID-JAG allows scoped tokens with controlled audience and claims
+  - ID-JAG avoids exposing full ID Token to external Authorization Servers
+  
+  The mechanism described in this draft (id_token_hint in PAR) has been
+  superseded by the assertion parameter in JWT Authorization Grant, which
+  provides equivalent cross-domain identity capabilities with enhanced
+  privacy and security.
+  
+  See:
+  - draft-ietf-oauth-identity-assertion-authz-grant (ID-JAG)
+  - draft-parecki-oauth-jwt-grant-interaction-response
+  - RFC 8693 (Token Exchange)
+  
+  Archived: March 2026
+  ============================================================================
+-->
 <!DOCTYPE rfc [
   <!ENTITY nbsp    "&#160;">
   <!ENTITY zwsp   "&#8203;">

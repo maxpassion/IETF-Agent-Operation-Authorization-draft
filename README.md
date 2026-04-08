@@ -4,7 +4,18 @@ Agent Operation Authorization (AOA) specification drafts for IETF standardizatio
 
 ## Background
 
-The AOA (Agent Operation Authorization) framework provides standardized protocols for agent-to-agent authorization in OAuth 2.0 ecosystems. These drafts address emerging security requirements for AI agent interactions, cross-domain delegation, and cryptographic evidence binding.
+The AOA (Agent Operation Authorization) framework provides standardized protocols for agent authorization in OAuth 2.0 ecosystems. These drafts address emerging security requirements for AI agent interactions, cross-domain delegation, and cryptographic evidence binding.
+
+> **Note on Agent Identity**: AOA does not define new authentication mechanisms for agents. Instead, it treats agent identity as workload identity, leveraging [WIMSE](https://datatracker.ietf.org/group/wimse/about/) (Workload Identity in Multi-System Environments) for authentication. This design choice enables seamless integration with existing infrastructure while focusing AOA on the authorization layer.
+>
+> **Optional: Trusted Execution Environment Verification**: For deployments requiring hardware-level assurance of agent integrity, [WIT Attestation](https://www.ietf.org/archive/id/draft-liu-wimse-wit-attestation-00.txt) can be used alongside WIMSE to embed remote attestation evidence (e.g., Intel TDX, AMD SEV-SNP measurements) in workload identity tokens. This provides cryptographic proof that the agent is running in a trusted environment, complementing AOA's authorization decisions with runtime integrity verification.
+
+
+> **Progressive Deployment**: AOA supports progressive deployment through a two-dimensional matrix:
+> - **Identity Levels**: Self-Issued (Level 0) → WIMSE (Level 1) → Enterprise IdP (Level 2)
+> - **Token Levels**: Pre-configured (A) → Admin-assigned (B) → Runtime AOA (C)
+> 
+> This allows organizations to start simple (e.g., Level 0A for personal or small-team agents) and gradually upgrade to full AOA (Level 2C for enterprise production) based on their security requirements.
 
 
 ## Draft Relationships Overview
@@ -13,7 +24,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 | # | Draft Name | Purpose |
 |---|------------|---------|
-| 1 | [OAuth Cross-Domain ID Token Hint](#1-oauth-cross-domain-id-token-hint) | Cross-domain user identity binding via ID tokens |
+| 1 | [JWT Grant Interaction Response](#1-jwt-grant-interaction-response) | JWT authorization grants with user interaction, consent, and cross-domain agent-user identity binding |
 | 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy-based authorization using Rego language |
 | 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Defines evidence for OAuth authorization decisions |
 | 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Multi-hop delegation with cryptographic binding |
@@ -28,15 +39,17 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ---
 
-## 1. OAuth Cross-Domain ID Token Hint
+## 1. JWT Grant Interaction Response
 
-**Draft**: [draft-liu-oauth-cross-domain-id-token-hint-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-cross-domain-id-token-hint-00.html)
+**Draft**: [draft-parecki-oauth-jwt-grant-interaction-response-00](https://datatracker.ietf.org/doc/html/draft-parecki-oauth-jwt-grant-interaction-response-00)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/drafts/html/draft-liu-oauth-cross-domain-id-token-hint-00.html
+- **IETF Datatracker**: https://datatracker.ietf.org/doc/html/draft-parecki-oauth-jwt-grant-interaction-response-00
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-cross-domain-id-token-hint-00.xml
+**Authors**: Aaron Parecki, Brian Campbell, Dapeng Liu
 
-**Purpose**: Provides cross-domain identity binding mechanism using ID Token hints, enabling seamless user identity mapping across different trust domains during agent-mediated interactions.
+**Purpose**: Extends the JWT Authorization Grant (RFC 7523) to support user interaction, explicit consent flows, and cross-domain agent-user identity binding. This mechanism enables scenarios where an AI agent acting on behalf of a user needs to obtain authorization from an external authorization server, with user approval when required. The draft defines the `interaction_required` error response, the interaction flow for obtaining user consent, and the use of JWT assertions for cross-domain identity verification.
+
+
 
 ---
 
