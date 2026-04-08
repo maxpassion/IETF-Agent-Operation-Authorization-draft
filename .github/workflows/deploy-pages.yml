@@ -42,48 +42,48 @@ jobs:
 
     - name: Create index page
       run: |
-        cat > drafts/html/index.html << 'INDEXHTML'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>AOA IETF Drafts</title>
-    <style>
-        body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
-        h1 { color: #24292e; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; }
-        .draft-list { list-style: none; padding: 0; }
-        .draft-item { background: #f6f8fa; margin: 10px 0; padding: 15px; border-radius: 6px; }
-        .draft-item a { color: #0366d6; text-decoration: none; font-weight: 600; }
-        .format-links a { color: #58a6ff; margin-right: 10px; }
-    </style>
-</head>
-<body>
-    <h1>📄 AOA IETF Internet-Drafts</h1>
-    <ul class="draft-list">
-        <li class="draft-item">
-            <a href="draft-liu-agent-operation-authorization-00.html">draft-liu-agent-operation-authorization-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-agent-operation-authorization-00.txt">TXT</a></div>
-        </li>
-        <li class="draft-item">
-            <a href="draft-liu-ai-agent-authorization-integration-00.html">draft-liu-ai-agent-authorization-integration-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-ai-agent-authorization-integration-00.txt">TXT</a></div>
-        </li>
-        <li class="draft-item">
-            <a href="draft-liu-oauth-authorization-evidence-00.html">draft-liu-oauth-authorization-evidence-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-oauth-authorization-evidence-00.txt">TXT</a></div>
-        </li>
-        <li class="draft-item">
-            <a href="draft-liu-oauth-chain-delegation-00.html">draft-liu-oauth-chain-delegation-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a></div>
-        </li>
-        <li class="draft-item">
-            <a href="draft-liu-oauth-rego-policy-00.html">draft-liu-oauth-rego-policy-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a></div>
-        </li>
-    </ul>
-</body>
-</html>
-INDEXHTML
+        cat > drafts/html/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>AOA IETF Drafts</title>
+            <style>
+                body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
+                h1 { color: #24292e; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; }
+                .draft-list { list-style: none; padding: 0; }
+                .draft-item { background: #f6f8fa; margin: 10px 0; padding: 15px; border-radius: 6px; }
+                .draft-item a { color: #0366d6; text-decoration: none; font-weight: 600; }
+                .format-links a { color: #58a6ff; margin-right: 10px; }
+            </style>
+        </head>
+        <body>
+            <h1>📄 AOA IETF Internet-Drafts</h1>
+            <ul class="draft-list">
+                <li class="draft-item">
+                    <a href="draft-liu-agent-operation-authorization-00.html">draft-liu-agent-operation-authorization-00</a>
+                    <div class="format-links"><a href="../txt/draft-liu-agent-operation-authorization-00.txt">TXT</a></div>
+                </li>
+                <li class="draft-item">
+                    <a href="draft-liu-ai-agent-authorization-integration-00.html">draft-liu-ai-agent-authorization-integration-00</a>
+                    <div class="format-links"><a href="../txt/draft-liu-ai-agent-authorization-integration-00.txt">TXT</a></div>
+                </li>
+                <li class="draft-item">
+                    <a href="draft-liu-oauth-authorization-evidence-00.html">draft-liu-oauth-authorization-evidence-00</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-authorization-evidence-00.txt">TXT</a></div>
+                </li>
+                <li class="draft-item">
+                    <a href="draft-liu-oauth-chain-delegation-00.html">draft-liu-oauth-chain-delegation-00</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a></div>
+                </li>
+                <li class="draft-item">
+                    <a href="draft-liu-oauth-rego-policy-00.html">draft-liu-oauth-rego-policy-00</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a></div>
+                </li>
+            </ul>
+        </body>
+        </html>
+        EOF
     
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
