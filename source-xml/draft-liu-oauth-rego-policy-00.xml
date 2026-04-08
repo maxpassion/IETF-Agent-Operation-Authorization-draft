@@ -136,6 +136,49 @@
           in Section 7 based on their specific deployment scenario.
         </t>
       </section>
+
+      <section title="Relationship to Rich Authorization Requests (RAR)">
+        <t>
+          Rich Authorization Requests (RAR) <xref target="RFC9396"/> defines 
+          a framework for expressing fine-grained authorization requirements 
+          through the <tt>authorization_details</tt> parameter. This specification 
+          complements RAR by providing policy-based authorization using the Rego 
+          language.
+        </t>
+
+        <t>
+          The relationship between these specifications is as follows:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Complementary Use</strong>: RAR enables structured 
+            authorization requests with type-specific details, while Rego Policy 
+            enables expressive, Turing-complete policy definitions. Implementations 
+            MAY use both mechanisms together.
+          </li>
+          <li>
+            <strong>Interoperability</strong>: When used with RAR, the 
+            <tt>policy_proposal</tt> claim MAY be included within an 
+            <tt>authorization_details</tt> object of type 
+            <tt>openid_rego_policy</tt> (registered in <xref target="IANA-RAR"/>).
+          </li>
+          <li>
+            <strong>Enriched Responses</strong>: RAR's enriched authorization 
+            response mechanism (Section 7.1 of <xref target="RFC9396"/>) can 
+            be used to return additional policy-related data, such as 
+            <tt>policy_ref</tt> or authorization evidence, alongside the access 
+            token.
+          </li>
+        </ul>
+
+        <t>
+          Implementations that support both RAR and Rego Policy SHOULD ensure 
+          consistency between <tt>authorization_details</tt> requirements and 
+          Rego policy evaluations. The Authorization Server MAY use RAR types 
+          to determine applicable policy templates or validation rules.
+        </t>
+      </section>
     </section>
 
     <section anchor="terminology" title="Terminology">
@@ -1056,6 +1099,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
       </references>
 
       <references>
