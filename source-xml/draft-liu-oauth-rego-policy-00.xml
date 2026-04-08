@@ -445,42 +445,43 @@ allow {
 | Client |       |   AS   |       |   RS   |       |  OPA   |
 +--------+       +--------+       +--------+       +--------+
     |                |                |                |
-    | (1) PAR with   |                |                |
-    | policy_proposal|                |                |
-    | policy_context |                |                |
+    | (1) AuthZ Req  |                |                |
+    | with           |                |                |
+    | authorization_ |                |                |
+    | details        |                |                |
+    | (type=rego_    |                |                |
+    |  policy)       |                |                |
     |--------------->|                |                |
     |                |                |                |
     |                | (2) Validate   |                |
     |                | policy syntax  |                |
     |                |                |                |
-    |                | (3) Register   |                |
+    |                | (3) Evaluate   |                |
     |                | policy         |                |
     |                |                |                |
-    | (4) request_uri|                |                |
+    | (4) Enriched   |                |                |
+    |    Access Token|                |                |
+    |    with        |                |                |
+    |    policy_ref  |                |                |
     |<---------------|                |                |
     |                |                |                |
-    | (5) Authorization flow          |                |
-    |<-------------->|                |                |
-    |                |                |                |
-    | (6) Access Token                |                |
-    | with policy_ref                 |                |
-    |<---------------|                |                |
-    |                |                |                |
-    | (7) API Request with token      |                |
+    | (5) API Request|                |                |
+    | with token     |                |                |
     |-------------------------------->|                |
     |                |                |                |
-    |                |                | (8) Fetch      |
-    |                |                | policy         |
+    |                |                | (6) Fetch      |
+    |                |                | policy via     |
+    |                |                | policy_ref     |
     |                |                |--------------->|
     |                |                |                |
-    |                |                | (9) Evaluate   |
+    |                |                | (7) Evaluate   |
     |                |                | policy         |
     |                |                |<---------------|
     |                |                |                |
-    |                |                | (10) Enforce   |
+    |                |                | (8) Enforce    |
     |                |                | decision       |
     |                |                |                |
-    | (11) Response  |                |                |
+    | (9) Response   |                |                |
     |<--------------------------------|                |
         ]]></artwork>
       </figure>
@@ -488,36 +489,36 @@ allow {
       <section title="Step Details">
         <ol>
           <li>
-            Policy Proposal: Client sends PAR request with 
-            <tt>policy_proposal</tt> and <tt>policy_context</tt> claims.
+            Authorization Request: Client sends authorization request with 
+            <tt>authorization_details</tt> of type <tt>openid_rego_policy</tt>,
+            containing <tt>policy_proposal</tt> and optional <tt>policy_context</tt>.
+            This leverages RAR (RFC 9396) for structured authorization requests.
           </li>
           <li>
             Syntax Validation: AS validates that the Rego policy 
             is syntactically correct and safe to execute.
           </li>
           <li>
-            Policy Registration: AS registers the policy and 
-            assigns a unique identifier.
+            Policy Evaluation: AS evaluates the policy against the request context
+            to determine authorization scope. This may involve checking user consent
+            requirements and policy constraints.
           </li>
           <li>
-            Request URI: AS returns request_uri for authorization flow.
-          </li>
-          <li>
-            Authorization: User consent flow (if required).
-          </li>
-          <li>
-            Token Issuance: AS issues access token with 
-            <tt>policy_ref</tt> claim.
+            Enriched Token Response: AS issues access token with 
+            <tt>policy_ref</tt> claim referencing the evaluated policy.
+            Per RFC 9396 Section 7.1, the response MAY include enriched
+            authorization information such as the full policy or evaluation context.
           </li>
           <li>
             API Request: Client presents token to Resource Server.
           </li>
           <li>
-            Policy Fetch: RS retrieves the full policy from AS 
-            (if not cached).
+            Policy Fetch: RS retrieves the policy via <tt>policy_ref</tt> from AS
+            (if not cached). The policy may have been returned directly in the
+            enriched token response.
           </li>
           <li>
-            Policy Evaluation: RS sends policy and input to OPA.
+            Policy Evaluation: RS sends policy and request input to OPA for evaluation.
           </li>
           <li>
             Enforcement: RS enforces OPA's allow/deny decision.
