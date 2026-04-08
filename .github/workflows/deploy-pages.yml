@@ -62,10 +62,6 @@ jobs:
             <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a></div>
         </li>
         <li class="draft-item">
-            <a href="draft-liu-oauth-cross-domain-id-token-hint-00.html">draft-liu-oauth-cross-domain-id-token-hint-00</a>
-            <div class="format-links"><a href="../txt/draft-liu-oauth-cross-domain-id-token-hint-00.txt">TXT</a></div>
-        </li>
-        <li class="draft-item">
             <a href="draft-liu-oauth-rego-policy-00.html">draft-liu-oauth-rego-policy-00</a>
             <div class="format-links"><a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a></div>
         </li>
