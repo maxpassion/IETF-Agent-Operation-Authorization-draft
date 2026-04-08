@@ -8,7 +8,7 @@ The AOA (Agent Operation Authorization) framework provides standardized protocol
 
 > **Note on Agent Identity**: AOA does not define new authentication mechanisms for agents. Instead, it treats agent identity as workload identity, leveraging [WIMSE](https://datatracker.ietf.org/group/wimse/about/) (Workload Identity in Multi-System Environments) for authentication. This design choice enables seamless integration with existing infrastructure while focusing AOA on the authorization layer.
 >
-> **Optional: Trusted Execution Environment Verification**: For deployments requiring hardware-level assurance of agent integrity, [WIT Attestation](https://www.ietf.org/archive/id/draft-liu-wimse-wit-attestation-00.txt) can be used alongside WIMSE to embed remote attestation evidence (e.g., Intel TDX, AMD SEV-SNP measurements) in workload identity tokens. This provides cryptographic proof that the agent is running in a trusted environment, complementing AOA's authorization decisions with runtime integrity verification.
+> **Optional: Trusted Execution Environment Verification**: For deployments requiring hardware-level assurance of agent integrity, [WIT Attestation](https://www.ietf.org/archive/id/draft-liu-wimse-wit-attestation-00.txt) can be used alongside WIMSE to embed remote attestation evidence (e.g., TEE technologies such as TDX and SEV-SNP) in workload identity tokens. This provides cryptographic proof that the agent is running in a trusted environment, complementing AOA's authorization decisions with runtime integrity verification.
 
 
 > **Progressive Deployment**: AOA supports progressive deployment through a two-dimensional matrix:
