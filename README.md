@@ -11,11 +11,23 @@ The AOA (Agent Operation Authorization) framework provides standardized protocol
 > **Optional: Trusted Execution Environment Verification**: For deployments requiring hardware-level assurance of agent integrity, [WIT Attestation](https://www.ietf.org/archive/id/draft-liu-wimse-wit-attestation-00.txt) can be used alongside WIMSE to embed remote attestation evidence (e.g., TEE technologies such as TDX and SEV-SNP) in workload identity tokens. This provides cryptographic proof that the agent is running in a trusted environment, complementing AOA's authorization decisions with runtime integrity verification.
 
 
-> **Progressive Deployment**: AOA supports progressive deployment through a two-dimensional matrix:
-> - **Identity Levels**: Self-Issued (Level 0) → WIMSE (Level 1) → Enterprise IdP (Level 2)
-> - **Token Levels**: Pre-configured (A) → Admin-assigned (B) → Runtime AOA (C)
-> 
-> This allows organizations to start simple (e.g., Level 0A for personal or small-team agents) and gradually upgrade to full AOA (Level 2C for enterprise production) based on their security requirements.
+## Progressive Deployment
+
+AOA supports **progressive deployment** through a two-dimensional matrix, allowing organizations to adopt capabilities gradually based on their security requirements and operational maturity.
+
+### Deployment Levels
+
+| Dimension | Level 0 / A | Level 1 / B | Level 2 / C |
+|-----------|-------------|-------------|-------------|
+| **Identity** | Self-Issued | WIMSE | Enterprise IdP |
+| **Token** | Pre-configured | Admin-assigned | Runtime AOA |
+
+### Example Progression
+
+- **Level 0A**: Personal or small-team agents (self-issued identity, pre-configured tokens)
+- **Level 2C**: Enterprise production (enterprise IdP, full runtime AOA with user consent)
+
+Organizations can start at any level and upgrade as requirements evolve.
 
 
 ## Draft Relationships Overview
