@@ -486,6 +486,184 @@ allow {
       </section>
     </section>
 
+    <section anchor="reverse-guided" title="Reverse-Guided Authorization">
+      <t>
+        Traditional OAuth error responses indicate authorization failure without 
+        providing guidance on how to obtain valid authorization. In AI agent 
+        scenarios, where agents may need to autonomously navigate authorization 
+        requirements, resource servers can provide structured guidance that enables 
+        agents to construct appropriate authorization requests.
+      </t>
+
+      <section title="Error Response Format">
+        <t>
+          When an agent's request lacks sufficient authorization, the resource 
+          server returns an HTTP 403 Forbidden response with a JSON body containing 
+          a <tt>rego_profile</tt> object. This object provides machine-readable 
+          guidance on the required authorization conditions.
+        </t>
+
+        <figure>
+          <name>Reverse-Guided Authorization Error Response</name>
+          <artwork type="json"><![CDATA[
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+
+{
+  "error": "insufficient_authorization",
+  "error_description": "Additional authorization required",
+  "rego_profile": {
+    "profile_uri": "https://resource.example/policies/purchase",
+    "required_scope": ["purchase.create"],
+    "required_claims": ["agent_id", "user_id"],
+    "constraints": {
+      "max_amount": {
+        "type": "number",
+        "description": "Maximum transaction amount in USD",
+        "required": true
+      },
+      "trigger_source": {
+        "type": "string",
+        "enum": ["user_initiated", "scheduled"],
+        "description": "Source of the operation trigger"
+      }
+    },
+    "confirmation_required": true,
+    "evidence_required": true,
+    "auth_server": "https://as.example.com",
+    "token_endpoint": "https://as.example.com/token"
+  }
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Rego Profile Structure">
+        <t>
+          The <tt>rego_profile</tt> object contains the following fields:
+        </t>
+
+        <dl>
+          <dt>profile_uri:</dt>
+          <dd>
+            REQUIRED. URI of the policy profile document that defines the 
+            authorization requirements for this resource.
+          </dd>
+
+          <dt>required_scope:</dt>
+          <dd>
+            OPTIONAL. Array of scope values that the access token MUST include.
+          </dd>
+
+          <dt>required_claims:</dt>
+          <dd>
+            OPTIONAL. Array of claim names that MUST be present in the token.
+          </dd>
+
+          <dt>constraints:</dt>
+          <dd>
+            OPTIONAL. Object defining policy constraints that MUST be satisfied. 
+            Each constraint specifies the data type, description, and whether it 
+            is required.
+          </dd>
+
+          <dt>confirmation_required:</dt>
+          <dd>
+            OPTIONAL. Boolean indicating whether user consent is required. 
+            If true, the agent MUST obtain explicit user approval.
+          </dd>
+
+          <dt>evidence_required:</dt>
+          <dd>
+            OPTIONAL. Boolean indicating whether authorization evidence 
+            recording is required.
+          </dd>
+
+          <dt>auth_server:</dt>
+          <dd>
+            REQUIRED. Identifier of the authorization server capable of 
+            issuing tokens that satisfy these requirements.
+          </dd>
+
+          <dt>token_endpoint:</dt>
+          <dd>
+            REQUIRED. URL of the token endpoint where the agent can request 
+            appropriate authorization.
+          </dd>
+        </dl>
+      </section>
+
+      <section title="Agent Adaptive Behavior">
+        <t>
+          Upon receiving a reverse-guided authorization response, the AI agent 
+          SHOULD:
+        </t>
+
+        <ol>
+          <li>
+            Parse the <tt>rego_profile</tt> to understand authorization requirements.
+          </li>
+          <li>
+            Verify that the specified <tt>auth_server</tt> is trusted before 
+            proceeding.
+          </li>
+          <li>
+            Construct a new authorization request that includes:
+            <ul>
+              <li>Required scopes from <tt>required_scope</tt></li>
+              <li>Policy proposal satisfying the specified constraints</li>
+              <li>Appropriate <tt>policy_context</tt> with required claims</li>
+            </ul>
+          </li>
+          <li>
+            If <tt>confirmation_required</tt> is true, initiate user consent flow.
+          </li>
+          <li>
+            Submit the authorization request to the specified 
+            <tt>token_endpoint</tt>.
+          </li>
+        </ol>
+
+        <t>
+          This adaptive approach enables agents to "learn" authorization 
+          requirements dynamically, reducing the need for pre-programmed 
+          knowledge of each resource server's policies.
+        </t>
+      </section>
+
+      <section title="Security Considerations">
+        <t>
+          Implementations of reverse-guided authorization MUST consider the 
+          following security aspects:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Auth Server Verification</strong>: Agents MUST verify that 
+            the <tt>auth_server</tt> specified in the rego_profile is trusted 
+            before submitting authorization requests. Blindly following 
+            redirects could lead to credential theft.
+          </li>
+          <li>
+            <strong>Constraint Validation</strong>: Agents SHOULD validate that 
+            constraint values are reasonable before including them in 
+            authorization requests. Malicious resource servers might attempt 
+            to induce agents to request excessive permissions.
+          </li>
+          <li>
+            <strong>Information Disclosure</strong>: The rego_profile reveals 
+            authorization requirements, which is acceptable as it only exposes 
+            "what is needed" not "why it is needed." This is analogous to 
+            OAuth scope definitions.
+          </li>
+          <li>
+            <strong>TLS Protection</strong>: All communications MUST use TLS 
+            to prevent man-in-the-middle attacks on the error response.
+          </li>
+        </ul>
+      </section>
+    </section>
+
     <section anchor="as-processing" title="Authorization Server Processing">
       <section title="Policy Validation">
         <t>
