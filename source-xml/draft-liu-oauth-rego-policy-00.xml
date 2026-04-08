@@ -161,7 +161,7 @@
             <strong>Interoperability</strong>: When used with RAR, the 
             <tt>policy_proposal</tt> claim MAY be included within an 
             <tt>authorization_details</tt> object of type 
-            <tt>openid_rego_policy</tt> (registered in <xref target="IANA-RAR"/>).
+            <tt>openid_rego_policy</tt> (registered in the RAR Authorization Data Types registry defined in Section 9.4 of RFC 9396).
           </li>
           <li>
             <strong>Enriched Responses</strong>: RAR's enriched authorization 
@@ -651,12 +651,8 @@ Content-Type: application/json
             proceeding.
           </li>
           <li>
-            Construct a new authorization request that includes:
-            <ul>
-              <li>Required scopes from <tt>required_scope</tt></li>
-              <li>Policy proposal satisfying the specified constraints</li>
-              <li>Appropriate <tt>policy_context</tt> with required claims</li>
-            </ul>
+            Construct a new authorization request including required scopes, 
+            policy proposal satisfying constraints, and appropriate policy context.
           </li>
           <li>
             If <tt>confirmation_required</tt> is true, initiate user consent flow.
