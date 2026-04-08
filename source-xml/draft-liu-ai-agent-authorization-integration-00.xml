@@ -91,6 +91,26 @@
         this use case.
       </t>
 
+      <t>
+        Two key design principles guide this framework:
+      </t>
+
+      <ul>
+        <li>
+          <strong>Progressive Deployment</strong>: Organizations can adopt AOA 
+          capabilities gradually through a two-dimensional deployment matrix, 
+          starting with simple configurations and upgrading to full runtime 
+          authorization as requirements evolve (see <xref target="progressive-deployment"/>).
+        </li>
+        <li>
+          <strong>Reverse-Guided Authorization</strong>: Resource servers can 
+          guide agents toward appropriate authorization by returning structured 
+          error responses that specify required policies and constraints, enabling 
+          AI agents to adaptively construct valid authorization requests (see 
+          <xref target="reverse-guided"/>).
+        </li>
+      </ul>
+
       <section title="Component Specifications">
         <t>
           This framework integrates the following specifications:
@@ -629,6 +649,153 @@
       </section>
     </section>
 
+    <section anchor="progressive-deployment" title="Progressive Deployment">
+      <t>
+        The AOA framework supports progressive deployment through a 
+        two-dimensional matrix, allowing organizations to adopt capabilities 
+        gradually based on their security requirements and operational maturity.
+      </t>
+
+      <section anchor="identity-levels" title="Identity Deployment Levels">
+        <t>
+          Implementations MAY deploy agent identity at three progressive levels:
+        </t>
+
+        <section title="Level 0: Self-Issued Identity">
+          <t>
+            The agent generates its own key pair and self-issues identity 
+            assertions. Suitable for development, testing, and low-trust scenarios 
+            such as personal or small-team agents.
+          </t>
+        </section>
+
+        <section title="Level 1: WIMSE Workload Identity">
+          <t>
+            The agent obtains workload identity tokens through WIMSE infrastructure. 
+            Provides cross-domain verifiability without requiring full enterprise IdP 
+            deployment. This level can be enhanced with optional trusted execution 
+            environment verification using WIT Attestation.
+          </t>
+        </section>
+
+        <section title="Level 2: Enterprise Identity">
+          <t>
+            The agent's identity is managed by an enterprise IdP with full 
+            X.509 or SAML/OIDC trust chains. Required for high-assurance 
+            enterprise deployments.
+          </t>
+        </section>
+      </section>
+
+      <section anchor="token-levels" title="Token Deployment Levels">
+        <t>
+          Authorization tokens can be deployed at three levels:
+        </t>
+
+        <section title="Level A: Pre-configured Tokens">
+          <t>
+            Static tokens configured at deployment time. No runtime AS interaction 
+            required. Suitable for internal services and well-known agents.
+          </t>
+        </section>
+
+        <section title="Level B: Admin-Assigned Tokens">
+          <t>
+            Tokens assigned by administrators through a management interface. 
+            Policy binding without end-user consent. Suitable for enterprise 
+            automation scenarios.
+          </t>
+        </section>
+
+        <section title="Level C: Runtime AOA Tokens">
+          <t>
+            Full AOA flow with user consent, policy evaluation, and evidence 
+            recording. Required for high-sensitivity operations and cross-domain 
+            access. This level utilizes the JWT Grant Interaction Response 
+            mechanism for user consent.
+          </t>
+        </section>
+      </section>
+
+      <section anchor="deployment-matrix" title="Deployment Matrix">
+        <t>
+          The combination of identity and token levels creates a deployment matrix:
+        </t>
+
+        <table anchor="tbl-deployment-matrix">
+          <name>AOA Deployment Matrix</name>
+          <thead>
+            <tr>
+              <th>Identity \ Token</th>
+              <th>A (Pre-configured)</th>
+              <th>B (Admin-assigned)</th>
+              <th>C (Runtime AOA)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0 (Self-Issued)</td>
+              <td>Personal agents, IoT</td>
+              <td>Small team automation</td>
+              <td>Dynamic authorization</td>
+            </tr>
+            <tr>
+              <td>1 (WIMSE)</td>
+              <td>Trusted lightweight agents</td>
+              <td>Enterprise operations</td>
+              <td>Cross-domain access</td>
+            </tr>
+            <tr>
+              <td>2 (Enterprise)</td>
+              <td>High-trust static auth</td>
+              <td>Compliance scenarios</td>
+              <td>Full AOA enterprise</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <t>
+          Organizations typically progress through the matrix as their 
+          requirements evolve, starting from lower levels (e.g., 0A) and 
+          upgrading to higher levels (e.g., 2C) based on security needs.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="reverse-guided" title="Reverse-Guided Authorization">
+      <t>
+        Traditional OAuth error responses indicate authorization failure without 
+        guidance on how to obtain valid authorization. In AI agent scenarios, 
+        where agents may autonomously navigate authorization requirements, 
+        resource servers can provide structured guidance through error responses.
+      </t>
+
+      <t>
+        When an agent's request lacks sufficient authorization, the resource 
+        server returns a 403 Forbidden response with a <tt>rego_profile</tt> 
+        object that specifies:
+      </t>
+
+      <ul>
+        <li>Required scopes or authorization details;</li>
+        <li>Policy constraints that must be satisfied;</li>
+        <li>Whether user consent is required;</li>
+        <li>Reference to the authorization server capable of issuing appropriate tokens.</li>
+      </ul>
+
+      <t>
+        The AI agent parses this guidance and constructs a new authorization 
+        request that satisfies the specified requirements. This enables agents 
+        to "learn" authorization requirements dynamically rather than requiring 
+        pre-programmed knowledge of each resource server's policies.
+      </t>
+
+      <t>
+        Detailed specification of the Rego Profile format and agent adaptive 
+        behavior is defined in draft-liu-oauth-rego-policy.
+      </t>
+    </section>
+
     <section anchor="security" title="Security Considerations">
       <section title="Trust Boundaries">
         <t>
@@ -700,6 +867,300 @@
       </section>
     </section>
 
+    <section anchor="relationships" title="Relationship to Other Specifications">
+      <t>
+        This section clarifies the relationship between this framework and other 
+        OAuth 2.0 specifications. Understanding these relationships is essential 
+        for implementers to determine which specifications are required for their 
+        specific use cases.
+      </t>
+
+      <section anchor="rel-id-jag" title="Relationship to Identity Assertion Grant (ID-JAG)">
+        <t>
+          This framework extends the Identity Assertion Authorization Grant 
+          (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>) by adding 
+          explicit user consent through the confirmation URL mechanism. While ID-JAG 
+          focuses on service-to-service scenarios where the requesting client already 
+          has user authorization, this framework addresses user-to-agent scenarios 
+          requiring explicit consent.
+        </t>
+
+        <t>
+          Key differences:
+        </t>
+
+        <ul>
+          <li>
+            ID-JAG assumes the client has already obtained user consent through 
+            out-of-band means;
+          </li>
+          <li>
+            This framework defines a confirmation URL mechanism for obtaining 
+            explicit user consent within the OAuth flow;
+          </li>
+          <li>
+            This framework adds policy-based authorization (Rego) beyond ID-JAG's 
+            scope-based approach.
+          </li>
+        </ul>
+
+        <t>
+          Implementations of this framework MUST implement ID-JAG as the base 
+          grant type.
+        </t>
+      </section>
+
+      <section anchor="rel-token-exchange" title="Relationship to Token Exchange (RFC 8693)">
+        <t>
+          This framework uses Token Exchange (<xref target="RFC8693"/>) as the base 
+          delegation mechanism and extends it with the <tt>delegation_chain</tt> claim 
+          for complete auditability. While RFC 8693 provides point-to-point token 
+          exchange, this framework enables end-to-end delegation chain tracking.
+        </t>
+
+        <t>
+          Key extensions:
+        </t>
+
+        <ul>
+          <li>
+            <tt>delegation_chain</tt> claim records all delegation hops with 
+            cryptographic signatures;
+          </li>
+          <li>
+            Policy subset validation ensures privilege escalation prevention 
+            across delegation hops;
+          </li>
+          <li>
+            Evidence records provide cryptographic proof of user consent at 
+            each delegation step.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MUST support RFC 8693 for token exchange operations 
+          and MAY implement the delegation chain extension for multi-hop scenarios.
+        </t>
+      </section>
+
+      <section anchor="rel-transaction-tokens" title="Relationship to Transaction Tokens">
+        <t>
+          Transaction Tokens (draft-ietf-oauth-transaction-tokens) focus on 
+          short-lived service-to-service authorization in microservices architectures. 
+          This framework focuses on longer-lived user-to-agent delegation with explicit 
+          human consent.
+        </t>
+
+        <t>
+          Comparison:
+        </t>
+
+        <table anchor="tbl-txn-compare">
+          <name>Transaction Tokens vs AOA Framework</name>
+          <thead>
+            <tr>
+              <th>Aspect</th>
+              <th>Transaction Tokens</th>
+              <th>AOA Framework</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Primary use case</td>
+              <td>Service-to-service</td>
+              <td>User-to-agent</td>
+            </tr>
+            <tr>
+              <td>Human consent</td>
+              <td>Not required</td>
+              <td>Required</td>
+            </tr>
+            <tr>
+              <td>Token lifetime</td>
+              <td>Minutes</td>
+              <td>Hours to days</td>
+            </tr>
+            <tr>
+              <td>Authorization model</td>
+              <td>Capability-based</td>
+              <td>Policy-based</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <t>
+          The two specifications can be combined: AOA for initial user authorization, 
+          Transaction Tokens for subsequent service-to-service calls within the 
+          authorized scope.
+        </t>
+      </section>
+
+      <section anchor="rel-ciba" title="Relationship to CIBA">
+        <t>
+          This framework profiles the OpenID Connect Client-Initiated Backchannel 
+          Authentication (CIBA) specification for out-of-band user consent. While 
+          CIBA focuses on user authentication, this framework uses it for authorization 
+          and consent collection.
+        </t>
+
+        <t>
+          CIBA is used in this framework for:
+        </t>
+
+        <ul>
+          <li>
+            Scenarios where the agent cannot redirect the user to a browser 
+            (e.g., voice assistants, IoT devices);
+          </li>
+          <li>
+            High-security scenarios requiring out-of-band consent verification;
+          </li>
+          <li>
+            Mobile scenarios where the user completes consent on a separate device.
+          </li>
+        </ul>
+
+        <t>
+          The framework extends CIBA by adding policy presentation to the consent 
+          interface and evidence recording of the consent decision.
+        </t>
+      </section>
+
+      <section anchor="rel-rar" title="Relationship to Rich Authorization Requests (RAR)">
+        <t>
+          Rich Authorization Requests (<xref target="RFC9396"/>) provide a structured 
+          JSON format for authorization requests. This framework uses the Rego policy 
+          language instead of RAR for authorization requests.
+        </t>
+
+        <t>
+          Rationale for using Rego:
+        </t>
+
+        <ul>
+          <li>
+            Rego provides Turing-complete expressiveness suitable for complex 
+            AI agent scenarios;
+          </li>
+          <li>
+            Rego policies can be evaluated by standard OPA engines at resource 
+            servers;
+          </li>
+          <li>
+            Rego enables context-aware authorization decisions based on runtime 
+            parameters.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MAY support RAR as an alternative to Rego for simpler 
+          scenarios, but Rego is RECOMMENDED for AI agent authorization.
+        </t>
+      </section>
+
+      <section anchor="rel-spiffe" title="Relationship to SPIFFE Client Authentication">
+        <t>
+          This framework uses OAuth SPIFFE Client Authentication 
+          (<xref target="I-D.ietf-oauth-spiffe-client-auth"/>) for agent 
+          authentication. SPIFFE provides workload identity through WIT-SVID 
+          (Workload Identity Token with SPIFFE Verifiable Identity Document).
+        </t>
+
+        <t>
+          The relationship is:
+        </t>
+
+        <ul>
+          <li>
+            SPIFFE Client Auth proves "who the agent is" through cryptographic 
+            workload identity;
+          </li>
+          <li>
+            This framework proves "what the agent is allowed to do" through 
+            user consent and policy authorization;
+          </li>
+          <li>
+            Together, they provide complete agent identity and authorization.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MUST support SPIFFE Client Authentication for agent 
+          identification.
+        </t>
+      </section>
+
+      <section anchor="implementation-requirements" title="Implementation Requirements">
+        <t>
+          The following table summarizes the implementation requirements for 
+          different components of this framework:
+        </t>
+
+        <table anchor="tbl-impl-req">
+          <name>Implementation Requirements</name>
+          <thead>
+            <tr>
+              <th>Specification</th>
+              <th>Requirement Level</th>
+              <th>Component</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OAuth 2.0 (RFC 6749)</td>
+              <td>MUST</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td>PAR (RFC 9126)</td>
+              <td>MUST</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td>ID-JAG</td>
+              <td>MUST</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td>SPIFFE Client Auth</td>
+              <td>MUST</td>
+              <td>Agent, AS</td>
+            </tr>
+            <tr>
+              <td>Cross-Domain ID Token Hint</td>
+              <td>MUST</td>
+              <td>Agent, AS</td>
+            </tr>
+            <tr>
+              <td>Rego Policy</td>
+              <td>SHOULD</td>
+              <td>Agent, AS, RS</td>
+            </tr>
+            <tr>
+              <td>Authorization Evidence</td>
+              <td>SHOULD</td>
+              <td>AS, RS</td>
+            </tr>
+            <tr>
+              <td>Chain Delegation</td>
+              <td>MAY</td>
+              <td>AS (if supporting delegation)</td>
+            </tr>
+            <tr>
+              <td>Token Exchange (RFC 8693)</td>
+              <td>SHOULD</td>
+              <td>AS</td>
+            </tr>
+            <tr>
+              <td>CIBA</td>
+              <td>MAY</td>
+              <td>AS (if supporting out-of-band consent)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+
     <section anchor="iana" title="IANA Considerations">
       <t>
         This document has no IANA actions. All claims and parameters are defined 
@@ -716,6 +1177,17 @@
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
+
+        <reference anchor="I-D.ietf-oauth-identity-assertion-authz-grant">
+          <front>
+            <title>OAuth 2.0 Identity Assertion Authorization Grant</title>
+            <author initials="K." surname="Ying"/>
+            <author initials="B." surname="Campbell"/>
+            <date year="2026" month="January"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-identity-assertion-authz-grant"/>
+        </reference>
 
         <reference anchor="I-D.ietf-oauth-spiffe-client-auth">
           <front>
