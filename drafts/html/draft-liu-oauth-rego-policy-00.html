@@ -12,10 +12,10 @@
 <meta content="
        
         This specification defines how to use the Rego policy language in OAuth 2.0 
-        authorization flows. It introduces JWT claims for carrying policy proposals 
-        in authorization requests and policy references in access tokens, enabling 
-        fine-grained, dynamic authorization decisions that go beyond traditional 
-        scope-based access control.
+        authorization flows using Rich Authorization Requests (RAR). It defines 
+        the openid_rego_policy authorization data type for carrying policy proposals 
+        in authorization_details, enabling fine-grained, dynamic authorization 
+        decisions that go beyond traditional scope-based access control.
        
     " name="description">
 <meta content="xml2rfc 3.31.0" name="generator">
@@ -1279,10 +1279,10 @@ li > p:last-of-type:only-child {
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">
         This specification defines how to use the Rego policy language in OAuth 2.0 
-        authorization flows. It introduces JWT claims for carrying policy proposals 
-        in authorization requests and policy references in access tokens, enabling 
-        fine-grained, dynamic authorization decisions that go beyond traditional 
-        scope-based access control.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+        authorization flows using Rich Authorization Requests (RAR). It defines 
+        the openid_rego_policy authorization data type for carrying policy proposals 
+        in authorization_details, enabling fine-grained, dynamic authorization 
+        decisions that go beyond traditional scope-based access control.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1342,7 +1342,7 @@ li > p:last-of-type:only-child {
                 <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-applicability" class="internal xref">Applicability</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
-                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-relationship-to-rich-author" class="internal xref">Relationship to Rich Authorization Requests (RAR)</a></p>
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-rar-integration" class="internal xref">RAR Integration</a></p>
 </li>
             </ul>
 </li>
@@ -1350,13 +1350,13 @@ li > p:last-of-type:only-child {
             <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-jwt-claims" class="internal xref">JWT Claims</a></p>
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-rar-authorization-data-type" class="internal xref">RAR Authorization Data Type</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
-                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-policy_proposal-claim" class="internal xref">policy_proposal Claim</a></p>
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-openid_rego_policy" class="internal xref">openid_rego_policy</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1.2.1">
-                    <p id="section-toc.1-1.3.2.1.2.1.1"><a href="#section-3.1.1" class="auto internal xref">3.1.1</a>.  <a href="#name-claim-definition" class="internal xref">Claim Definition</a></p>
+                    <p id="section-toc.1-1.3.2.1.2.1.1"><a href="#section-3.1.1" class="auto internal xref">3.1.1</a>.  <a href="#name-type-definition" class="internal xref">Type Definition</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1.2.2">
                     <p id="section-toc.1-1.3.2.1.2.2.1"><a href="#section-3.1.2" class="auto internal xref">3.1.2</a>.  <a href="#name-structure" class="internal xref">Structure</a></p>
@@ -1370,7 +1370,7 @@ li > p:last-of-type:only-child {
                 <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-policy_ref-claim" class="internal xref">policy_ref Claim</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.1">
-                    <p id="section-toc.1-1.3.2.2.2.1.1"><a href="#section-3.2.1" class="auto internal xref">3.2.1</a>.  <a href="#name-claim-definition-2" class="internal xref">Claim Definition</a></p>
+                    <p id="section-toc.1-1.3.2.2.2.1.1"><a href="#section-3.2.1" class="auto internal xref">3.2.1</a>.  <a href="#name-claim-definition" class="internal xref">Claim Definition</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.2">
                     <p id="section-toc.1-1.3.2.2.2.2.1"><a href="#section-3.2.2" class="auto internal xref">3.2.2</a>.  <a href="#name-structure-2" class="internal xref">Structure</a></p>
@@ -1378,12 +1378,7 @@ li > p:last-of-type:only-child {
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
-                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-policy_context-claim" class="internal xref">policy_context Claim</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3.2.1">
-                    <p id="section-toc.1-1.3.2.3.2.1.1"><a href="#section-3.3.1" class="auto internal xref">3.3.1</a>.  <a href="#name-structure-3" class="internal xref">Structure</a></p>
-</li>
-                </ul>
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-policy-context" class="internal xref">Policy Context</a></p>
 </li>
             </ul>
 </li>
@@ -1475,7 +1470,10 @@ li > p:last-of-type:only-child {
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
-                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-jwt-claims-registration" class="internal xref">JWT Claims Registration</a></p>
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-rar-authorization-data-type-" class="internal xref">RAR Authorization Data Type Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-jwt-claims-registration" class="internal xref">JWT Claims Registration</a></p>
 </li>
             </ul>
 </li>
@@ -1554,10 +1552,10 @@ li > p:last-of-type:only-child {
 <a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-applicability" class="section-name selfRef">Applicability</a>
         </h3>
 <p id="section-1.2-1">
-          While this specification is optimized for use with Pushed 
-          Authorization Requests (PAR) <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, the 
-          policy proposal mechanism is designed to be general-purpose 
-          and MAY be used with various OAuth 2.0 authorization flows, 
+          This specification is designed to work with Rich Authorization 
+          Requests (RAR) <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> as the primary mechanism 
+          for carrying policy proposals. The openid_rego_policy authorization 
+          data type MAY be used with various OAuth 2.0 authorization flows, 
           including but not limited to:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.2-2.1">
@@ -1580,43 +1578,41 @@ li > p:last-of-type:only-child {
           in Section 7 based on their specific deployment scenario.<a href="#section-1.2-3" class="pilcrow">¶</a></p>
 </section>
 <section id="section-1.3">
-        <h3 id="name-relationship-to-rich-author">
-<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-relationship-to-rich-author" class="section-name selfRef">Relationship to Rich Authorization Requests (RAR)</a>
+        <h3 id="name-rar-integration">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-rar-integration" class="section-name selfRef">RAR Integration</a>
         </h3>
 <p id="section-1.3-1">
-          Rich Authorization Requests (RAR) <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> defines 
-          a framework for expressing fine-grained authorization requirements 
-          through the <code>authorization_details</code> parameter. This specification 
-          complements RAR by providing policy-based authorization using the Rego 
-          language.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+          This specification defines the <code>openid_rego_policy</code> 
+          authorization data type for use with Rich Authorization Requests (RAR) 
+          <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>. The policy proposal is carried within the 
+          <code>authorization_details</code> parameter as the primary mechanism.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
 <p id="section-1.3-2">
-          The relationship between these specifications is as follows:<a href="#section-1.3-2" class="pilcrow">¶</a></p>
+          Key aspects of the RAR integration:<a href="#section-1.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.3-3.1">
+            <strong>Authorization Data Type</strong>: The 
+            <code>openid_rego_policy</code> type is registered in the RAR 
+            Authorization Data Types registry (Section 9.4 of RFC 9396). 
+            It contains the policy content, entry point, and optional context.<a href="#section-1.3-3.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-1.3-3.2">
+            <strong>Token Response</strong>: The access token includes a 
+            <code>policy_ref</code> claim referencing the registered policy. 
+            Per RFC 9396 Section 7.1, the token response MAY include 
+            enriched authorization information such as the full policy content.<a href="#section-1.3-3.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-1.3-3.3">
             <strong>Complementary Use</strong>: RAR enables structured 
             authorization requests with type-specific details, while Rego Policy 
             enables expressive, Turing-complete policy definitions. Implementations 
-            MAY use both mechanisms together.<a href="#section-1.3-3.1" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-1.3-3.2">
-            <strong>Interoperability</strong>: When used with RAR, the 
-            <code>policy_proposal</code> claim MAY be included within an 
-            <code>authorization_details</code> object of type 
-            <code>openid_rego_policy</code> (registered in the RAR Authorization Data Types registry defined in Section 9.4 of RFC 9396).<a href="#section-1.3-3.2" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-1.3-3.3">
-            <strong>Enriched Responses</strong>: RAR's enriched authorization 
-            response mechanism (Section 7.1 of <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) can 
-            be used to return additional policy-related data, such as 
-            <code>policy_ref</code> or authorization evidence, alongside the access 
-            token.<a href="#section-1.3-3.3" class="pilcrow">¶</a>
+            MAY combine openid_rego_policy with other RAR types.<a href="#section-1.3-3.3" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-1.3-4">
-          Implementations that support both RAR and Rego Policy SHOULD ensure 
-          consistency between <code>authorization_details</code> requirements and 
-          Rego policy evaluations. The Authorization Server MAY use RAR types 
-          to determine applicable policy templates or validation rules.<a href="#section-1.3-4" class="pilcrow">¶</a></p>
+          Implementations SHOULD ensure consistency between 
+          <code>authorization_details</code> requirements and Rego policy evaluations. 
+          The Authorization Server MAY use RAR types to determine applicable 
+          policy templates or validation rules.<a href="#section-1.3-4" class="pilcrow">¶</a></p>
 </section>
 </section>
 </div>
@@ -1639,58 +1635,61 @@ li > p:last-of-type:only-child {
           structured input data.<a href="#section-2-1.4" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-1.5">Policy Proposal:</dt>
+<dt id="section-2-1.5">Rich Authorization Requests (RAR):</dt>
         <dd style="margin-left: 1.5em" id="section-2-1.6">
-          A Rego policy string submitted by a client in an authorization request, 
-          describing the operations the client wishes to perform.<a href="#section-2-1.6" class="pilcrow">¶</a>
+          A framework defined in RFC 9396 for expressing fine-grained authorization 
+          requirements through the <code>authorization_details</code> parameter.<a href="#section-2-1.6" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-1.7">Policy Reference:</dt>
+<dt id="section-2-1.7">openid_rego_policy:</dt>
         <dd style="margin-left: 1.5em" id="section-2-1.8">
-          An identifier for a policy that has been validated and registered by the 
-          Authorization Server, included in access tokens.<a href="#section-2-1.8" class="pilcrow">¶</a>
+          An authorization data type for RAR that carries a Rego policy proposal 
+          within the <code>authorization_details</code> parameter.<a href="#section-2-1.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-1.9">Policy Context:</dt>
+<dt id="section-2-1.9">Policy Reference:</dt>
         <dd style="margin-left: 1.5em" id="section-2-1.10">
-          Structured input data provided to OPA for policy evaluation, including 
-          user attributes, resource attributes, and environmental conditions.<a href="#section-2-1.10" class="pilcrow">¶</a>
+          An identifier for a policy that has been validated and registered by the 
+          Authorization Server, included in access tokens via the <code>policy_ref</code> 
+          claim.<a href="#section-2-1.10" class="pilcrow">¶</a>
 </dd>
       <dd class="break"></dd>
 </dl>
 </section>
 </div>
-<div id="claims">
+<div id="authorization-data-type">
 <section id="section-3">
-      <h2 id="name-jwt-claims">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-jwt-claims" class="section-name selfRef">JWT Claims</a>
+      <h2 id="name-rar-authorization-data-type">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-rar-authorization-data-type" class="section-name selfRef">RAR Authorization Data Type</a>
       </h2>
 <p id="section-3-1">
-        This specification defines the following JWT claims for Rego policy support:<a href="#section-3-1" class="pilcrow">¶</a></p>
-<div id="policy-proposal-claim">
+        This specification defines the <code>openid_rego_policy</code> authorization 
+        data type for use with Rich Authorization Requests (RAR).<a href="#section-3-1" class="pilcrow">¶</a></p>
+<div id="openid-rego-policy">
 <section id="section-3.1">
-        <h3 id="name-policy_proposal-claim">
-<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-policy_proposal-claim" class="section-name selfRef">policy_proposal Claim</a>
+        <h3 id="name-openid_rego_policy">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-openid_rego_policy" class="section-name selfRef">openid_rego_policy</a>
         </h3>
 <p id="section-3.1-1">
-          The <code>policy_proposal</code> claim carries a Rego policy string in 
-          authorization requests. It is used by clients to propose the operations 
-          they wish to perform.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+          The <code>openid_rego_policy</code> authorization data type carries a Rego 
+          policy within the <code>authorization_details</code> parameter. It enables 
+          clients to propose fine-grained authorization policies as part of the 
+          authorization request.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <section id="section-3.1.1">
-          <h4 id="name-claim-definition">
-<a href="#section-3.1.1" class="section-number selfRef">3.1.1. </a><a href="#name-claim-definition" class="section-name selfRef">Claim Definition</a>
+          <h4 id="name-type-definition">
+<a href="#section-3.1.1" class="section-number selfRef">3.1.1. </a><a href="#name-type-definition" class="section-name selfRef">Type Definition</a>
           </h4>
 <span class="break"></span><dl class="dlParallel" id="section-3.1.1-1">
-            <dt id="section-3.1.1-1.1">Claim Name:</dt>
-            <dd style="margin-left: 1.5em" id="section-3.1.1-1.2">policy_proposal<a href="#section-3.1.1-1.2" class="pilcrow">¶</a>
+            <dt id="section-3.1.1-1.1">Type Name:</dt>
+            <dd style="margin-left: 1.5em" id="section-3.1.1-1.2">openid_rego_policy<a href="#section-3.1.1-1.2" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
-<dt id="section-3.1.1-1.3">Claim Type:</dt>
+<dt id="section-3.1.1-1.3">Data Type:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.1-1.4">Object<a href="#section-3.1.1-1.4" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
 <dt id="section-3.1.1-1.5">Usage:</dt>
-            <dd style="margin-left: 1.5em" id="section-3.1.1-1.6">Authorization requests (PAR)<a href="#section-3.1.1-1.6" class="pilcrow">¶</a>
+            <dd style="margin-left: 1.5em" id="section-3.1.1-1.6">authorization_details (RFC 9396)<a href="#section-3.1.1-1.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -1703,39 +1702,71 @@ li > p:last-of-type:only-child {
             <div class="alignLeft art-json art-text artwork" id="section-3.1.2-1.1">
 <pre>
 {
-  "policy_proposal": {
-    "type": "rego",
-    "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount &lt;= 50.0\n}",
-    "entry_point": "allow"
-  }
+  "authorization_details": [
+    {
+      "type": "openid_rego_policy",
+      "policy": {
+        "type": "rego",
+        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount &lt;= 50.0\n}",
+        "entry_point": "allow"
+      },
+      "context": {
+        "user": {"id": "user_123", "tier": "premium"},
+        "environment": {"channel": "mobile-app"}
+      }
+    }
+  ]
 }
 </pre>
 </div>
 <figcaption><a href="#figure-1" class="selfRef">Figure 1</a></figcaption></figure>
-<p id="section-3.1.2-2">Fields:<a href="#section-3.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.1.2-2">
+            The <code>openid_rego_policy</code> authorization data type has the 
+            following fields:<a href="#section-3.1.2-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.1.2-3">
             <dt id="section-3.1.2-3.1">type:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-3.2">
-              REQUIRED. The policy language type. MUST be "rego" for this specification. 
-              Future extensions MAY define additional types (e.g., "cel", "opa-bundle").<a href="#section-3.1.2-3.2" class="pilcrow">¶</a>
+              REQUIRED. The authorization data type identifier. MUST be 
+              "openid_rego_policy" for this specification.<a href="#section-3.1.2-3.2" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
-<dt id="section-3.1.2-3.3">content:</dt>
+<dt id="section-3.1.2-3.3">policy:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-3.4">
-              REQUIRED (if uri not present). The Rego policy as a string. The policy 
-              MUST be syntactically valid Rego.<a href="#section-3.1.2-3.4" class="pilcrow">¶</a>
+              REQUIRED. An object containing the Rego policy definition.<a href="#section-3.1.2-3.4" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
-<dt id="section-3.1.2-3.5">uri:</dt>
+<dt id="section-3.1.2-3.5">context:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-3.6">
-              OPTIONAL. A URI reference to an externally hosted policy. If provided, 
-              the AS MAY fetch the policy from this location.<a href="#section-3.1.2-3.6" class="pilcrow">¶</a>
+              OPTIONAL. An object providing structured input data for policy 
+              evaluation. This data is passed to OPA as the <code>input</code> object.<a href="#section-3.1.2-3.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-3.1.2-4">
+            The <code>policy</code> object has the following fields:<a href="#section-3.1.2-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.1.2-5">
+            <dt id="section-3.1.2-5.1">type:</dt>
+            <dd style="margin-left: 1.5em" id="section-3.1.2-5.2">
+              REQUIRED. The policy language type. MUST be "rego" for this 
+              specification. Future extensions MAY define additional types.<a href="#section-3.1.2-5.2" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
-<dt id="section-3.1.2-3.7">entry_point:</dt>
-            <dd style="margin-left: 1.5em" id="section-3.1.2-3.8">
-              REQUIRED. The rule name that serves as the policy entry point. For 
-              authorization decisions, this MUST be "allow".<a href="#section-3.1.2-3.8" class="pilcrow">¶</a>
+<dt id="section-3.1.2-5.3">content:</dt>
+            <dd style="margin-left: 1.5em" id="section-3.1.2-5.4">
+              REQUIRED (if uri not present). The Rego policy as a string. 
+              The policy MUST be syntactically valid Rego.<a href="#section-3.1.2-5.4" class="pilcrow">¶</a>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-3.1.2-5.5">uri:</dt>
+            <dd style="margin-left: 1.5em" id="section-3.1.2-5.6">
+              OPTIONAL. A URI reference to an externally hosted policy. 
+              If provided, the AS MAY fetch the policy from this location.<a href="#section-3.1.2-5.6" class="pilcrow">¶</a>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-3.1.2-5.7">entry_point:</dt>
+            <dd style="margin-left: 1.5em" id="section-3.1.2-5.8">
+              REQUIRED. The rule name that serves as the policy entry point. 
+              For authorization decisions, this MUST be "allow".<a href="#section-3.1.2-5.8" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -1763,7 +1794,8 @@ li > p:last-of-type:only-child {
 </li>
             <li id="section-3.1.3-2.4">
               Input Reference: The policy accesses context data via 
-              the <code>input</code> object, which is populated by the policy_context claim.<a href="#section-3.1.3-2.4" class="pilcrow">¶</a>
+              the <code>input</code> object, which is populated from the <code>context</code> 
+              field of the <code>openid_rego_policy</code> authorization data type.<a href="#section-3.1.3-2.4" class="pilcrow">¶</a>
 </li>
           </ol>
 <figure id="figure-2">
@@ -1793,8 +1825,8 @@ allow {
           The <code>policy_ref</code> claim is included in access tokens to reference a 
           policy that has been validated and registered by the Authorization Server.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <section id="section-3.2.1">
-          <h4 id="name-claim-definition-2">
-<a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-claim-definition-2" class="section-name selfRef">Claim Definition</a>
+          <h4 id="name-claim-definition">
+<a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-claim-definition" class="section-name selfRef">Claim Definition</a>
           </h4>
 <span class="break"></span><dl class="dlParallel" id="section-3.2.1-1">
             <dt id="section-3.2.1-1.1">Claim Name:</dt>
@@ -1860,62 +1892,33 @@ allow {
 </section>
 </section>
 </div>
-<div id="policy-context-claim">
+<div id="policy-context">
 <section id="section-3.3">
-        <h3 id="name-policy_context-claim">
-<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-policy_context-claim" class="section-name selfRef">policy_context Claim</a>
+        <h3 id="name-policy-context">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-policy-context" class="section-name selfRef">Policy Context</a>
         </h3>
 <p id="section-3.3-1">
-          The <code>policy_context</code> claim provides structured input data for policy 
-          evaluation. This data is passed to OPA as the <code>input</code> object.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
-<section id="section-3.3.1">
-          <h4 id="name-structure-3">
-<a href="#section-3.3.1" class="section-number selfRef">3.3.1. </a><a href="#name-structure-3" class="section-name selfRef">Structure</a>
-          </h4>
-<figure id="figure-4">
-            <div class="alignLeft art-json art-text artwork" id="section-3.3.1-1.1">
-<pre>
-{
-  "policy_context": {
-    "user": {
-      "id": "user_12345",
-      "roles": ["customer"],
-      "tier": "premium"
-    },
-    "agent": {
-      "id": "spiffe://myassistant.example/agent",
-      "platform": "personal-agent.myassistant.example",
-      "instance": "dfp_abc123",
-      "client": "mobile-app-v1.myassistant.example"
-    },
-    "environment": {
-      "channel": "mobile-app",
-      "time": "2026-03-01T10:30:00Z",
-      "location": "US",
-      "language": "zh-CN",
-      "device_fingerprint": "dfp_abc123"
-    }
-  }
-}
-</pre>
-</div>
-<figcaption><a href="#figure-4" class="selfRef">Figure 4</a></figcaption></figure>
-<p id="section-3.3.1-2">
-            The structure of policy_context is flexible and can include any attributes 
-            relevant to policy evaluation. Common categories include:<a href="#section-3.3.1-2" class="pilcrow">¶</a></p>
+          The <code>context</code> field within <code>openid_rego_policy</code> provides 
+          structured input data for policy evaluation. This data is passed to OPA 
+          as the <code>input</code> object.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">
+          The context structure is flexible and can include any attributes relevant 
+          to policy evaluation. Common categories include:<a href="#section-3.3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.3.1-3.1">user: User identity and attributes;<a href="#section-3.3.1-3.1" class="pilcrow">¶</a>
+<li class="normal" id="section-3.3-3.1">user: User identity and attributes;<a href="#section-3.3-3.1" class="pilcrow">¶</a>
 </li>
-            <li class="normal" id="section-3.3.1-3.2">agent: Agent identity, platform, instance, and client metadata;<a href="#section-3.3.1-3.2" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-3.2">agent: Agent identity, platform, instance, and client metadata;<a href="#section-3.3-3.2" class="pilcrow">¶</a>
 </li>
-            <li class="normal" id="section-3.3.1-3.3">resource: Target resource attributes;<a href="#section-3.3.1-3.3" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-3.3">resource: Target resource attributes;<a href="#section-3.3-3.3" class="pilcrow">¶</a>
 </li>
-            <li class="normal" id="section-3.3.1-3.4">action: Requested action details;<a href="#section-3.3.1-3.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-3.4">action: Requested action details;<a href="#section-3.3-3.4" class="pilcrow">¶</a>
 </li>
-            <li class="normal" id="section-3.3.1-3.5">environment: Contextual conditions (time, location, channel, language, device fingerprint).<a href="#section-3.3.1-3.5" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-3.5">environment: Contextual conditions (time, location, channel, language, device fingerprint).<a href="#section-3.3-3.5" class="pilcrow">¶</a>
 </li>
-          </ul>
-</section>
+        </ul>
+<p id="section-3.3-4">
+          See Section 3.1 for an example of context within the authorization_details 
+          structure.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1925,95 +1928,98 @@ allow {
       <h2 id="name-protocol-flow">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-protocol-flow" class="section-name selfRef">Protocol Flow</a>
       </h2>
-<figure id="figure-5">
+<figure id="figure-4">
         <div class="alignLeft art-ascii-art art-text artwork" id="section-4-1.1">
 <pre>
 +--------+       +--------+       +--------+       +--------+
 | Client |       |   AS   |       |   RS   |       |  OPA   |
 +--------+       +--------+       +--------+       +--------+
     |                |                |                |
-    | (1) PAR with   |                |                |
-    | policy_proposal|                |                |
-    | policy_context |                |                |
+    | (1) AuthZ Req  |                |                |
+    | with           |                |                |
+    | authorization_ |                |                |
+    | details        |                |                |
+    | (type=rego_    |                |                |
+    |  policy)       |                |                |
     |---------------&gt;|                |                |
     |                |                |                |
     |                | (2) Validate   |                |
     |                | policy syntax  |                |
     |                |                |                |
-    |                | (3) Register   |                |
+    |                | (3) Evaluate   |                |
     |                | policy         |                |
     |                |                |                |
-    | (4) request_uri|                |                |
+    | (4) Enriched   |                |                |
+    |    Access Token|                |                |
+    |    with        |                |                |
+    |    policy_ref  |                |                |
     |&lt;---------------|                |                |
     |                |                |                |
-    | (5) Authorization flow          |                |
-    |&lt;--------------&gt;|                |                |
-    |                |                |                |
-    | (6) Access Token                |                |
-    | with policy_ref                 |                |
-    |&lt;---------------|                |                |
-    |                |                |                |
-    | (7) API Request with token      |                |
+    | (5) API Request|                |                |
+    | with token     |                |                |
     |--------------------------------&gt;|                |
     |                |                |                |
-    |                |                | (8) Fetch      |
-    |                |                | policy         |
+    |                |                | (6) Fetch      |
+    |                |                | policy via     |
+    |                |                | policy_ref     |
     |                |                |---------------&gt;|
     |                |                |                |
-    |                |                | (9) Evaluate   |
+    |                |                | (7) Evaluate   |
     |                |                | policy         |
     |                |                |&lt;---------------|
     |                |                |                |
-    |                |                | (10) Enforce   |
+    |                |                | (8) Enforce    |
     |                |                | decision       |
     |                |                |                |
-    | (11) Response  |                |                |
+    | (9) Response   |                |                |
     |&lt;--------------------------------|                |
 </pre>
 </div>
-<figcaption><a href="#figure-5" class="selfRef">Figure 5</a></figcaption></figure>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a></figcaption></figure>
 <section id="section-4.1">
         <h3 id="name-step-details">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-step-details" class="section-name selfRef">Step Details</a>
         </h3>
 <ol start="1" type="1" class="normal type-1" id="section-4.1-1">
           <li id="section-4.1-1.1">
-            Policy Proposal: Client sends PAR request with 
-            <code>policy_proposal</code> and <code>policy_context</code> claims.<a href="#section-4.1-1.1" class="pilcrow">¶</a>
+            Authorization Request: Client sends authorization request with 
+            <code>authorization_details</code> containing an object of type 
+            <code>openid_rego_policy</code>, with <code>policy</code> and optional 
+            <code>context</code> fields. This leverages RAR (RFC 9396) for structured 
+            authorization requests.<a href="#section-4.1-1.1" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.2">
             Syntax Validation: AS validates that the Rego policy 
             is syntactically correct and safe to execute.<a href="#section-4.1-1.2" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.3">
-            Policy Registration: AS registers the policy and 
-            assigns a unique identifier.<a href="#section-4.1-1.3" class="pilcrow">¶</a>
+            Policy Evaluation: AS evaluates the policy against the request context
+            to determine authorization scope. This may involve checking user consent
+            requirements and policy constraints.<a href="#section-4.1-1.3" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.4">
-            Request URI: AS returns request_uri for authorization flow.<a href="#section-4.1-1.4" class="pilcrow">¶</a>
+            Token Response: AS issues access token with <code>policy_ref</code> claim 
+            referencing the registered policy. Per RFC 9396 Section 7.1, the 
+            token response MAY include enriched authorization information in 
+            additional JSON fields (e.g., <code>policy</code> containing the full 
+            policy content) alongside the access token.<a href="#section-4.1-1.4" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.5">
-            Authorization: User consent flow (if required).<a href="#section-4.1-1.5" class="pilcrow">¶</a>
+            API Request: Client presents token to Resource Server.<a href="#section-4.1-1.5" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.6">
-            Token Issuance: AS issues access token with 
-            <code>policy_ref</code> claim.<a href="#section-4.1-1.6" class="pilcrow">¶</a>
+            Policy Fetch: RS retrieves the policy via <code>policy_ref</code> from AS
+            (if not cached). The policy may have been returned directly in the
+            enriched token response.<a href="#section-4.1-1.6" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.7">
-            API Request: Client presents token to Resource Server.<a href="#section-4.1-1.7" class="pilcrow">¶</a>
+            Policy Evaluation: RS sends policy and request input to OPA for evaluation.<a href="#section-4.1-1.7" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.8">
-            Policy Fetch: RS retrieves the full policy from AS 
-            (if not cached).<a href="#section-4.1-1.8" class="pilcrow">¶</a>
+            Enforcement: RS enforces OPA's allow/deny decision.<a href="#section-4.1-1.8" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.9">
-            Policy Evaluation: RS sends policy and input to OPA.<a href="#section-4.1-1.9" class="pilcrow">¶</a>
-</li>
-          <li id="section-4.1-1.10">
-            Enforcement: RS enforces OPA's allow/deny decision.<a href="#section-4.1-1.10" class="pilcrow">¶</a>
-</li>
-          <li id="section-4.1-1.11">
-            Response: RS returns result to client.<a href="#section-4.1-1.11" class="pilcrow">¶</a>
+            Response: RS returns result to client.<a href="#section-4.1-1.9" class="pilcrow">¶</a>
 </li>
         </ol>
 </section>
@@ -2039,7 +2045,7 @@ allow {
           server returns an HTTP 403 Forbidden response with a JSON body containing 
           a <code>rego_profile</code> object. This object provides machine-readable 
           guidance on the required authorization conditions.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
-<span id="name-reverse-guided-authorization"></span><figure id="figure-6">
+<span id="name-reverse-guided-authorization"></span><figure id="figure-5">
           <div class="alignLeft art-json art-text artwork" id="section-5.1-2.1">
 <pre>
 HTTP/1.1 403 Forbidden
@@ -2072,7 +2078,7 @@ Content-Type: application/json
 }
 </pre>
 </div>
-<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
 <a href="#name-reverse-guided-authorization" class="selfRef">Reverse-Guided Authorization Error Response</a>
           </figcaption></figure>
 </section>
@@ -2253,7 +2259,7 @@ Content-Type: application/json
         </h3>
 <p id="section-6.3-1">
           If policy validation fails, the AS MUST return an error:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
-<figure id="figure-7">
+<figure id="figure-6">
           <div class="alignLeft art-json art-text artwork" id="section-6.3-2.1">
 <pre>
 {
@@ -2262,7 +2268,7 @@ Content-Type: application/json
 }
 </pre>
 </div>
-<figcaption><a href="#figure-7" class="selfRef">Figure 7</a></figcaption></figure>
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a></figcaption></figure>
 </section>
 </section>
 </div>
@@ -2299,7 +2305,7 @@ Content-Type: application/json
         </h3>
 <p id="section-7.2-1">
           The RS evaluates the policy using OPA:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
-<figure id="figure-8">
+<figure id="figure-7">
           <div class="alignLeft art-json art-text artwork" id="section-7.2-2.1">
 <pre>
 POST /v1/data/agent/allow HTTP/1.1
@@ -2322,8 +2328,8 @@ Content-Type: application/json
 }
 </pre>
 </div>
-<figcaption><a href="#figure-8" class="selfRef">Figure 8</a></figcaption></figure>
-<figure id="figure-9">
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a></figcaption></figure>
+<figure id="figure-8">
           <div class="alignLeft art-json art-text artwork" id="section-7.2-3.1">
 <pre>
 {
@@ -2331,7 +2337,7 @@ Content-Type: application/json
 }
 </pre>
 </div>
-<figcaption><a href="#figure-9" class="selfRef">Figure 9</a></figcaption></figure>
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a></figcaption></figure>
 </section>
 <section id="section-7.3">
         <h3 id="name-enforcement-decision">
@@ -2372,7 +2378,7 @@ Content-Type: application/json
           Request (JAR), is specifically designed for redirect-based 
           flows and provides integrity protection while maintaining 
           consistency with the PAR mechanism.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<figure id="figure-10">
+<figure id="figure-9">
           <div class="alignLeft art-http art-text artwork" id="section-8.1-2.1">
 <pre>
 GET /authorize?
@@ -2383,30 +2389,35 @@ GET /authorize?
 Host: as.example.com
 </pre>
 </div>
-<figcaption><a href="#figure-10" class="selfRef">Figure 10</a></figcaption></figure>
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a></figcaption></figure>
 <p id="section-8.1-3">
           The JWT payload (decoded) contains:<a href="#section-8.1-3" class="pilcrow">¶</a></p>
-<figure id="figure-11">
+<figure id="figure-10">
           <div class="alignLeft art-json art-text artwork" id="section-8.1-4.1">
 <pre>
 {
   "response_type": "code",
   "client_id": "spiffe://agent.example/agent",
-  "policy_proposal": {
-    "type": "rego",
-    "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \\"read\\"\\n}",
-    "entry_point": "allow"
-  },
-  "policy_context": {
-    "user": {"id": "user_123"},
-    "agent": {"id": "spiffe://agent.example/agent"}
-  },
+  "authorization_details": [
+    {
+      "type": "openid_rego_policy",
+      "policy": {
+        "type": "rego",
+        "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \"read\"\\n}",
+        "entry_point": "allow"
+      },
+      "context": {
+        "user": {"id": "user_123"},
+        "agent": {"id": "spiffe://agent.example/agent"}
+      }
+    }
+  ],
   "redirect_uri": "https://agent.example/callback",
   "state": "xyz123"
 }
 </pre>
 </div>
-<figcaption><a href="#figure-11" class="selfRef">Figure 11</a></figcaption></figure>
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a></figcaption></figure>
 <p id="section-8.1-5">
           Using the JWT request parameter provides the following 
           benefits:<a href="#section-8.1-5" class="pilcrow">¶</a></p>
@@ -2441,7 +2452,7 @@ Host: as.example.com
 <p id="section-8.2-1">
           In machine-to-machine scenarios using client credentials, 
           the policy proposal can be included in the token request:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
-<figure id="figure-12">
+<figure id="figure-11">
           <div class="alignLeft art-http art-text artwork" id="section-8.2-2.1">
 <pre>
 POST /token HTTP/1.1
@@ -2452,15 +2463,20 @@ Content-Type: application/json
   "grant_type": "client_credentials",
   "client_id": "spiffe://agent.example/agent",
   "client_secret": "...",
-  "policy_proposal": {
-    "type": "rego",
-    "content": "...",
-    "entry_point": "allow"
-  }
+  "authorization_details": [
+    {
+      "type": "openid_rego_policy",
+      "policy": {
+        "type": "rego",
+        "content": "...",
+        "entry_point": "allow"
+      }
+    }
+  ]
 }
 </pre>
 </div>
-<figcaption><a href="#figure-12" class="selfRef">Figure 12</a></figcaption></figure>
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a></figcaption></figure>
 </section>
 <section id="section-8.3">
         <h3 id="name-token-exchange-rfc-8693">
@@ -2469,19 +2485,30 @@ Content-Type: application/json
 <p id="section-8.3-1">
           When exchanging tokens, a new policy proposal can be 
           provided to refine or extend the authorized operations:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
-<figure id="figure-13">
+<figure id="figure-12">
           <div class="alignLeft art-http art-text artwork" id="section-8.3-2.1">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
-Content-Type: application/x-www-form-urlencoded
+Content-Type: application/json
 
-grant_type=urn:ietf:params:oauth:grant-type:token-exchange
-&amp;subject_token=eyJhbGciOiJSUzI1NiJ9...
-&amp;policy_proposal={"type":"rego","content":"...","entry_point":"allow"}
+{
+  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+  "subject_token": "eyJhbGciOiJSUzI1NiJ9...",
+  "authorization_details": [
+    {
+      "type": "openid_rego_policy",
+      "policy": {
+        "type": "rego",
+        "content": "...",
+        "entry_point": "allow"
+      }
+    }
+  ]
+}
 </pre>
 </div>
-<figcaption><a href="#figure-13" class="selfRef">Figure 13</a></figcaption></figure>
+<figcaption><a href="#figure-12" class="selfRef">Figure 12</a></figcaption></figure>
 <p id="section-8.3-3">
           The resulting access token will include both the original 
           permissions and the new policy constraints.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
@@ -2492,32 +2519,53 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
         </h3>
 <p id="section-8.4-1">
           Different authorization flows have different security 
-          characteristics when using policy proposals:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+          characteristics when using RAR with openid_rego_policy:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8.4-2">
-          <dt id="section-8.4-2.1">PAR (Recommended):</dt>
+          <dt id="section-8.4-2.1">PAR with RAR (Recommended):</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.2">
-            Full JWT signature validation before authorization 
-            begins. Highest security.<a href="#section-8.4-2.2" class="pilcrow">¶</a>
+            authorization_details is transmitted in the PAR request body 
+            with JWT signature protection. Provides integrity and confidentiality.
+            Highest security for policy proposals.<a href="#section-8.4-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-8.4-2.3">Authorization Code:</dt>
+<dt id="section-8.4-2.3">Authorization Code with JAR:</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.4">
-            Policy transmitted in URL; MUST use HTTPS and consider 
-            signing to prevent tampering.<a href="#section-8.4-2.4" class="pilcrow">¶</a>
+            When using JWT-Secured Authorization Request (JAR, RFC 9101), 
+            authorization_details is protected by the JWT signature. 
+            Implementations MUST validate the JWT before processing.<a href="#section-8.4-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.4-2.5">Client Credentials:</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.6">
-            Direct AS communication; standard TLS and client auth 
-            usually sufficient.<a href="#section-8.4-2.6" class="pilcrow">¶</a>
+            Direct AS communication with TLS; standard client authentication 
+            usually sufficient. authorization_details is in the request body.<a href="#section-8.4-2.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 <dt id="section-8.4-2.7">Token Exchange:</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.8">
-            Similar to PAR; ensure policy binding to exchanged token.<a href="#section-8.4-2.8" class="pilcrow">¶</a>
+            Similar security to Client Credentials; ensure policy binding 
+            to the exchanged token subject.<a href="#section-8.4-2.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-8.4-3">
+          General security requirements for all flows:<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.4-4.1">
+            <strong>Integrity Protection:</strong> authorization_details 
+            SHOULD be signed when transmitted through untrusted channels 
+            (e.g., browser redirects). Use JAR or PAR for protection.<a href="#section-8.4-4.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-8.4-4.2">
+            <strong>Length Considerations:</strong> Rego policies may be 
+            large. Implementations SHOULD use PAR or JAR to avoid URL 
+            length limitations.<a href="#section-8.4-4.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-8.4-4.3">
+            <strong>RAR Type Validation:</strong> AS MUST validate that 
+            the type field is "openid_rego_policy" and reject unknown types.<a href="#section-8.4-4.3" class="pilcrow">¶</a>
+</li>
+        </ul>
 </section>
 </section>
 </div>
@@ -2568,20 +2616,22 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <section id="section-10.1">
-        <h3 id="name-jwt-claims-registration">
-<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-jwt-claims-registration" class="section-name selfRef">JWT Claims Registration</a>
+        <h3 id="name-rar-authorization-data-type-">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-rar-authorization-data-type-" class="section-name selfRef">RAR Authorization Data Type Registration</a>
         </h3>
 <p id="section-10.1-1">
-          This specification registers the following claims in the 
-          "JSON Web Token Claims" registry:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+          This specification registers the following authorization data type 
+          in the "OAuth Authorization Data Types" registry established by 
+          RFC 9396:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10.1-2">
-          <dt id="section-10.1-2.1">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-2.2">policy_proposal<a href="#section-10.1-2.2" class="pilcrow">¶</a>
+          <dt id="section-10.1-2.1">Type Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.1-2.2">openid_rego_policy<a href="#section-10.1-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-2.3">Claim Description:</dt>
+<dt id="section-10.1-2.3">Description:</dt>
           <dd style="margin-left: 1.5em" id="section-10.1-2.4">
-            A Rego policy proposed by a client for authorization evaluation.<a href="#section-10.1-2.4" class="pilcrow">¶</a>
+            A Rego policy for fine-grained authorization decisions, including 
+            policy content, entry point, and optional evaluation context.<a href="#section-10.1-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 <dt id="section-10.1-2.5">Change Controller:</dt>
@@ -2589,45 +2639,34 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </dd>
           <dd class="break"></dd>
 <dt id="section-10.1-2.7">Specification Document:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-2.8">Section 3.1 of this document<a href="#section-10.1-2.8" class="pilcrow">¶</a>
+          <dd style="margin-left: 1.5em" id="section-10.1-2.8">Section 3 of this document<a href="#section-10.1-2.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-3">
-          <dt id="section-10.1-3.1">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.2">policy_ref<a href="#section-10.1-3.2" class="pilcrow">¶</a>
+</section>
+<section id="section-10.2">
+        <h3 id="name-jwt-claims-registration">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-jwt-claims-registration" class="section-name selfRef">JWT Claims Registration</a>
+        </h3>
+<p id="section-10.2-1">
+          This specification registers the following claims in the 
+          "JSON Web Token Claims" registry:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.2-2">
+          <dt id="section-10.2-2.1">Claim Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.2-2.2">policy_ref<a href="#section-10.2-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-3.3">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.4">
-            A reference to a registered policy in access tokens.<a href="#section-10.1-3.4" class="pilcrow">¶</a>
+<dt id="section-10.2-2.3">Claim Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.2-2.4">
+            A reference to a registered Rego policy in access tokens.<a href="#section-10.2-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-3.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.6">IETF<a href="#section-10.1-3.6" class="pilcrow">¶</a>
+<dt id="section-10.2-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.2-2.6">IETF<a href="#section-10.2-2.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-10.1-3.7">Specification Document:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-3.8">Section 3.2 of this document<a href="#section-10.1-3.8" class="pilcrow">¶</a>
-</dd>
-        <dd class="break"></dd>
-</dl>
-<span class="break"></span><dl class="dlParallel" id="section-10.1-4">
-          <dt id="section-10.1-4.1">Claim Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.2">policy_context<a href="#section-10.1-4.2" class="pilcrow">¶</a>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-10.1-4.3">Claim Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.4">
-            Structured input data for policy evaluation.<a href="#section-10.1-4.4" class="pilcrow">¶</a>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-10.1-4.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.6">IETF<a href="#section-10.1-4.6" class="pilcrow">¶</a>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-10.1-4.7">Specification Document:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-4.8">Section 3.3 of this document<a href="#section-10.1-4.8" class="pilcrow">¶</a>
+<dt id="section-10.2-2.7">Specification Document:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.2-2.8">Section 3.2 of this document<a href="#section-10.2-2.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2697,7 +2736,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
         <h3 id="name-amount-based-authorization">
 <a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-amount-based-authorization" class="section-name selfRef">Amount-Based Authorization</a>
         </h3>
-<figure id="figure-14">
+<figure id="figure-13">
           <div class="alignLeft art-rego art-text artwork" id="appendix-A.1-1.1">
 <pre>
 package agent
@@ -2716,13 +2755,13 @@ allow {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-14" class="selfRef">Figure 14</a></figcaption></figure>
+<figcaption><a href="#figure-13" class="selfRef">Figure 13</a></figcaption></figure>
 </section>
 <section id="appendix-A.2">
         <h3 id="name-time-window-authorization">
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-time-window-authorization" class="section-name selfRef">Time-Window Authorization</a>
         </h3>
-<figure id="figure-15">
+<figure id="figure-14">
           <div class="alignLeft art-rego art-text artwork" id="appendix-A.2-1.1">
 <pre>
 package agent
@@ -2737,13 +2776,13 @@ allow {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-15" class="selfRef">Figure 15</a></figcaption></figure>
+<figcaption><a href="#figure-14" class="selfRef">Figure 14</a></figcaption></figure>
 </section>
 <section id="appendix-A.3">
         <h3 id="name-role-based-authorization">
 <a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-role-based-authorization" class="section-name selfRef">Role-Based Authorization</a>
         </h3>
-<figure id="figure-16">
+<figure id="figure-15">
           <div class="alignLeft art-rego art-text artwork" id="appendix-A.3-1.1">
 <pre>
 package agent
@@ -2762,7 +2801,7 @@ allow {
 }
 </pre>
 </div>
-<figcaption><a href="#figure-16" class="selfRef">Figure 16</a></figcaption></figure>
+<figcaption><a href="#figure-15" class="selfRef">Figure 15</a></figcaption></figure>
 </section>
 </section>
 <section id="appendix-B">
