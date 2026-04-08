@@ -62,7 +62,7 @@
       <t>
         This specification defines how to use the Rego policy language in OAuth 2.0 
         authorization flows using Rich Authorization Requests (RAR). It defines 
-        the openid_rego_policy authorization data type for carrying policy proposals 
+        the rego_policy authorization data type for carrying policy proposals 
         in authorization_details, enabling fine-grained, dynamic authorization 
         decisions that go beyond traditional scope-based access control.
       </t>
@@ -106,7 +106,7 @@
         <t>
           This specification is designed to work with Rich Authorization 
           Requests (RAR) <xref target="RFC9396"/> as the primary mechanism 
-          for carrying policy proposals. The openid_rego_policy authorization 
+          for carrying policy proposals. The rego_policy authorization 
           data type MAY be used with various OAuth 2.0 authorization flows, 
           including but not limited to:
         </t>
@@ -139,7 +139,7 @@
 
       <section title="RAR Integration">
         <t>
-          This specification defines the <tt>openid_rego_policy</tt> 
+          This specification defines the <tt>rego_policy</tt> 
           authorization data type for use with Rich Authorization Requests (RAR) 
           <xref target="RFC9396"/>. The policy proposal is carried within the 
           <tt>authorization_details</tt> parameter as the primary mechanism.
@@ -152,7 +152,7 @@
         <ul>
           <li>
             <strong>Authorization Data Type</strong>: The 
-            <tt>openid_rego_policy</tt> type is registered in the RAR 
+            <tt>rego_policy</tt> type is registered in the RAR 
             Authorization Data Types registry (Section 9.4 of RFC 9396). 
             It contains the policy content, entry point, and optional context.
           </li>
@@ -166,7 +166,7 @@
             <strong>Complementary Use</strong>: RAR enables structured 
             authorization requests with type-specific details, while Rego Policy 
             enables expressive, Turing-complete policy definitions. Implementations 
-            MAY combine openid_rego_policy with other RAR types.
+            MAY combine rego_policy with other RAR types.
           </li>
         </ul>
 
@@ -200,7 +200,7 @@
           requirements through the <tt>authorization_details</tt> parameter.
         </dd>
 
-        <dt>openid_rego_policy:</dt>
+        <dt>rego_policy:</dt>
         <dd>
           An authorization data type for RAR that carries a Rego policy proposal 
           within the <tt>authorization_details</tt> parameter.
@@ -217,13 +217,13 @@
 
     <section anchor="authorization-data-type" title="RAR Authorization Data Type">
       <t>
-        This specification defines the <tt>openid_rego_policy</tt> authorization 
+        This specification defines the <tt>rego_policy</tt> authorization 
         data type for use with Rich Authorization Requests (RAR).
       </t>
 
-      <section anchor="openid-rego-policy" title="openid_rego_policy">
+      <section anchor="rego-policy" title="rego_policy">
         <t>
-          The <tt>openid_rego_policy</tt> authorization data type carries a Rego 
+          The <tt>rego_policy</tt> authorization data type carries a Rego 
           policy within the <tt>authorization_details</tt> parameter. It enables 
           clients to propose fine-grained authorization policies as part of the 
           authorization request.
@@ -232,7 +232,7 @@
         <section title="Type Definition">
           <dl>
             <dt>Type Name:</dt>
-            <dd>openid_rego_policy</dd>
+            <dd>rego_policy</dd>
 
             <dt>Data Type:</dt>
             <dd>Object</dd>
@@ -244,11 +244,11 @@
 
         <section title="Structure">
           <figure>
-            <artwork name="openid_rego_policy in authorization_details" type="json"><![CDATA[
+            <artwork name="rego_policy in authorization_details" type="json"><![CDATA[
 {
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount <= 50.0\n}",
@@ -265,7 +265,7 @@
           </figure>
 
           <t>
-            The <tt>openid_rego_policy</tt> authorization data type has the 
+            The <tt>rego_policy</tt> authorization data type has the 
             following fields:
           </t>
 
@@ -273,7 +273,7 @@
             <dt>type:</dt>
             <dd>
               REQUIRED. The authorization data type identifier. MUST be 
-              "openid_rego_policy" for this specification.
+              "rego_policy" for this specification.
             </dd>
 
             <dt>policy:</dt>
@@ -342,7 +342,7 @@
             <li>
               Input Reference: The policy accesses context data via 
               the <tt>input</tt> object, which is populated from the <tt>context</tt> 
-              field of the <tt>openid_rego_policy</tt> authorization data type.
+              field of the <tt>rego_policy</tt> authorization data type.
             </li>
           </ol>
 
@@ -427,7 +427,7 @@ allow {
 
       <section anchor="policy-context" title="Policy Context">
         <t>
-          The <tt>context</tt> field within <tt>openid_rego_policy</tt> provides 
+          The <tt>context</tt> field within <tt>rego_policy</tt> provides 
           structured input data for policy evaluation. This data is passed to OPA 
           as the <tt>input</tt> object.
         </t>
@@ -505,7 +505,7 @@ allow {
           <li>
             Authorization Request: Client sends authorization request with 
             <tt>authorization_details</tt> containing an object of type 
-            <tt>openid_rego_policy</tt>, with <tt>policy</tt> and optional 
+            <tt>rego_policy</tt>, with <tt>policy</tt> and optional 
             <tt>context</tt> fields. This leverages RAR (RFC 9396) for structured 
             authorization requests.
           </li>
@@ -891,7 +891,7 @@ Host: as.example.com
   "client_id": "spiffe://agent.example/agent",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \"read\"\\n}",
@@ -962,7 +962,7 @@ Content-Type: application/json
   "client_secret": "...",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "...",
@@ -992,7 +992,7 @@ Content-Type: application/json
   "subject_token": "eyJhbGciOiJSUzI1NiJ9...",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "...",
@@ -1013,7 +1013,7 @@ Content-Type: application/json
       <section title="Security Considerations by Flow">
         <t>
           Different authorization flows have different security 
-          characteristics when using RAR with openid_rego_policy:
+          characteristics when using RAR with rego_policy:
         </t>
 
         <dl>
@@ -1061,7 +1061,7 @@ Content-Type: application/json
           </li>
           <li>
             <strong>RAR Type Validation:</strong> AS MUST validate that 
-            the type field is "openid_rego_policy" and reject unknown types.
+            the type field is "rego_policy" and reject unknown types.
           </li>
         </ul>
       </section>
@@ -1107,7 +1107,7 @@ Content-Type: application/json
 
         <dl>
           <dt>Type Name:</dt>
-          <dd>openid_rego_policy</dd>
+          <dd>rego_policy</dd>
           <dt>Description:</dt>
           <dd>
             A Rego policy for fine-grained authorization decisions, including 

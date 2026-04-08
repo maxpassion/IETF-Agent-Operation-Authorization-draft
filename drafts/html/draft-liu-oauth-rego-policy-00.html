@@ -13,7 +13,7 @@
        
         This specification defines how to use the Rego policy language in OAuth 2.0 
         authorization flows using Rich Authorization Requests (RAR). It defines 
-        the openid_rego_policy authorization data type for carrying policy proposals 
+        the rego_policy authorization data type for carrying policy proposals 
         in authorization_details, enabling fine-grained, dynamic authorization 
         decisions that go beyond traditional scope-based access control.
        
@@ -1280,7 +1280,7 @@ li > p:last-of-type:only-child {
 <p id="section-abstract-1">
         This specification defines how to use the Rego policy language in OAuth 2.0 
         authorization flows using Rich Authorization Requests (RAR). It defines 
-        the openid_rego_policy authorization data type for carrying policy proposals 
+        the rego_policy authorization data type for carrying policy proposals 
         in authorization_details, enabling fine-grained, dynamic authorization 
         decisions that go beyond traditional scope-based access control.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
@@ -1353,7 +1353,7 @@ li > p:last-of-type:only-child {
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-rar-authorization-data-type" class="internal xref">RAR Authorization Data Type</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
-                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-openid_rego_policy" class="internal xref">openid_rego_policy</a></p>
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-rego_policy" class="internal xref">rego_policy</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1.2.1">
                     <p id="section-toc.1-1.3.2.1.2.1.1"><a href="#section-3.1.1" class="auto internal xref">3.1.1</a>.  <a href="#name-type-definition" class="internal xref">Type Definition</a></p>
@@ -1554,7 +1554,7 @@ li > p:last-of-type:only-child {
 <p id="section-1.2-1">
           This specification is designed to work with Rich Authorization 
           Requests (RAR) <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> as the primary mechanism 
-          for carrying policy proposals. The openid_rego_policy authorization 
+          for carrying policy proposals. The rego_policy authorization 
           data type MAY be used with various OAuth 2.0 authorization flows, 
           including but not limited to:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1582,7 +1582,7 @@ li > p:last-of-type:only-child {
 <a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-rar-integration" class="section-name selfRef">RAR Integration</a>
         </h3>
 <p id="section-1.3-1">
-          This specification defines the <code>openid_rego_policy</code> 
+          This specification defines the <code>rego_policy</code> 
           authorization data type for use with Rich Authorization Requests (RAR) 
           <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>. The policy proposal is carried within the 
           <code>authorization_details</code> parameter as the primary mechanism.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
@@ -1591,7 +1591,7 @@ li > p:last-of-type:only-child {
 <ul class="normal">
 <li class="normal" id="section-1.3-3.1">
             <strong>Authorization Data Type</strong>: The 
-            <code>openid_rego_policy</code> type is registered in the RAR 
+            <code>rego_policy</code> type is registered in the RAR 
             Authorization Data Types registry (Section 9.4 of RFC 9396). 
             It contains the policy content, entry point, and optional context.<a href="#section-1.3-3.1" class="pilcrow">¶</a>
 </li>
@@ -1605,7 +1605,7 @@ li > p:last-of-type:only-child {
             <strong>Complementary Use</strong>: RAR enables structured 
             authorization requests with type-specific details, while Rego Policy 
             enables expressive, Turing-complete policy definitions. Implementations 
-            MAY combine openid_rego_policy with other RAR types.<a href="#section-1.3-3.3" class="pilcrow">¶</a>
+            MAY combine rego_policy with other RAR types.<a href="#section-1.3-3.3" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-1.3-4">
@@ -1641,7 +1641,7 @@ li > p:last-of-type:only-child {
           requirements through the <code>authorization_details</code> parameter.<a href="#section-2-1.6" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-1.7">openid_rego_policy:</dt>
+<dt id="section-2-1.7">rego_policy:</dt>
         <dd style="margin-left: 1.5em" id="section-2-1.8">
           An authorization data type for RAR that carries a Rego policy proposal 
           within the <code>authorization_details</code> parameter.<a href="#section-2-1.8" class="pilcrow">¶</a>
@@ -1663,15 +1663,15 @@ li > p:last-of-type:only-child {
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-rar-authorization-data-type" class="section-name selfRef">RAR Authorization Data Type</a>
       </h2>
 <p id="section-3-1">
-        This specification defines the <code>openid_rego_policy</code> authorization 
+        This specification defines the <code>rego_policy</code> authorization 
         data type for use with Rich Authorization Requests (RAR).<a href="#section-3-1" class="pilcrow">¶</a></p>
-<div id="openid-rego-policy">
+<div id="rego-policy">
 <section id="section-3.1">
-        <h3 id="name-openid_rego_policy">
-<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-openid_rego_policy" class="section-name selfRef">openid_rego_policy</a>
+        <h3 id="name-rego_policy">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-rego_policy" class="section-name selfRef">rego_policy</a>
         </h3>
 <p id="section-3.1-1">
-          The <code>openid_rego_policy</code> authorization data type carries a Rego 
+          The <code>rego_policy</code> authorization data type carries a Rego 
           policy within the <code>authorization_details</code> parameter. It enables 
           clients to propose fine-grained authorization policies as part of the 
           authorization request.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
@@ -1681,7 +1681,7 @@ li > p:last-of-type:only-child {
           </h4>
 <span class="break"></span><dl class="dlParallel" id="section-3.1.1-1">
             <dt id="section-3.1.1-1.1">Type Name:</dt>
-            <dd style="margin-left: 1.5em" id="section-3.1.1-1.2">openid_rego_policy<a href="#section-3.1.1-1.2" class="pilcrow">¶</a>
+            <dd style="margin-left: 1.5em" id="section-3.1.1-1.2">rego_policy<a href="#section-3.1.1-1.2" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
 <dt id="section-3.1.1-1.3">Data Type:</dt>
@@ -1704,7 +1704,7 @@ li > p:last-of-type:only-child {
 {
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount &lt;= 50.0\n}",
@@ -1721,13 +1721,13 @@ li > p:last-of-type:only-child {
 </div>
 <figcaption><a href="#figure-1" class="selfRef">Figure 1</a></figcaption></figure>
 <p id="section-3.1.2-2">
-            The <code>openid_rego_policy</code> authorization data type has the 
+            The <code>rego_policy</code> authorization data type has the 
             following fields:<a href="#section-3.1.2-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.1.2-3">
             <dt id="section-3.1.2-3.1">type:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-3.2">
               REQUIRED. The authorization data type identifier. MUST be 
-              "openid_rego_policy" for this specification.<a href="#section-3.1.2-3.2" class="pilcrow">¶</a>
+              "rego_policy" for this specification.<a href="#section-3.1.2-3.2" class="pilcrow">¶</a>
 </dd>
             <dd class="break"></dd>
 <dt id="section-3.1.2-3.3">policy:</dt>
@@ -1795,7 +1795,7 @@ li > p:last-of-type:only-child {
             <li id="section-3.1.3-2.4">
               Input Reference: The policy accesses context data via 
               the <code>input</code> object, which is populated from the <code>context</code> 
-              field of the <code>openid_rego_policy</code> authorization data type.<a href="#section-3.1.3-2.4" class="pilcrow">¶</a>
+              field of the <code>rego_policy</code> authorization data type.<a href="#section-3.1.3-2.4" class="pilcrow">¶</a>
 </li>
           </ol>
 <figure id="figure-2">
@@ -1898,7 +1898,7 @@ allow {
 <a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-policy-context" class="section-name selfRef">Policy Context</a>
         </h3>
 <p id="section-3.3-1">
-          The <code>context</code> field within <code>openid_rego_policy</code> provides 
+          The <code>context</code> field within <code>rego_policy</code> provides 
           structured input data for policy evaluation. This data is passed to OPA 
           as the <code>input</code> object.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <p id="section-3.3-2">
@@ -1984,7 +1984,7 @@ allow {
           <li id="section-4.1-1.1">
             Authorization Request: Client sends authorization request with 
             <code>authorization_details</code> containing an object of type 
-            <code>openid_rego_policy</code>, with <code>policy</code> and optional 
+            <code>rego_policy</code>, with <code>policy</code> and optional 
             <code>context</code> fields. This leverages RAR (RFC 9396) for structured 
             authorization requests.<a href="#section-4.1-1.1" class="pilcrow">¶</a>
 </li>
@@ -2400,7 +2400,7 @@ Host: as.example.com
   "client_id": "spiffe://agent.example/agent",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \"read\"\\n}",
@@ -2465,7 +2465,7 @@ Content-Type: application/json
   "client_secret": "...",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "...",
@@ -2497,7 +2497,7 @@ Content-Type: application/json
   "subject_token": "eyJhbGciOiJSUzI1NiJ9...",
   "authorization_details": [
     {
-      "type": "openid_rego_policy",
+      "type": "rego_policy",
       "policy": {
         "type": "rego",
         "content": "...",
@@ -2519,7 +2519,7 @@ Content-Type: application/json
         </h3>
 <p id="section-8.4-1">
           Different authorization flows have different security 
-          characteristics when using RAR with openid_rego_policy:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+          characteristics when using RAR with rego_policy:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8.4-2">
           <dt id="section-8.4-2.1">PAR with RAR (Recommended):</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.2">
@@ -2563,7 +2563,7 @@ Content-Type: application/json
 </li>
           <li class="normal" id="section-8.4-4.3">
             <strong>RAR Type Validation:</strong> AS MUST validate that 
-            the type field is "openid_rego_policy" and reject unknown types.<a href="#section-8.4-4.3" class="pilcrow">¶</a>
+            the type field is "rego_policy" and reject unknown types.<a href="#section-8.4-4.3" class="pilcrow">¶</a>
 </li>
         </ul>
 </section>
@@ -2625,7 +2625,7 @@ Content-Type: application/json
           RFC 9396:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-10.1-2">
           <dt id="section-10.1-2.1">Type Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-10.1-2.2">openid_rego_policy<a href="#section-10.1-2.2" class="pilcrow">¶</a>
+          <dd style="margin-left: 1.5em" id="section-10.1-2.2">rego_policy<a href="#section-10.1-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 <dt id="section-10.1-2.3">Description:</dt>
