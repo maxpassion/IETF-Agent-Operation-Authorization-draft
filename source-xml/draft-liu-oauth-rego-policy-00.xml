@@ -48,6 +48,13 @@
       </address>
     </author>
 
+    <author fullname="Hui Xue" initials="H." surname="Xue">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hui.xueh@alibaba-inc.com</email>
+      </address>
+    </author>
+
     <date year="2026" month="March" day="17"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>

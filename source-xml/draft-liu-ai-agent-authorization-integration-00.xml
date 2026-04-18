@@ -48,6 +48,13 @@
       </address>
     </author>
 
+    <author fullname="Hui Xue" initials="H." surname="Xue">
+      <organization>Alibaba Group</organization>
+      <address>
+        <email>hui.xueh@alibaba-inc.com</email>
+      </address>
+    </author>
+
     <date year="2026" month="March" day="17"/>
     <area>Applications</area>
     <workgroup></workgroup>
@@ -132,9 +139,14 @@
               <td>Agent workload identity via SPIFFE/WIT-SVID</td>
             </tr>
             <tr>
-              <td>User Identity</td>
-              <td>draft-liu-oauth-cross-domain-id-token-hint</td>
-              <td>Cross-domain user identity assertion</td>
+              <td>Identity Assertion Grant</td>
+              <td>draft-ietf-oauth-identity-assertion-authz-grant (ID-JAG)</td>
+              <td>JWT-based cross-domain identity assertion</td>
+            </tr>
+            <tr>
+              <td>User Interaction &amp; Consent</td>
+              <td>draft-parecki-oauth-jwt-grant-interaction-response</td>
+              <td>User consent via JWT grant interaction flow</td>
             </tr>
             <tr>
               <td>Policy Authorization</td>
@@ -165,20 +177,24 @@
 
       <section title="Rego Policy as Primary Authorization Mechanism">
         <t>
-          In AOA, the primary authorization mechanism is Rego policy, not OAuth 2.0 scopes. 
-          The <tt>policy_proposal</tt> and <tt>policy_ref</tt> claims defined in 
-          <xref target="I-D.liu-oauth-rego-policy"/> carry the authorization logic:
+          In AOA, the primary authorization mechanism is Rego policy carried via 
+          Rich Authorization Requests (RAR, <xref target="RFC9396"/>), not OAuth 2.0 scopes. 
+          The <tt>rego_policy</tt> authorization data type defined in 
+          <xref target="I-D.liu-oauth-rego-policy"/> carries the authorization logic 
+          within the <tt>authorization_details</tt> parameter:
         </t>
 
         <ul>
           <li>
             <strong>Authorization Request:</strong> Clients submit 
-            <tt>policy_proposal</tt> containing Rego policy that defines permitted 
-            operations (e.g., "allow add_to_cart if amount &lt;= 50").
+            <tt>authorization_details</tt> containing a <tt>rego_policy</tt> type 
+            with Rego policy that defines permitted operations 
+            (e.g., "allow add_to_cart if amount &lt;= 50").
           </li>
           <li>
-            <strong>Access Token:</strong> AS issues token with <tt>policy_ref</tt> 
-            referencing the registered policy.
+            <strong>Access Token:</strong> AS returns an enriched 
+            <tt>authorization_details</tt> response per RFC 9396 Section 7.1, 
+            including the evaluated policy reference.
           </li>
           <li>
             <strong>Resource Server:</strong> RS evaluates the policy at runtime using 
@@ -224,9 +240,9 @@
 |  |  
 |  |                                                     |  |
 |  |  +-----------------------------------------------+  |  |
-|  |  |  Policy (Primary)                             |  |  |
+|  |  |  Policy via RAR (Primary)                     |  |  |
+|  |  |  authorization_details: rego_policy            |  |  |
 |  |  |  "allow if amount <= 50 AND time < 6pm"       |  |  |
-|  |  |  - Fine-grained conditions                    |  |  |
 |  |  +-----------------------------------------------+  |  |
 |  +-----------------------------------------------------+  |
 +-----------------------------------------------------------+
@@ -242,8 +258,8 @@
         <ol>
           <li>
             <strong>Cross-Domain Identity</strong> 
-            (<xref target="I-D.liu-oauth-cross-domain-id-token-hint"/>): 
-            Proves "who the user is" across trust domains.
+            (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>): 
+            Proves "who the user is" across trust domains via JWT assertion.
           </li>
           <li>
             <strong>Consent Evidence</strong> 
@@ -273,16 +289,16 @@
 |  "How to combine all components"                        |
 +---------------------------------------------------------+
 |  +-------------+  +-------------+  +-------------+      |
-|  |  Identity   |  |  Evidence   |  | Delegation  |      |
-|  |  (Who)      |  |  (What)     |  | (Transfer)  |      |
+|  |  Identity   |  |  Consent    |  | Delegation  |      |
+|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |      |
 |  +-------------+  +-------------+  +-------------+      |
 |                                                         |
 |  +---------------------------------------------------+  |
-|  |           Policy Engine (Rules)                   |  |
+|  |     Policy Engine via RAR (rego_policy)           |  |
 |  |         "Under what conditions allow"             |  |
 |  +---------------------------------------------------+  |
 +---------------------------------------------------------+
-|           OAuth 2.0 Core + PAR + OIDC                   |
+|        OAuth 2.0 Core + RAR + ID-JAG                    |
 +---------------------------------------------------------+
           ]]></artwork>
         </figure>
@@ -298,13 +314,23 @@
 |    Home IdP      |     |   AI Agent       |     |   External AS    |
 |                  |     |                  |     |                  |
 | - User authn     |     | - SPIFFE identity|     | - Policy engine  |
-| - ID Token issue |     | - PAR client     |     | - Token issuance |
+| - ID Token issue |     | - JWT Grant clnt |     | - Token issuance |
 +------------------+     +------------------+     +------------------+
         |                        |                        |
         |   ID Token             |                        |
         |----------------------->|                        |
         |                        |                        |
-        |                        |   PAR + id_token_hint  |
+        |                        | JWT Grant + authz_det  |
+        |                        |----------------------->|
+        |                        |                        |
+        |                        | interaction_required   |
+        |                        |<-----------------------|
+        |                        |                        |
+        |  interaction_uri  +----|                        |
+        |<------------------+    |                        |
+        |  (user consent)        |                        |
+        |-------------------+--->|                        |
+        |                        | Poll token endpoint    |
         |                        |----------------------->|
         |                        |                        |
         |                        |   Access Token         |
@@ -334,8 +360,8 @@
 
           <dt>External Authorization Server (AS):</dt>
           <dd>
-            Issues access tokens for resources in its domain. Validates cross-domain 
-            identity and policy proposals.
+            Issues access tokens for resources in its domain. Validates JWT 
+            assertions, evaluates authorization_details, and manages user interaction.
           </dd>
 
           <dt>Resource Server (RS):</dt>
@@ -359,8 +385,7 @@
             Agent's internal user identifier. This enables the Resource Server 
             to immediately identify the resource owner without additional 
             identity mapping lookups. The AS extracts this value from the 
-            <tt>third_party_binding.user_id</tt> claim in the 
-            <tt>id_token_hint</tt>.
+            JWT assertion's subject claims.
           </li>
           <li>
             <t>
@@ -397,23 +422,27 @@
     "agent_user_id": "agent_user_001"     // Optional: for agent-side audit
   },
   
-  // Policy reference
-  "policy_ref": {
-    "id": "policy-abc123",
-    "endpoint": "https://as.external.example/policies/..."
-  },
+  // Enriched authorization_details (RFC 9396 Section 7.1)
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "ref": "policy-abc123",
+        "endpoint": "https://as.external.example/policies/..."
+      },
+      "context": {
+        "user": { "id": "user_12345" },
+        "agent": { "id": "wit://agent.example/sha256.abc123..." }
+      }
+    }
+  ],
   
   // User consent evidence
   "evidence": {
     "id": "evidence-xyz",
     "user_confirmation": { ... },
     "as_signature": "..."
-  },
-  
-  // Semantic traceability
-  "audit_trail": {
-    "evidence_ref": "evidence-xyz",
-    "semantic_expansion_level": "medium"
   },
   
   // Delegation chain (if delegated)
@@ -439,46 +468,52 @@
 (2) |  ID Token (aud=agent)   |            |            |           |
     |<------------------------->            |            |           |
     |            |             |            |            |           |
-(3) |            |   Agent builds PAR:     |            |           |
-    |            |   - id_token_hint       |            |           |
-    |            |   - policy_proposal     |            |           |
-    |            |   - policy_context      |            |           |
+(3) |            |   Agent builds token req:|            |           |
+    |            |   - JWT assertion        |            |           |
+    |            |   - authorization_details|            |           |
+    |            |     (rego_policy type)   |            |           |
     |            |             |            |            |           |
-(4) |            |   PAR Request           |            |           |
-    |            |   + SPIFFE client auth  |            |           |
+(4) |            |   Token Request          |            |           |
+    |            |   + SPIFFE client auth   |            |           |
     |            |             |----------->|            |           |
     |            |             |            |            |           |
 (5) |            |             |  Validate: |            |           |
     |            |             |  - SPIFFE  |            |           |
-    |            |             |  - ID Token|            |           |
-    |            |             |  - aud bind|            |           |
+    |            |             |  - JWT     |            |           |
     |            |             |  - policy  |            |           |
     |            |             |            |            |           |
-(6) | Consent UI (via redirect or CIBA)    |            |           |
-    |<-------------------------------------|            |           |
-    |            |             |            |            |           |
-(7) | User confirms            |            |            |           |
-    |------------------------------------->|            |           |
-    |            |             |            |            |           |
-(8) |            |             |  Issue token with:     |           |
-    |            |             |  - act                 |           |
-    |            |             |  - policy_ref         |           |
-    |            |             |  - evidence           |           |
+(6) |            |             |  interaction_required   |           |
+    |            |             |  + interaction_uri      |           |
     |            |             |<-----------|            |           |
     |            |             |            |            |           |
-(9) |            |             | API Request|            |           |
+(7) | User interaction via browser         |            |           |
+    |<------------------------------------|            |           |
+    |            |             |            |            |           |
+(8) | User confirms            |            |            |           |
+    |------------------------------------->|            |           |
+    |            |             |            |            |           |
+(9) |            |             |  Poll token endpoint   |           |
+    |            |             |----------->|            |           |
+    |            |             |            |            |           |
+(10)|            |             |  Issue token with:     |           |
+    |            |             |  - act                 |           |
+    |            |             |  - authorization_details|           |
+    |            |             |  - evidence            |           |
+    |            |             |<-----------|            |           |
+    |            |             |            |            |           |
+(11)|            |             | API Request|            |           |
     |            |             |------------------------>|           |
     |            |             |            |            |           |
-(10)|            |             |            |  Validate  |           |
+(12)|            |             |            |  Validate  |           |
     |            |             |            |  token     |           |
     |            |             |            |            |           |
-(11)|            |             |            |  Policy    |           |
+(13)|            |             |            |  Policy    |           |
     |            |             |            |  eval      |---------->|
     |            |             |            |            |           |
-(12)|            |             |            |  Decision  |           |
+(14)|            |             |            |  Decision  |           |
     |            |             |            |            |<----------|
     |            |             |            |            |           |
-(13)|            |             | Response   |            |           |
+(15)|            |             | Response   |            |           |
     |            |             |<------------------------|           |
           ]]></artwork>
         </figure>
@@ -497,59 +532,62 @@
               </li>
               <li>
                 <tt>aud</tt>: The agent's SPIFFE ID, binding this token 
-                to the specific agent;
-              </li>
-              <li>
-                <tt>third_party_binding</tt> (OPTIONAL): If the user has 
-                completed OAuth login with a third-party Resource Application 
-                (e.g., shop.example), this claim asserts the user's identity 
-                at that application (e.g., <tt>user_12345</tt>). This enables 
-                lazy binding scenarios where users authenticate with third-party 
-                apps on-demand rather than pre-registering.
+                to the specific agent.
               </li>
             </ul>
           </li>
           <li>
-            <t><strong>ID Token as id_token_hint:</strong> The Agent uses 
-            this ID Token as the <tt>id_token_hint</tt> parameter in the PAR 
-            request. The AS validates the Agent IdP's signature and extracts 
-            the user's Resource Application identity from the 
-            <tt>third_party_binding</tt> claim if present.</t>
+            <t><strong>ID Token as JWT Assertion:</strong> The Agent uses 
+            the ID Token as the JWT assertion in the token request per 
+            <xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>. 
+            The AS validates the Home IdP's signature and extracts 
+            the user's identity claims.</t>
           </li>
           <li>
-            <t>PAR Construction: Agent builds a PAR request including:</t>
+            <t>Token Request Construction: Agent builds a token request including:</t>
             <ul>
-              <li><tt>id_token_hint</tt>: The user's ID Token;</li>
-              <li><tt>policy_proposal</tt>: Rego policy defining operations;</li>
-              <li><tt>policy_context</tt>: Context data for policy evaluation.</li>
+              <li><tt>grant_type</tt>: <tt>urn:ietf:params:oauth:grant-type:jwt-bearer</tt>;</li>
+              <li><tt>assertion</tt>: The user's ID Token (JWT);</li>
+              <li><tt>authorization_details</tt>: Containing <tt>rego_policy</tt> type with policy and context;</li>
+              <li><tt>redirect_uri</tt> (OPTIONAL): For interaction completion notification.</li>
             </ul>
           </li>
           <li>
-            <t>PAR Submission: Agent sends PAR to External AS with 
-            SPIFFE client authentication (WIT-SVID in headers).</t>
+            <t>Token Request Submission: Agent sends the token request to 
+            External AS with SPIFFE client authentication (WIT-SVID in headers).</t>
           </li>
           <li>
             <t>AS Validation: AS validates:</t>
             <ul>
               <li>SPIFFE client credentials;</li>
-              <li>ID Token signature from Home IdP;</li>
-              <li>Audience binding (id_token_hint.aud == agent's SPIFFE ID);</li>
-              <li>Policy syntax and safety.</li>
+              <li>JWT assertion signature from Home IdP;</li>
+              <li>Policy syntax and safety in <tt>authorization_details</tt>.</li>
             </ul>
           </li>
           <li>
-            <t>User Consent: AS presents consent UI showing the 
-            interpreted operation (redirect or CIBA push).</t>
+            <t>Interaction Required: AS determines user interaction is needed 
+            and returns an <tt>interaction_required</tt> error response per 
+            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> 
+            containing an <tt>interaction_uri</tt> for user consent.</t>
+          </li>
+          <li>
+            <t>User Interaction: The agent launches the <tt>interaction_uri</tt> 
+            in the user's browser. The AS presents the consent UI showing 
+            the interpreted operation.</t>
           </li>
           <li>
             <t>User Confirmation: User reviews and approves the 
             operation.</t>
           </li>
           <li>
+            <t>Polling: Agent polls the token endpoint (re-sending its 
+            original request) until the AS completes user interaction.</t>
+          </li>
+          <li>
             <t>Token Issuance: AS issues access token containing:</t>
             <ul>
               <li><tt>act</tt>: Agent's SPIFFE ID;</li>
-              <li><tt>policy_ref</tt>: Reference to registered policy;</li>
+              <li><tt>authorization_details</tt>: Enriched response per RFC 9396 Section 7.1;</li>
               <li><tt>evidence</tt>: Signed user confirmation record.</li>
             </ul>
           </li>
@@ -877,36 +915,71 @@
 
       <section anchor="rel-id-jag" title="Relationship to Identity Assertion Grant (ID-JAG)">
         <t>
-          This framework extends the Identity Assertion Authorization Grant 
-          (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>) by adding 
-          explicit user consent through the confirmation URL mechanism. While ID-JAG 
-          focuses on service-to-service scenarios where the requesting client already 
-          has user authorization, this framework addresses user-to-agent scenarios 
-          requiring explicit consent.
+          This framework builds on the Identity Assertion Authorization Grant 
+          (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>) as the 
+          base grant type for cross-domain identity assertion. ID-JAG enables AI 
+          agents to present a JWT assertion (e.g., an ID Token from the user's Home 
+          IdP) to an external authorization server as proof of user identity.
         </t>
 
         <t>
-          Key differences:
+          This framework extends ID-JAG with:
         </t>
 
         <ul>
           <li>
-            ID-JAG assumes the client has already obtained user consent through 
-            out-of-band means;
+            The JWT Grant Interaction Response 
+            (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>) for 
+            obtaining explicit user consent when the AS requires user interaction;
           </li>
           <li>
-            This framework defines a confirmation URL mechanism for obtaining 
-            explicit user consent within the OAuth flow;
+            RAR-based policy authorization via the <tt>rego_policy</tt> authorization 
+            data type in <tt>authorization_details</tt>;
           </li>
           <li>
-            This framework adds policy-based authorization (Rego) beyond ID-JAG's 
-            scope-based approach.
+            Evidence recording of user consent decisions.
           </li>
         </ul>
 
         <t>
           Implementations of this framework MUST implement ID-JAG as the base 
           grant type.
+        </t>
+      </section>
+
+      <section anchor="rel-jwt-grant-interaction" title="Relationship to JWT Grant Interaction Response">
+        <t>
+          The JWT Grant Interaction Response 
+          (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>) 
+          defines an extension to the JWT Authorization Grant that enables an 
+          authorization server to indicate that user interaction is required. 
+          Instead of immediately returning an access token or error, the AS 
+          returns an <tt>interaction_uri</tt> where the user can provide consent, 
+          along with a polling interval.
+        </t>
+
+        <t>
+          This framework uses JWT Grant Interaction Response for:
+        </t>
+
+        <ul>
+          <li>
+            Obtaining explicit user consent for AI agent operations without 
+            requiring a traditional OAuth redirect flow;
+          </li>
+          <li>
+            Enabling the agent to launch a browser for user interaction and then 
+            poll for completion;
+          </li>
+          <li>
+            Supporting both polling-based and redirect-based notification of 
+            interaction completion.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MUST support JWT Grant Interaction Response for 
+          user consent in AI agent authorization scenarios.
         </t>
       </section>
 
@@ -1028,33 +1101,36 @@
 
       <section anchor="rel-rar" title="Relationship to Rich Authorization Requests (RAR)">
         <t>
-          Rich Authorization Requests (<xref target="RFC9396"/>) provide a structured 
-          JSON format for authorization requests. This framework uses the Rego policy 
-          language instead of RAR for authorization requests.
+          This framework uses Rich Authorization Requests 
+          (<xref target="RFC9396"/>) as the mechanism for carrying Rego policy 
+          in authorization requests via the <tt>authorization_details</tt> parameter. 
+          The <tt>rego_policy</tt> authorization data type defined in 
+          <xref target="I-D.liu-oauth-rego-policy"/> enables fine-grained, 
+          policy-based authorization within the RAR framework.
         </t>
 
         <t>
-          Rationale for using Rego:
+          RAR integration provides:
         </t>
 
         <ul>
           <li>
-            Rego provides Turing-complete expressiveness suitable for complex 
-            AI agent scenarios;
+            A standardized container (<tt>authorization_details</tt>) for carrying 
+            Rego policy and evaluation context;
           </li>
           <li>
-            Rego policies can be evaluated by standard OPA engines at resource 
-            servers;
+            Enriched token responses (RFC 9396 Section 7.1) that include the 
+            evaluated policy in the access token;
           </li>
           <li>
-            Rego enables context-aware authorization decisions based on runtime 
-            parameters.
+            Compatibility with other RAR types, enabling combined authorization 
+            scenarios.
           </li>
         </ul>
 
         <t>
-          Implementations MAY support RAR as an alternative to Rego for simpler 
-          scenarios, but Rego is RECOMMENDED for AI agent authorization.
+          Implementations MUST support RAR (RFC 9396) with the <tt>rego_policy</tt> 
+          authorization data type.
         </t>
       </section>
 
@@ -1113,8 +1189,13 @@
             </tr>
             <tr>
               <td>PAR (RFC 9126)</td>
+              <td>MAY</td>
+              <td>Agent, AS</td>
+            </tr>
+            <tr>
+              <td>RAR (RFC 9396)</td>
               <td>MUST</td>
-              <td>All</td>
+              <td>Agent, AS, RS</td>
             </tr>
             <tr>
               <td>ID-JAG</td>
@@ -1122,12 +1203,12 @@
               <td>All</td>
             </tr>
             <tr>
-              <td>SPIFFE Client Auth</td>
+              <td>JWT Grant Interaction Response</td>
               <td>MUST</td>
               <td>Agent, AS</td>
             </tr>
             <tr>
-              <td>Cross-Domain ID Token Hint</td>
+              <td>SPIFFE Client Auth</td>
               <td>MUST</td>
               <td>Agent, AS</td>
             </tr>
@@ -1189,6 +1270,16 @@
           <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-identity-assertion-authz-grant"/>
         </reference>
 
+        <reference anchor="I-D.parecki-oauth-jwt-grant-interaction-response">
+          <front>
+            <title>JWT Grant Interaction Response</title>
+            <author initials="A." surname="Parecki"/>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="March"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-parecki-oauth-jwt-grant-interaction-response-00"/>
+        </reference>
+
         <reference anchor="I-D.ietf-oauth-spiffe-client-auth">
           <front>
             <title>OAuth SPIFFE Client Authentication</title>
@@ -1196,15 +1287,6 @@
             <date year="2026" month="March"/>
           </front>
           <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-spiffe-client-auth"/>
-        </reference>
-
-        <reference anchor="I-D.liu-oauth-cross-domain-id-token-hint">
-          <front>
-            <title>Cross-Domain ID Token Hint for OAuth 2.0</title>
-            <author initials="D." surname="Liu"/>
-            <date year="2026" month="March"/>
-          </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-cross-domain-id-token-hint"/>
         </reference>
 
         <reference anchor="I-D.liu-oauth-rego-policy">
@@ -1271,20 +1353,37 @@
     </references>
 
     <section title="Complete Example">
-      <section title="PAR Request">
+      <section title="Token Request">
         <figure>
-          <artwork name="Complete PAR Request" type="http"><![CDATA[
-POST /par HTTP/1.1
+          <artwork name="JWT Grant Token Request" type="http"><![CDATA[
+POST /token HTTP/1.1
 Host: as.shop.example
 Content-Type: application/x-www-form-urlencoded
 OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
 OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
 
-client_id=spiffe://myassistant.example/agent
-&id_token_hint=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
+grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
 &redirect_uri=https://myassistant.example/callback
-&policy_proposal={"type":"rego","content":"package agent...","entry_point":"allow"}
-&policy_context={"user":{"id":"user_12345"},"action":"add_to_cart"}
+&authorization_details=[{"type":"rego_policy","policy":{"type":"rego",
+  "content":"package agent...","entry_point":"allow"},
+  "context":{"user":{"id":"user_12345"},"action":"add_to_cart"}}]
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Interaction Required Response">
+        <figure>
+          <artwork name="Interaction Required" type="json"><![CDATA[
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "interaction_required",
+  "interaction_uri": "https://as.shop.example/interact/abc123",
+  "interval": 5,
+  "expires_in": 600
+}
           ]]></artwork>
         </figure>
       </section>
@@ -1294,7 +1393,7 @@ client_id=spiffe://myassistant.example/agent
           <artwork name="Complete Access Token" type="json"><![CDATA[
 {
   "iss": "https://as.shop.example",
-  "sub": "user_12345",                    // Third-party app user ID
+  "sub": "user_12345",
   "aud": "https://api.shop.example",
   "exp": 1731369540,
   "iat": 1731320700,
@@ -1302,13 +1401,23 @@ client_id=spiffe://myassistant.example/agent
   
   "act": {
     "sub": "wit://myassistant.example/sha256.xyz789...",
-    "agent_user_id": "agent_user_001"     // Optional: correlation at agent side
+    "agent_user_id": "agent_user_001"
   },
   
-  "policy_ref": {
-    "id": "policy-cart-50",
-    "endpoint": "https://as.shop.example/policies/policy-cart-50"
-  },
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "ref": "policy-cart-50",
+        "endpoint": "https://as.shop.example/policies/policy-cart-50"
+      },
+      "context": {
+        "user": { "id": "user_12345" },
+        "action": "add_to_cart"
+      }
+    }
+  ],
   
   "evidence": {
     "id": "evidence-consent-abc",
