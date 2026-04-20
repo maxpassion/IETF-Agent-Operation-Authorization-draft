@@ -115,13 +115,12 @@
           document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> 
           <xref target="RFC8174"/> when, and only when, they appear in all capitals.
         </t>
-      
+      </section>
+
       <section title="Applicability">
         <t>
-          While this specification is optimized for use with Pushed 
-          Authorization Requests (PAR) <xref target="RFC9126"/>, the 
-          mechanism defined herein is designed to be general-purpose 
-          and MAY be used with various OAuth 2.0 authorization flows, 
+          This specification defines general-purpose JWT claims that 
+          MAY be used with various OAuth 2.0 authorization flows, 
           including but not limited to:
         </t>
 
@@ -150,7 +149,6 @@
           their specific deployment scenario.
         </t>
       </section>
-</section>
     </section>
 
     <section anchor="terminology" title="Terminology">
@@ -212,7 +210,7 @@
           <artwork name="evidence structure" type="json"><![CDATA[
 {
   "evidence": {
-    "id": "evidence-abc123",
+    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
@@ -224,7 +222,7 @@
       "client_instance": "dfp_abc123",
       "channel": "mobile-app"
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiIs..."
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   }
 }
           ]]></artwork>
@@ -247,7 +245,9 @@
               <td>id</td>
               <td>string</td>
               <td>REQUIRED</td>
-              <td>Unique identifier for this evidence record.</td>
+              <td>Unique identifier for this evidence record. The value
+                SHOULD use a collision-resistant format such as a UUID URN
+                (e.g., "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6").</td>
             </tr>
             <tr>
               <td>user_confirmation</td>
@@ -371,9 +371,19 @@
         <t>
           The <tt>as_signature</tt> field itself MUST be excluded from the 
           signature computation. The signature input MUST be constructed using 
-          JSON Canonicalization Scheme (JCS) as defined in RFC 8785 to ensure 
+          JSON Canonicalization Scheme (JCS) as defined in <xref target="RFC8785"/> to ensure 
           deterministic serialization. The signature format MUST be a detached 
-          JWS (JSON Web Signature) using the AS's signing key.
+          JWS <xref target="RFC7515"/> in Compact Serialization using the AS's signing key.
+          In detached Compact Serialization (see RFC 7515 Appendix F), the 
+          payload portion is omitted, resulting in the format 
+          "header..signature".
+        </t>
+
+        <t>
+          Note: In examples throughout this document, the 
+          <tt>as_signature</tt> value is shown in abbreviated form for 
+          readability. Actual values MUST use the detached JWS Compact 
+          Serialization format described above.
         </t>
       </section>
     </section>
@@ -403,7 +413,7 @@
           <artwork name="audit_trail structure" type="json"><![CDATA[
 {
   "audit_trail": {
-    "evidence_ref": "evidence-abc123",
+    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
     "interpretation_notes": "Mapped 'cheap' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
@@ -472,6 +482,17 @@
           <dt>high:</dt>
           <dd>Substantial expansion (e.g., multi-step plan derived from goal).</dd>
         </dl>
+      </section>
+
+      <section title="Minimum Content Guidance">
+        <t>
+          When the <tt>audit_trail</tt> claim is included, the 
+          <tt>evidence_ref</tt> field SHOULD be present to link 
+          the audit record to its corresponding evidence. Including 
+          at least <tt>evidence_ref</tt> and 
+          <tt>semantic_expansion_level</tt> is RECOMMENDED for 
+          meaningful audit capability.
+        </t>
       </section>
     </section>
 
@@ -545,7 +566,9 @@
             Generate a unique evidence identifier;
           </li>
           <li>
-            Sign the user_confirmation object with the AS's private key;
+            Sign the evidence fields (id, user_confirmation, and
+            session_context if present) with the AS's private key using
+            JCS canonicalization;
           </li>
           <li>
             Include the evidence claim in the access token.
@@ -608,7 +631,8 @@
     <section anchor="security" title="Security Considerations">
       <section title="Signature Verification">
         <t>
-          The AS signature over user_confirmation is critical for evidence integrity. 
+          The AS signature over the evidence fields (id, user_confirmation, 
+          and session_context if present) is critical for evidence integrity.
           Implementations MUST:
         </t>
 
@@ -633,6 +657,21 @@
           timestamp help detect attempts to reuse evidence across different 
           authorization contexts.
         </t>
+      </section>
+
+      <section title="Token Size Considerations">
+        <t>
+          Including evidence and audit_trail claims increases access token size.
+          Implementations SHOULD consider:
+        </t>
+
+        <ul>
+          <li>HTTP header size limits when tokens are passed in Authorization headers;</li>
+          <li>Using token introspection <xref target="RFC7662"/> to retrieve evidence
+              details rather than embedding all data in the token;</li>
+          <li>Limiting displayed_content length to essential information;</li>
+          <li>Omitting OPTIONAL fields (session_context, interpretation_notes) when not required.</li>
+        </ul>
       </section>
     </section>
 
@@ -710,8 +749,6 @@
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
       </references>
@@ -719,6 +756,9 @@
       <references>
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
       </references>
     </references>
 
@@ -739,11 +779,11 @@
   "jti": "urn:uuid:token-abc-123",
   
   "act": {
-    "sub": "spiffe://myassistant.example/agent"
+    "sub": "wit://myassistant.example/sha256.abc123..."
   },
   
   "evidence": {
-    "id": "evidence-abc123",
+    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart during Nov 11 sale",
       "user_action": "confirmed_via_button_click",
@@ -755,20 +795,26 @@
       "client_instance": "dfp_abc123",
       "channel": "mobile-app"
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   },
   
   "audit_trail": {
-    "evidence_ref": "evidence-abc123",
+    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
     "interpretation_notes": "User said 'cheap items', mapped to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   },
   
-  "policy_ref": {
-    "id": "policy-cart-50",
-    "endpoint": "https://as.example.com/policies/policy-cart-50"
-  }
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "uri": "https://as.example.com/policies/policy-cart-50",
+        "entry_point": "allow"
+      }
+    }
+  ]
 }
         ]]></artwork>
       </figure>

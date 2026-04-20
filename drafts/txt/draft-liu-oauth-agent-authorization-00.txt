@@ -1,0 +1,1680 @@
+
+
+
+
+OAuth Working Group                                               D. Liu
+Internet-Draft                                                    H. Zhu
+Intended status: Standards Track                           Alibaba Group
+Expires: 20 September 2026                                   S. Krishnan
+                                                                   Cisco
+                                                              A. Parecki
+                                                                    Okta
+                                                           19 March 2026
+
+
+  OAuth 2.0 Agent Authorization with Identity Binding and User Consent
+                 draft-liu-oauth-agent-authorization-00
+
+Abstract
+
+   This specification defines an extension to the OAuth 2.0 Identity
+   Assertion Grant that adds explicit user consent through a
+   confirmation URL mechanism.  Building on the Identity Assertion Grant
+   mechanism, this extension enables secure delegation to autonomous
+   agents while maintaining user control.  Unlike the Device
+   Authorization Grant (RFC 8628), this flow does not require polling
+   and is designed for AI agents with frontend capabilities.  The
+   specification maintains cryptographic binding between user and agent
+   identities in the resulting access token and provides verifiable
+   evidence of user consent.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 20 September 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 1]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Motivation  . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Requirements Notation . . . . . . . . . . . . . . . . . .   4
+     1.3.  Terminology . . . . . . . . . . . . . . . . . . . . . . .   4
+   2.  Architectural Overview  . . . . . . . . . . . . . . . . . . .   4
+     2.1.  Design Principles . . . . . . . . . . . . . . . . . . . .   4
+     2.2.  System Components . . . . . . . . . . . . . . . . . . . .   5
+     2.3.  Trust Relationships . . . . . . . . . . . . . . . . . . .   6
+   3.  Agent Authorization Grant Type  . . . . . . . . . . . . . . .   6
+     3.1.  Relationship to Identity Assertion Grant  . . . . . . . .   7
+     3.2.  Protocol Overview . . . . . . . . . . . . . . . . . . . .   7
+     3.3.  Initial Authorization Request . . . . . . . . . . . . . .   9
+     3.4.  Authorization Server Validation . . . . . . . . . . . . .  10
+     3.5.  Confirmation URL Response . . . . . . . . . . . . . . . .  10
+   4.  User Consent Flow . . . . . . . . . . . . . . . . . . . . . .  12
+     4.1.  Consent Page Example  . . . . . . . . . . . . . . . . . .  12
+     4.2.  Policy Interpretation . . . . . . . . . . . . . . . . . .  13
+       4.2.1.  Interpretation Requirements . . . . . . . . . . . . .  13
+       4.2.2.  Best Practices  . . . . . . . . . . . . . . . . . . .  14
+       4.2.3.  Policy to Text Translation Example  . . . . . . . . .  14
+     4.3.  User Confirmation Action  . . . . . . . . . . . . . . . .  15
+   5.  Token Request . . . . . . . . . . . . . . . . . . . . . . . .  16
+     5.1.  Access Token Response . . . . . . . . . . . . . . . . . .  16
+     5.2.  Token Lifetime Recommendations  . . . . . . . . . . . . .  18
+     5.3.  Token Introspection Response  . . . . . . . . . . . . . .  18
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  20
+     6.1.  Threat Model  . . . . . . . . . . . . . . . . . . . . . .  20
+     6.2.  Trust Boundaries  . . . . . . . . . . . . . . . . . . . .  20
+     6.3.  Consent Security  . . . . . . . . . . . . . . . . . . . .  21
+     6.4.  Difference from Device Authorization Grant  . . . . . . .  21
+     6.5.  Confirmation URL Binding  . . . . . . . . . . . . . . . .  22
+     6.6.  Token Revocation  . . . . . . . . . . . . . . . . . . . .  22
+       6.6.1.  Revocation Triggers . . . . . . . . . . . . . . . . .  22
+       6.6.2.  Revocation Propagation  . . . . . . . . . . . . . . .  22
+       6.6.3.  Revocation Evidence . . . . . . . . . . . . . . . . .  23
+   7.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  23
+     7.1.  Identifier Minimization . . . . . . . . . . . . . . . . .  23
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 2]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+     7.2.  Evidence Retention  . . . . . . . . . . . . . . . . . . .  23
+     7.3.  Logging Considerations  . . . . . . . . . . . . . . . . .  23
+   8.  Error Handling  . . . . . . . . . . . . . . . . . . . . . . .  24
+   9.  Implementation Considerations . . . . . . . . . . . . . . . .  24
+     9.1.  Deployment Patterns . . . . . . . . . . . . . . . . . . .  24
+     9.2.  Performance Considerations  . . . . . . . . . . . . . . .  25
+     9.3.  Interoperability Guidelines . . . . . . . . . . . . . . .  25
+   10. ABNF Syntax . . . . . . . . . . . . . . . . . . . . . . . . .  25
+   11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  26
+     11.1.  JWT Claim Registration . . . . . . . . . . . . . . . . .  26
+     11.2.  Authorization Server Metadata  . . . . . . . . . . . . .  27
+   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  27
+     12.1.  Normative References . . . . . . . . . . . . . . . . . .  27
+     12.2.  Informative References . . . . . . . . . . . . . . . . .  28
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  29
+   Change Log  . . . . . . . . . . . . . . . . . . . . . . . . . . .  29
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  29
+
+1.  Introduction
+
+1.1.  Motivation
+
+   AI agents increasingly need to access protected resources on behalf
+   of users.  However, existing OAuth 2.0 mechanisms do not adequately
+   address the unique requirements of AI agent authorization:
+
+   *  *Identity Binding:* AI agents operate with their own workload
+      identities (e.g., SPIFFE IDs) distinct from user identities.
+      Current OAuth flows do not provide standardized mechanisms to
+      cryptographically bind user and agent identities in access tokens.
+
+   *  *Explicit Consent:* Users must understand and approve what
+      operations an AI agent can perform on their behalf.  Traditional
+      scope-based authorization is too coarse-grained for AI agent
+      scenarios requiring fine-grained, context-aware policies.
+
+   *  *Audit and Accountability:* Organizations deploying AI agents need
+      verifiable evidence of user consent for compliance and security
+      purposes.  Current OAuth tokens do not include cryptographic
+      evidence of consent.
+
+   *  *Cross-Domain Trust:* AI agents often operate across
+      organizational boundaries, requiring standardized mechanisms for
+      identity assertion and authorization that work across trust
+      domains.
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 3]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   This specification addresses these gaps by extending the Identity
+   Assertion Grant with a confirmation URL mechanism that ensures
+   explicit user consent while maintaining strong identity binding
+   between users and agents.
+
+1.2.  Requirements Notation
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+1.3.  Terminology
+
+   This specification uses the terms defined in OAuth 2.0 [RFC6749] and
+   the Identity Assertion Grant specification
+   [I-D.ietf-oauth-identity-assertion-authz-grant].
+
+   Agent:  An autonomous software application acting on behalf of a
+      user.  The agent has its own workload identity (e.g., SPIFFE ID)
+      separate from the user's identity.
+
+   Confirmation URL:  A URL provided by the authorization server that
+      enables the user to review and approve an authorization request
+      through a browser-based interface.
+
+   Identity Binding:  The cryptographic association between a user's
+      identity and an agent's identity within an access token, ensuring
+      the token represents delegated authority from that specific user
+      to that specific agent.
+
+2.  Architectural Overview
+
+   This section provides an architectural overview of the agent
+   authorization framework, including design principles, system
+   components, and trust relationships.
+
+2.1.  Design Principles
+
+   This specification is guided by the following design principles:
+
+   Security by Design:  All authorization decisions MUST be based on
+      explicit, verifiable user consent.  Cryptographic binding between
+      user and agent identities prevents token substitution attacks.
+
+   User Control:  Users MUST have clear understanding and control over
+
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 4]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+      what operations AI agents can perform.  Consent interfaces MUST
+      present authorization details in human-readable form.
+
+   Minimal Token Size:  Access tokens SHOULD remain compact to avoid
+      HTTP header size limitations.  Detailed policy and evidence
+      information is available via reference rather than embedded in
+      tokens.
+
+   Backward Compatibility:  This specification extends existing OAuth
+      2.0 and Identity Assertion Grant mechanisms without breaking
+      compatibility with standard OAuth deployments.
+
+   Auditability:  All authorization decisions MUST be auditable through
+      cryptographically signed evidence records and comprehensive
+      logging.
+
+2.2.  System Components
+
+   The agent authorization framework involves the following components:
+
+   User:  The resource owner who delegates authorization to an AI agent.
+      The user authenticates with their Identity Provider and provides
+      explicit consent for agent operations.
+
+   AI Agent:  An autonomous software application that acts on behalf of
+      the user.  The agent has its own workload identity (e.g., SPIFFE
+      ID) and initiates authorization requests to access protected
+      resources.
+
+   Home Identity Provider (Home IdP):  The user's primary identity
+      provider that authenticates the user and issues ID Tokens.  The
+      Home IdP is trusted by the user and typically operated by the
+      user's organization or a trusted third party.
+
+   Authorization Server (AS):  The OAuth 2.0 authorization server that
+      validates agent requests, obtains user consent, and issues access
+      tokens with identity binding.  The AS operates in the resource
+      domain and may be distinct from the Home IdP.
+
+   Resource Server (RS):  The server hosting protected resources.  The
+      RS validates access tokens, evaluates authorization policies, and
+      enforces access control decisions.
+
+   Policy Engine:  An optional component (e.g., Open Policy Agent) that
+      evaluates authorization policies against request context.  The
+      Policy Engine may be integrated with the Resource Server or
+      operate as a separate service.
+
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 5]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+2.3.  Trust Relationships
+
+   The framework establishes the following trust relationships:
+
+   1.  *User → Home IdP:* The user trusts their Home IdP to authenticate
+       them and issue valid ID Tokens.  This is typically established
+       through account registration and ongoing authentication.
+
+   2.  *User → Agent:* The user trusts the AI agent to act on their
+       behalf within defined boundaries.  This trust is established
+       through explicit consent during the authorization flow.
+
+   3.  *Agent → AS:* The agent authenticates to the AS using its
+       workload identity (e.g., SPIFFE ID).  The AS validates the
+       agent's identity through attestation or mTLS.
+
+   4.  *AS → Home IdP:* The AS trusts the Home IdP to issue valid ID
+       Tokens for user authentication.  This trust is established
+       through OIDC discovery and key validation.
+
+   5.  *RS → AS:* The Resource Server trusts the AS to issue valid
+       access tokens.  This trust is established through token signature
+       validation and issuer verification.
+
+   +--------+         +--------+         +--------+         +--------+
+   |  User  |<------->|  Home  |         |   AS   |<------->|   RS   |
+   |        |  Trust  |  IdP   |         |        |  Trust  |        |
+   +--------+         +--------+         +--------+         +--------+
+       ^                                     ^
+       | Trust                               | Trust
+       |                                     |
+       v                                     v
+   +--------+                           +--------+
+   | Agent  |                           | Policy |
+   |        |                           | Engine |
+   +--------+                           +--------+
+
+                                  Figure 1
+
+3.  Agent Authorization Grant Type
+
+   This specification extends the Identity Assertion Grant
+   ([I-D.ietf-oauth-identity-assertion-authz-grant]) with a confirmation
+   URL flow.  It uses the same grant type value but adds additional
+   request and response parameters.  The grant enables an agent to
+   obtain an access token that:
+
+   *  Binds the user's identity to the agent's identity;
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 6]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   *  Reflects explicit user consent for specific operations;
+
+   *  Includes policy-based authorization constraints;
+
+   *  Contains verifiable evidence of user confirmation.
+
+3.1.  Relationship to Identity Assertion Grant
+
+   This specification uses the same grant type value as the Identity
+   Assertion Grant: urn:ietf:params:oauth:grant-type:identity-assertion.
+   Implementations MUST support the base ID-JAG specification and this
+   extension.  The extension adds optional parameters for policy
+   proposal and introduces a confirmation URL response instead of
+   immediately issuing an access token.
+
+3.2.  Protocol Overview
+
+   The following diagram illustrates the complete authorization flow:
+
+  +--------+     +--------+     +--------+     +--------+     +--------+
+  |  User  |     | Agent  |     |   AS   |     |  RS    |     |  OPA   |
+  |        |     |        |     |        |     |        |     |        |
+  +--------+     +--------+     +--------+     +--------+     +--------+
+      |               |               |               |               |
+  (1) | Authenticated |               |               |               |
+      |-------------->|               |               |               |
+      | (ID Token)    |               |               |               |
+      |               |               |               |               |
+  (2) |               | Identity      |               |               |
+      |               | Assertion     |               |               |
+      |               | Grant +       |               |               |
+      |               | Policy        |               |               |
+      |               |-------------->|               |               |
+      |               |               |               |               |
+  (3) |               | Confirmation  |               |               |
+      |               | URL +         |               |               |
+      |               | Session ID    |               |               |
+      |               |<--------------|               |               |
+      |               |               |               |               |
+  (4) |<--------------| Redirect to   |               |               |
+      |               | Confirmation  |               |               |
+      |               | (with state)  |               |               |
+      |               |               |               |               |
+  (5) | Review &      |               |               |               |
+      | Approve       |               |               |               |
+      |----------------------------->|               |               |
+      |               |               |               |               |
+  (6) |<--------------| Callback      |               |               |
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 7]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+      |               | (Auth Code)   |               |               |
+      |               |               |               |               |
+  (7) |               | Exchange      |               |               |
+      |               | Code for      |               |               |
+      |               | Token         |               |               |
+      |               |-------------->|               |               |
+      |               |               |               |               |
+  (8) |               | Access Token  |               |               |
+      |               | (with binding)|               |               |
+      |               |<--------------|               |               |
+      |               |               |               |               |
+  (9) |               | API Request   |               |               |
+      |               | + Token       |               |               |
+      |               |------------------------------>|               |
+      |               |               |               |               |
+  (10)|               |               |               | Validate      |
+      |               |               |               | Token         |
+      |               |               |               |               |
+  (11)|               |               |               | Policy Eval   |
+      |               |               |               |-------------->|
+      |               |               |               |               |
+  (12)|               |               |               | Decision      |
+      |               |               |               |<--------------|
+      |               |               |               |               |
+  (13)|               |               |               | Response      |
+      |               |<------------------------------|               |
+      |               |               |               |               |
+
+                                 Figure 2
+
+   The flow consists of the following phases:
+
+   1.   *Authentication:* User authenticates with the agent's Identity
+        Provider and receives an ID Token.
+
+   2.   *Initial Request:* Agent submits Identity Assertion Grant
+        request with policy proposal to the Authorization Server.
+
+   3.   *Session Creation:* AS validates request and returns
+        confirmation URL with session identifier.
+
+   4.   *Consent Redirection:* Agent redirects user to AS consent page
+        with CSRF protection (state parameter).
+
+   5.   *User Consent:* User reviews authorization details and approves
+        or denies the request.
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 8]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   6.   *Callback:* AS redirects user back to agent with authorization
+        code.
+
+   7.   *Token Exchange:* Agent exchanges authorization code for access
+        token.
+
+   8.   *Token Issuance:* AS issues access token with identity binding
+        (user + agent).
+
+   9.   *API Access:* Agent uses access token to access protected
+        resources.
+
+   10.  *Token Validation:* Resource Server validates token signature
+        and claims.
+
+   11.  *Policy Evaluation:* RS evaluates authorization policy using OPA
+        or similar engine.
+
+   12.  *Authorization Decision:* Policy engine returns allow/deny
+        decision.
+
+   13.  *Response:* RS returns API response based on authorization
+        decision.
+
+3.3.  Initial Authorization Request
+
+   The agent initiates the flow by submitting an Identity Assertion
+   Grant request to the authorization server's token endpoint, augmented
+   with policy proposal and context parameters:
+
+   POST /token HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/x-www-form-urlencoded
+
+   grant_type=urn:ietf:params:oauth:grant-type:identity-assertion
+   &assertion_type=urn:ietf:params:oauth:assertion-type:id_token
+   &assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lk...
+   &client_id=spiffe://agent.example.com/sha256.abc123...
+   &policy_proposal=eyJ0eXBlIjoicmVnbyIsImNvbnRlbnQiOiJwYWNr...
+   &policy_context=eyJ1c2VyIjp7ImlkIjoidXNlcl8xMjM0NSJ9fQ
+
+                                  Figure 3
+
+   The request parameters are:
+
+   grant_type:  REQUIRED.  The value urn:ietf:params:oauth:grant-
+      type:identity-assertion as defined in
+      [I-D.ietf-oauth-identity-assertion-authz-grant].
+
+
+
+Liu, et al.             Expires 20 September 2026               [Page 9]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   assertion_type:  REQUIRED.  The value
+      urn:ietf:params:oauth:assertion-type:id_token indicating the
+      assertion is an OpenID Connect ID Token.
+
+   assertion:  REQUIRED.  A signed ID Token containing the user's
+      identity.  The token MUST include the agent's SPIFFE ID in the aud
+      claim to bind the token to the specific agent.
+
+   client_id:  REQUIRED.  The agent's identifier, which SHOULD be a
+      SPIFFE ID URI as defined in [I-D.ietf-oauth-spiffe-client-auth].
+
+   policy_proposal:  OPTIONAL.  A JSON-encoded Rego policy proposal as
+      defined in [I-D.liu-oauth-rego-policy].  When present, this
+      defines the fine-grained operations the agent is requesting
+      authorization for.
+
+   policy_context:  OPTIONAL.  A JSON object providing context data for
+      policy evaluation, including user identifiers and requested
+      actions.
+
+3.4.  Authorization Server Validation
+
+   Upon receiving the request, the authorization server MUST validate:
+
+   1.  *ID Token Signature:* Verify the ID Token signature using the
+       issuer's public keys.  Validate standard OIDC claims including
+       iss, exp, and nbf.
+
+   2.  *Audience Binding:* Confirm that the aud claim in the ID Token
+       matches the agent's SPIFFE ID provided in client_id.  This
+       ensures the ID Token was specifically issued for this agent.
+
+   3.  *Agent Authentication:* Validate the agent's SPIFFE credentials
+       (if using mTLS or attestation-based client authentication).
+
+   4.  *Policy Syntax:* If policy_proposal is present, validate the Rego
+       policy syntax and check for safety properties.
+
+   If validation fails, the authorization server returns an error
+   response as defined in Section 5.2 of [RFC6749].
+
+3.5.  Confirmation URL Response
+
+   Upon successful validation, the authorization server does NOT
+   immediately issue an access token.  Instead, it creates a pending
+   authorization session and returns a confirmation URL along with a
+   session identifier:
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 10]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {
+    "confirmation_uri": "https://as.example.com/confirm?session=xyz789",
+    "session_id": "session_abc123xyz",
+    "expires_in": 300
+  }
+
+                                 Figure 4
+
+   The response parameters are:
+
+   confirmation_uri:  REQUIRED.  A URL that the agent MUST present to
+      the user for consent.  The URL encodes a unique request
+      identifier.
+
+   expires_in:  REQUIRED.  The lifetime in seconds of the confirmation
+      request (default: 300).
+
+   session_id:  REQUIRED.  An opaque identifier for the pending
+      authorization session.  The agent uses this value to correlate the
+      initial request with the subsequent callback.
+
+   expires_in:  REQUIRED.  The lifetime in seconds of the confirmation
+      session (default: 300).
+
+   The authorization server stores the pending authorization state
+   including:
+
+   *  The validated ID Token claims (especially sub and aud);
+
+   *  The agent's SPIFFE ID;
+
+   *  The policy proposal (if provided);
+
+   *  A cryptographically random session identifier.
+
+   The confirmation URI MUST be bound to the authenticated agent's
+   identity (via the aud claim in the ID Token) to prevent session
+   hijacking.  The URI MUST be single-use and expire after the specified
+   duration.
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 11]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+4.  User Consent Flow
+
+   The agent redirects the user's browser to the confirmation URI.  To
+   prevent CSRF attacks, the agent SHOULD generate a state value and
+   include it in the redirect.  The authorization server then presents a
+   consent interface that:
+
+HTTP/1.1 302 Found
+Location: https://as.example.com/confirm?session=xyz789&state=af0ifjsldkj
+
+                               Figure 5
+
+   1.  *Authenticates the User (if needed):* If the user does not have
+       an active session with the authorization server, prompt for
+       authentication.
+
+   2.  *Displays Authorization Details:* Present human-readable
+       information about what the agent is requesting:
+
+       *  Agent identity (name, organization);
+
+       *  Requested operations (derived from policy proposal);
+
+       *  Resource server being accessed;
+
+       *  Duration of authorization.
+
+   3.  *Presents Consent Options:* Allow the user to approve or deny the
+       request.
+
+4.1.  Consent Page Example
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 12]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   +----------------------------------------------------------+
+   |  Authorize Agent Access                                  |
+   +----------------------------------------------------------+
+   |                                                          |
+   |  Agent: MyShopping Assistant (myassistant.example.com)   |
+   |                                                          |
+   |  This agent is requesting permission to:                 |
+   |                                                          |
+   |  - Add items to your shopping cart (max $50 per item)    |
+   |  - View product recommendations                          |
+   |  - Update shipping address                               |
+   |                                                          |
+   |  Resource Server: Shop Example (shop.example.com)        |
+   |                                                          |
+   |  Duration: Until you revoke access                       |
+   |                                                          |
+   |  +------------------+     +------------------+           |
+   |  |      Allow       |     |      Deny        |           |
+   |  +------------------+     +------------------+           |
+   |                                                          |
+   +----------------------------------------------------------+
+
+                                  Figure 6
+
+   The authorization server is responsible for interpreting the policy
+   proposal and presenting it in human-readable form.  The example above
+   shows how a Rego policy might be translated into user-friendly
+   language.
+
+4.2.  Policy Interpretation
+
+   Authorization servers MUST interpret policy proposals and present
+   them to users in a clear, understandable manner.  The following
+   guidelines apply:
+
+4.2.1.  Interpretation Requirements
+
+   The consent interface MUST display:
+
+   *  *Agent Identity:* The name and identifier of the AI agent
+      requesting authorization, verified through its authenticated
+      workload identity.
+
+   *  *Requested Operations:* A human-readable summary of the operations
+      the agent is requesting permission to perform, derived from the
+      policy proposal.
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 13]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   *  *Constraints and Limitations:* Any constraints specified in the
+      policy (e.g., monetary limits, time restrictions, resource
+      scopes).
+
+   *  *Resource Server:* The target resource server or service that the
+      agent will access.
+
+   *  *Authorization Duration:* The lifetime of the authorization and
+      conditions for renewal or revocation.
+
+4.2.2.  Best Practices
+
+   Authorization servers SHOULD follow these best practices for policy
+   interpretation:
+
+   *  Use clear, non-technical language that average users can
+      understand;
+
+   *  Highlight high-risk operations (e.g., financial transactions, data
+      deletion) with appropriate warnings;
+
+   *  Provide expandable sections for users who want to see technical
+      details of the policy;
+
+   *  Include examples of what the agent can and cannot do with the
+      requested authorization;
+
+   *  Support multiple languages and accessibility features (screen
+      readers, high contrast modes);
+
+   *  Allow users to selectively approve or deny specific operations if
+      the policy permits granular consent.
+
+4.2.3.  Policy to Text Translation Example
+
+   The following example illustrates how a Rego policy might be
+   translated into human-readable consent text:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 14]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   Policy (Rego):
+   --------------
+   package agent
+   default allow = false
+
+   allow {
+     input.action == "add_to_cart"
+     input.amount <= 50.0
+   }
+
+   allow {
+     input.action == "view_recommendations"
+   }
+
+   Consent Display:
+   ----------------
+   This agent is requesting permission to:
+
+   ✓ Add items to your shopping cart (maximum $50 per item)
+   ✓ View product recommendations for you
+
+   This agent CANNOT:
+   ✗ Remove items from your cart
+   ✗ Complete purchases or access payment methods
+   ✗ Access your order history
+
+                                  Figure 7
+
+4.3.  User Confirmation Action
+
+   When the user clicks "Allow", the authorization server:
+
+   1.  Records the user's consent with a timestamp;
+
+   2.  Generates a one-time authorization code;
+
+   3.  Redirects the user's browser back to the agent's redirect URI
+       with the authorization code and state parameter:
+
+   HTTP/1.1 302 Found
+   Location: https://agent.example.com/callback?
+   code=SplxlOBeZQQYbYS6WxSbIA&state=af0ifjsldkj
+
+                                  Figure 8
+
+   The state parameter MUST match the value provided in the redirect to
+   the confirmation URI.  The agent MUST validate the state parameter to
+   prevent CSRF attacks.
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 15]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+5.  Token Request
+
+   After receiving the authorization code, the agent exchanges it for an
+   access token:
+
+   POST /token HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/x-www-form-urlencoded
+   Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
+
+   grant_type=authorization_code
+   &code=SplxlOBeZQQYbYS6WxSbIA
+   &redirect_uri=https://agent.example.com/callback
+
+                                  Figure 9
+
+   The authorization server validates:
+
+   *  The authorization code is valid and unexpired;
+
+   *  The redirect_uri matches the registered URI;
+
+   *  The agent's client credentials are valid.
+
+5.1.  Access Token Response
+
+   Upon successful validation, the authorization server issues an access
+   token with identity binding:
+
+   {
+     "access_token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Fz...",
+     "token_type": "Bearer",
+     "expires_in": 3600,
+     "scope": "read write",
+     "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA"
+   }
+
+                                 Figure 10
+
+   The JWT access token contains the following claims:
+
+   iss:  The authorization server's identifier.
+
+   sub:  The user's identifier at the resource server (extracted from ID
+      Token).
+
+   aud:  The resource server's identifier.
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 16]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   act (Actor):  As defined in [RFC8693].  Contains:
+
+      *  sub: The agent's SPIFFE ID (from client_id);
+
+      *  agent_user_id (OPTIONAL): The user's identifier at the agent
+         system.
+
+   policy_ref:  OPTIONAL.  A JSON string containing a policy identifier,
+      or a JSON array of strings when multiple policies apply.  The
+      resource server can fetch the full policy content from the
+      endpoint specified in the authorization server's metadata or via
+      token introspection.
+
+   evidence_ref:  OPTIONAL.  A JSON string containing an evidence
+      identifier referencing the user consent record.  The full evidence
+      details can be retrieved via token introspection.
+
+   refresh_token:  OPTIONAL.  If present, the refresh token MUST contain
+      the same identity binding as the access token (i.e., the same act
+      claim).  When used to obtain a new access token, the resulting
+      token MUST maintain the same user-agent binding unless the user
+      explicitly re-authenticates.
+
+   exp (Expiration Time):  REQUIRED.  The expiration time of the access
+      token.  For AI agent scenarios, short-lived tokens (e.g., 1 hour)
+      are RECOMMENDED to limit the window of exposure if a token is
+      compromised.  Longer durations MAY be used when combined with
+      strong binding and continuous authentication mechanisms.
+
+   {
+     "iss": "https://as.example.com",
+     "sub": "user_12345",
+     "aud": "https://api.shop.example.com",
+     "exp": 1731369540,
+     "iat": 1731320700,
+     "jti": "urn:uuid:token-abc-123",
+
+     "act": {
+       "sub": "wit://agent.example.com/sha256.abc123...",
+       "agent_user_id": "agent_user_001"
+     },
+
+     "policy_ref": "policy-cart-50",
+     "evidence_ref": "evidence-xyz"
+   }
+
+                                 Figure 11
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 17]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   The full policy content and evidence details are available via token
+   introspection or from the policy endpoint.  This design keeps the
+   token compact while enabling detailed verification when needed.
+
+5.2.  Token Lifetime Recommendations
+
+   Authorization servers SHOULD follow these token lifetime guidelines:
+
+    +===============+======================+=========================+
+    | Token Type    | Recommended Lifetime | Rationale               |
+    +===============+======================+=========================+
+    | Access Token  | 1 hour               | Balance between         |
+    |               |                      | usability and security  |
+    +---------------+----------------------+-------------------------+
+    | Refresh Token | 24 hours or session- | Allow re-authentication |
+    |               | based                | without re-consent      |
+    +---------------+----------------------+-------------------------+
+    | Confirmation  | 5 minutes            | Minimize exposure of    |
+    | Session       |                      | pending authorization   |
+    +---------------+----------------------+-------------------------+
+    | Authorization | 10 minutes           | Standard OAuth 2.0      |
+    | Code          |                      | recommendation          |
+    +---------------+----------------------+-------------------------+
+
+                   Table 1: Recommended Token Lifetimes
+
+   Authorization servers MAY adjust these values based on risk
+   assessment, user authentication strength, and operational
+   requirements.  Tokens issued for high-risk operations (e.g.,
+   financial transactions) SHOULD have shorter lifetimes.
+
+5.3.  Token Introspection Response
+
+   When a resource server performs token introspection [RFC7662], the
+   authorization server MAY return additional claims beyond the standard
+   OAuth 2.0 Token Introspection response:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 18]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+{
+  "active": true,
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example.com",
+  "exp": 1731369540,
+  "iat": 1731320700,
+
+  "act": {
+    "sub": "wit://agent.example.com/sha256.abc123...",
+    "agent_user_id": "agent_user_001"
+  },
+
+  "policy_ref": "policy-cart-50",
+  "evidence_ref": "evidence-xyz",
+
+  "policy_content": {
+    "type": "rego",
+    "content": "package agent\ndefault allow = false\nallow { input.amount <= 50 }",
+    "entry_point": "allow"
+  },
+
+  "evidence_details": {
+    "id": "evidence-xyz",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1731320595
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..."
+  }
+}
+
+                              Figure 12
+
+   The introspection response includes:
+
+   policy_content:  OPTIONAL.  The full policy content referenced by
+      policy_ref.  This enables resource servers to evaluate policies
+      without additional round-trips to the policy endpoint.
+
+   evidence_details:  OPTIONAL.  The complete evidence record referenced
+      by evidence_ref.  Includes user confirmation details and
+      authorization server signature for audit purposes.
+
+   Authorization servers SHOULD support token introspection for agent
+   authorization tokens to enable resource servers to obtain complete
+   authorization context.  However, implementations MAY choose to omit
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 19]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   policy_content and evidence_details from introspection responses for
+   privacy or performance reasons, requiring resource servers to fetch
+   this information separately from the policy and evidence endpoints.
+
+6.  Security Considerations
+
+6.1.  Threat Model
+
+   This specification addresses the following threats specific to AI
+   agent authorization:
+
+           +====================+==============================+
+           | Threat             | Mitigation                   |
+           +====================+==============================+
+           | Token substitution | Audience binding (ID Token   |
+           |                    | aud == agent SPIFFE ID)      |
+           +--------------------+------------------------------+
+           | CSRF attacks       | State parameter validation   |
+           |                    | (REQUIRED)                   |
+           +--------------------+------------------------------+
+           | Confirmation URL   | Bind confirmation request to |
+           | hijacking          | authenticated agent session  |
+           +--------------------+------------------------------+
+           | Unauthorized       | Explicit user consent        |
+           | actions            | required via secure UI       |
+           +--------------------+------------------------------+
+           | Consent forgery    | Evidence records available   |
+           |                    | via introspection            |
+           +--------------------+------------------------------+
+           | Replay attacks     | One-time authorization codes |
+           |                    | with short expiry            |
+           +--------------------+------------------------------+
+           | Confirmation URL   | HTTPS required, single-use,  |
+           | leakage            | short-lived (5 min)          |
+           +--------------------+------------------------------+
+
+                        Table 2: Threat Mitigations
+
+6.2.  Trust Boundaries
+
+   The framework establishes clear trust boundaries:
+
+   *  User → Agent: ID Token with agent in audience (binds user to
+      agent);
+
+   *  Agent → AS: SPIFFE authentication + ID Token assertion;
+
+   *  AS → User: Secure consent interface (HTTPS);
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 20]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   *  AS → Agent: Signed access token with identity binding;
+
+   *  Agent → RS: Access token with policy reference and evidence.
+
+6.3.  Consent Security
+
+   The consent process MUST be secured:
+
+   *  Confirmation URLs MUST be served over HTTPS and MUST NOT be sent
+      over unencrypted channels;
+
+   *  Confirmation URLs MUST be bound to the authenticated agent's
+      identity (e.g., via mTLS or DPoP) to prevent hijacking;
+
+   *  Confirmation URLs MUST be single-use and expire within 5 minutes;
+
+   *  Authorization codes MUST be single-use and expire quickly
+      (recommended: 10 minutes);
+
+   *  State parameter MUST be used and validated to prevent CSRF
+      attacks;
+
+   *  Evidence records SHOULD be made available via token introspection
+      for audit purposes.
+
+6.4.  Difference from Device Authorization Grant
+
+   This specification is sometimes confused with the Device
+   Authorization Grant (RFC 8628).  While both flows involve separated
+   user interaction, they address different use cases:
+
+   Device Flow (RFC 8628):  Designed for input-constrained devices (TVs,
+      IoT) that cannot render browsers.  Requires polling the token
+      endpoint waiting for user approval.  User enters a code on a
+      separate device.
+
+   Agent Authorization Flow (this spec):  Designed for AI agents with
+      frontend capabilities.  No polling required - uses standard OAuth
+      redirect callback.  User is redirected to authorization server's
+      consent page directly from the agent's interface.
+
+   Key differences:
+
+   *  No polling: Agent receives confirmation URL immediately;
+
+   *  No user codes: Standard OAuth redirect with authorization code;
+
+   *  Faster completion: Real-time redirect vs. polling interval delays;
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 21]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   *  Better UX: Seamless integration with agent's frontend.
+
+6.5.  Confirmation URL Binding
+
+   The authorization server MUST bind the confirmation URL to the
+   authenticated agent's identity.  When the user completes consent, the
+   AS MUST verify that the entity completing consent matches the
+   original requester identified in the ID Token's aud claim.
+
+   This prevents an attacker from intercepting a confirmation URL and
+   substituting their own identity during the consent flow (token
+   confusion attack).
+
+6.6.  Token Revocation
+
+   Token revocation for agent authorization tokens follows the OAuth 2.0
+   Token Revocation specification [RFC7009] with additional
+   considerations for identity-bound tokens:
+
+6.6.1.  Revocation Triggers
+
+   Authorization servers SHOULD revoke agent authorization tokens in the
+   following situations:
+
+   *  User explicitly revokes authorization for the agent;
+
+   *  Agent's workload identity is compromised or rotated;
+
+   *  Policy associated with the token is updated or deprecated;
+
+   *  User's account is suspended or terminated;
+
+   *  Anomalous activity is detected indicating potential token misuse.
+
+6.6.2.  Revocation Propagation
+
+   When an access token is revoked, the authorization server SHOULD also
+   revoke associated artifacts:
+
+   *  The refresh token used to obtain the access token;
+
+   *  Other access tokens issued with the same user-agent binding;
+
+   *  Pending confirmation sessions for the same agent.
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 22]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   Resource servers SHOULD check token revocation status through token
+   introspection or by maintaining a local revocation cache.  The cache
+   SHOULD be updated frequently (e.g., every 5 minutes) to balance
+   performance with security requirements.
+
+6.6.3.  Revocation Evidence
+
+   Authorization servers SHOULD maintain evidence of token revocation
+   for audit purposes.  The evidence SHOULD include:
+
+   *  Token identifier (jti claim);
+
+   *  Revocation timestamp;
+
+   *  Reason for revocation;
+
+   *  Entity that initiated revocation (user, admin, system);
+
+   *  Notification status (if user was notified).
+
+7.  Privacy Considerations
+
+   This specification involves processing of user identity information
+   across trust domains.  Implementers SHOULD consider the following
+   privacy implications:
+
+7.1.  Identifier Minimization
+
+   Agents SHOULD minimize exposure of user identifiers.  The sub claim
+   in access tokens SHOULD use pairwise pseudonymous identifiers as
+   described in [RFC8618] to prevent correlation across different
+   resource servers.
+
+7.2.  Evidence Retention
+
+   Authorization servers SHOULD limit retention periods for evidence
+   records.  Once the access token expires, the detailed evidence MAY be
+   deleted while maintaining minimal audit logs for security purposes.
+
+7.3.  Logging Considerations
+
+   Authorization servers SHOULD NOT log full ID Tokens or complete
+   evidence records.  Logs SHOULD contain only minimal identifiers
+   necessary for security monitoring and debugging.
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 23]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+8.  Error Handling
+
+   This specification extends the error codes defined in Section 5.2 of
+   [RFC6749] with the following values:
+
+   invalid_policy_syntax:  The policy_proposal parameter contains
+      malformed Rego policy.  The error response SHOULD include a human-
+      readable description of the syntax error.
+
+   confirmation_expired:  The confirmation URL has expired (typically
+      after 5 minutes).  The agent MUST restart the authorization flow.
+
+   user_denied_consent:  The user explicitly denied consent.  The
+      authorization server MAY provide this information to the agent via
+      error response or silent callback.
+
+   session_not_found:  The session identifier in the confirmation URL is
+      invalid or has already been used.  This MAY indicate a replay
+      attack attempt.
+
+9.  Implementation Considerations
+
+   This section provides guidance for implementers of the agent
+   authorization framework, including deployment patterns, performance
+   considerations, and interoperability guidelines.
+
+9.1.  Deployment Patterns
+
+   The agent authorization framework supports several deployment
+   patterns:
+
+   Single-Domain Deployment:  The Home IdP, Authorization Server, and
+      Resource Server are all operated by the same organization.  This
+      simplifies trust establishment but limits cross-organizational
+      agent usage.
+
+   Federated Deployment:  The Home IdP is operated by the user's
+      organization, while the AS and RS are operated by a resource
+      provider.  This requires cross-domain trust establishment through
+      OIDC federation.
+
+   Multi-Agent Deployment:  Multiple AI agents from different vendors
+      access resources on behalf of the same user.  Each agent has its
+      own workload identity and may access different resource servers.
+
+   Delegated Agent Deployment:  An AI agent delegates authorization to a
+      sub-agent (e.g., a specialized service agent).  This requires
+      support for delegation chains.
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 24]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+9.2.  Performance Considerations
+
+   Implementers SHOULD consider the following performance factors:
+
+   *  *Token Introspection Caching:* Resource servers SHOULD cache
+      introspection responses to reduce load on the authorization
+      server.  Cache duration should balance performance with security
+      requirements.
+
+   *  *Policy Evaluation:* Complex Rego policies may introduce latency.
+      Resource servers SHOULD cache policy evaluation results when
+      appropriate.
+
+   *  *Confirmation Session Storage:* Authorization servers SHOULD use
+      distributed session storage (e.g., Redis, memcached) for
+      confirmation sessions to support horizontal scaling.
+
+   *  *Evidence Record Storage:* Evidence records may accumulate
+      rapidly.  Implementers SHOULD establish retention policies and
+      archival strategies.
+
+9.3.  Interoperability Guidelines
+
+   To ensure interoperability between different implementations:
+
+   *  Implementations MUST support the mandatory features defined in
+      this specification;
+
+   *  Implementations SHOULD support token introspection for complete
+      authorization context;
+
+   *  Implementations MAY support optional features (e.g., policy
+      content in introspection responses) with graceful degradation;
+
+   *  Implementations SHOULD publish their supported features in
+      authorization server metadata;
+
+   *  Implementations MUST handle unknown claims gracefully without
+      failing.
+
+10.  ABNF Syntax
+
+   This specification uses the Augmented Backus-Naur Form (ABNF)
+   notation defined in [RFC5234].  The following terms are defined for
+   use in this specification:
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 25]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+grant-type         = "urn:ietf:params:oauth:grant-type:identity-assertion"
+assertion-type     = "urn:ietf:params:oauth:assertion-type:id_token"
+
+policy-proposal    = "policy_proposal" "=" policy-json
+policy-json        = 1*( %x20-21 / %x23-7B / %x7D-7E )
+
+policy-context     = "policy_context" "=" context-json
+context-json       = 1*( %x20-21 / %x23-7B / %x7D-7E )
+
+confirmation-uri   = "confirmation_uri" "=" uri
+session-id         = "session_id" "=" 1*( ALPHA / DIGIT / "_" )
+state-param        = "state" "=" 1*( ALPHA / DIGIT / "-" / "_" / "." )
+
+error-code         = "invalid_policy_syntax" /
+                     "confirmation_expired" /
+                     "user_denied_consent" /
+                     "session_not_found"
+
+                              Figure 13
+
+11.  IANA Considerations
+
+   This specification extends the Identity Assertion Grant with
+   additional parameters and token claims.  No new grant type is
+   registered since this specification uses the existing
+   urn:ietf:params:oauth:grant-type:identity-assertion grant type
+   defined in [I-D.ietf-oauth-identity-assertion-authz-grant].
+
+11.1.  JWT Claim Registration
+
+   This specification registers the following claims in the JSON Web
+   Token Claims registry ([RFC7519]):
+
+   Claim Name:  policy_ref
+
+   Claim Description:  Reference to authorized policy/policies
+
+   Change Controller:  IETF
+
+   Specification Document:  [This document]
+
+   Claim Name:  evidence_ref
+
+   Claim Description:  Reference to user consent evidence record
+
+   Change Controller:  IETF
+
+   Specification Document:  [This document]
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 26]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   Note: Full policy content and evidence details are available via
+   token introspection rather than embedded in the token to minimize
+   token size.
+
+11.2.  Authorization Server Metadata
+
+   An authorization server supporting this specification SHOULD include
+   the following parameters in its OAuth 2.0 Authorization Server
+   Metadata document [RFC8414]:
+
+   agent_confirmation_endpoint:  URL of the confirmation page used for
+      user consent.  This endpoint accepts HTTP GET requests with a
+      session identifier parameter.
+
+   agent_policy_endpoint:  URL template for retrieving policy content by
+      policy ID.  The template MUST contain the placeholder {policy_id}.
+
+   agent_evidence_endpoint:  URL template for retrieving evidence
+      content by evidence ID.  The template MUST contain the placeholder
+      {evidence_id}.
+
+{
+  "issuer": "https://as.example.com",
+  "authorization_endpoint": "https://as.example.com/authorize",
+  "token_endpoint": "https://as.example.com/token",
+  "agent_confirmation_endpoint": "https://as.example.com/confirm",
+  "agent_policy_endpoint": "https://as.example.com/policies/{policy_id}",
+  "agent_evidence_endpoint": "https://as.example.com/evidence/{evidence_id}"
+}
+
+                              Figure 14
+
+12.  References
+
+12.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/info/rfc6749>.
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 27]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   [RFC6750]  Jones, M. and D. Hardt, "The OAuth 2.0 Authorization
+              Framework: Bearer Token Usage", RFC 6750,
+              DOI 10.17487/RFC6750, October 2012,
+              <https://www.rfc-editor.org/info/rfc6750>.
+
+   [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
+              2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
+              August 2013, <https://www.rfc-editor.org/info/rfc7009>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/info/rfc7519>.
+
+   [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
+              RFC 7662, DOI 10.17487/RFC7662, October 2015,
+              <https://www.rfc-editor.org/info/rfc7662>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/info/rfc8414>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/info/rfc8693>.
+
+   [I-D.ietf-oauth-identity-assertion-authz-grant]
+              Ying, K. and B. Campbell, "OAuth 2.0 Identity Assertion
+              Authorization Grant", Work in Progress, Internet-Draft,
+              draft-ietf-oauth-identity-assertion-authz-grant-02,
+              January 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-oauth-identity-assertion-authz-grant-02>.
+
+   [I-D.ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., "OAuth SPIFFE Client Authentication",
+              Work in Progress, Internet-Draft, draft-ietf-oauth-spiffe-
+              client-auth, March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth>.
+
+   [I-D.liu-oauth-rego-policy]
+              Liu, D., "Rego Policy Language for OAuth 2.0", Work in
+              Progress, Internet-Draft, draft-liu-oauth-rego-policy,
+              March 2026, <https://datatracker.ietf.org/doc/html/draft-
+              liu-oauth-rego-policy>.
+
+12.2.  Informative References
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 28]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   [RFC8618]  Campbell, B., "Pairwise Pseudonymous Identifiers for OAuth
+              2.0", RFC 8618, 2019,
+              <https://www.rfc-editor.org/rfc/rfc8618>.
+
+   [RFC5234]  Crocker, D. and P. Overell, "Augmented BNF for Syntax
+              Specifications: ABNF", RFC 5234, 2008,
+              <https://www.rfc-editor.org/rfc/rfc5234>.
+
+   [OPA]      CNCF, "Open Policy Agent", 2024,
+              <https://www.openpolicyagent.org/>.
+
+Acknowledgments
+
+   The authors would like to thank Brian Campbell for his valuable
+   feedback and insightful discussions on OAuth extension design.  His
+   contributions helped shape key aspects of this framework.
+
+Change Log
+
+   *draft-liu-oauth-agent-authorization-00:*
+
+   *  Initial version based on Identity Assertion Grant extension;
+
+   *  Added confirmation URL flow with session binding;
+
+   *  Defined policy_ref and evidence_ref token claims;
+
+   *  Added privacy considerations and error handling;
+
+   *  Included ABNF syntax definitions and metadata endpoints.
+
+Authors' Addresses
+
+   Dapeng Liu
+   Alibaba Group
+   Email: max.ldp@alibaba-inc.com
+
+
+   Hongru Zhu
+   Alibaba Group
+   Email: hongru.zhr@alibaba-inc.com
+
+
+   Suresh Krishnan
+   Cisco
+   Email: suresh.krishnan@gmail.com
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 29]
+
+Internet-Draft          OAuth Agent Authorization             March 2026
+
+
+   Aaron Parecki
+   Okta
+   Email: aaron@parecki.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 20 September 2026              [Page 30]

@@ -1433,7 +1433,7 @@ li > p:last-of-type:only-child {
                 <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-policy-retrieval" class="internal xref">Policy Retrieval</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
-                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-opa-integration" class="internal xref">OPA Integration</a></p>
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-policy-engine-integration" class="internal xref">Policy Engine Integration</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
                 <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-enforcement-decision" class="internal xref">Enforcement Decision</a></p>
@@ -1469,6 +1469,9 @@ li > p:last-of-type:only-child {
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
                 <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-policy-integrity" class="internal xref">Policy Integrity</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-policy-size-limits" class="internal xref">Policy Size Limits</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
@@ -1479,6 +1482,9 @@ li > p:last-of-type:only-child {
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
                 <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-jwt-claims-registration" class="internal xref">JWT Claims Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.3">
+                <p id="section-toc.1-1.10.2.3.1"><a href="#section-10.3" class="auto internal xref">10.3</a>.  <a href="#name-oauth-extensions-error-regi" class="internal xref">OAuth Extensions Error Registration</a></p>
 </li>
             </ul>
 </li>
@@ -1539,7 +1545,7 @@ li > p:last-of-type:only-child {
 </li>
         <li class="normal" id="section-1-3.2">Authorization Servers to validate, register, and reference policies;<a href="#section-1-3.2" class="pilcrow">¶</a>
 </li>
-        <li class="normal" id="section-1-3.3">Resource Servers to enforce policies at runtime using OPA.<a href="#section-1-3.3" class="pilcrow">¶</a>
+        <li class="normal" id="section-1-3.3">Resource Servers to enforce policies at runtime using a Rego-compatible policy engine.<a href="#section-1-3.3" class="pilcrow">¶</a>
 </li>
       </ul>
 <section id="section-1.1">
@@ -1601,10 +1607,12 @@ li > p:last-of-type:only-child {
             It contains the policy content, entry point, and optional context.<a href="#section-1.3-3.1" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-1.3-3.2">
-            <strong>Token Response</strong>: The access token includes a 
-            <code>policy_ref</code> claim referencing the registered policy. 
-            Per RFC 9396 Section 7.1, the token response MAY include 
-            enriched authorization information such as the full policy content.<a href="#section-1.3-3.2" class="pilcrow">¶</a>
+            <strong>Token Response</strong>: Per RFC 9396 Section 7.1, 
+            the access token includes enriched 
+            <code>authorization_details</code> as the primary mechanism for 
+            carrying policy information. The <code>policy_ref</code> claim 
+            MAY be included as a lightweight alternative 
+            (see <a href="#policy-ref-claim" class="auto internal xref">Section 3.2</a>).<a href="#section-1.3-3.2" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-1.3-3.3">
             <strong>Complementary Use</strong>: RAR enables structured 
@@ -1743,7 +1751,7 @@ li > p:last-of-type:only-child {
 <dt id="section-3.1.2-3.5">context:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-3.6">
               OPTIONAL. An object providing structured input data for policy 
-              evaluation. This data is passed to OPA as the <code>input</code> object.<a href="#section-3.1.2-3.6" class="pilcrow">¶</a>
+              evaluation. This data is passed to the Rego policy engine as the <code>input</code> object.<a href="#section-3.1.2-3.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -1770,8 +1778,10 @@ li > p:last-of-type:only-child {
             <dd class="break"></dd>
 <dt id="section-3.1.2-5.7">entry_point:</dt>
             <dd style="margin-left: 1.5em" id="section-3.1.2-5.8">
-              REQUIRED. The rule name that serves as the policy entry point. 
-              For authorization decisions, this MUST be "allow".<a href="#section-3.1.2-5.8" class="pilcrow">¶</a>
+              OPTIONAL. The rule name that serves as the policy entry point. 
+              Defaults to "allow". For authorization decisions, this 
+              SHOULD be "allow". Future extensions MAY define additional 
+              entry points for non-boolean evaluations.<a href="#section-3.1.2-5.8" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -1827,8 +1837,13 @@ allow {
 <a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-policy_ref-claim" class="section-name selfRef">policy_ref Claim</a>
         </h3>
 <p id="section-3.2-1">
-          The <code>policy_ref</code> claim is included in access tokens to reference a 
-          policy that has been validated and registered by the Authorization Server.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+          The <code>policy_ref</code> claim is an OPTIONAL shorthand mechanism for 
+          referencing a policy in access tokens. When the AS uses Rich Authorization 
+          Requests (RAR), the enriched <code>authorization_details</code> array in the 
+          access token (per RFC 9396 Section 7.1) is the primary mechanism for 
+          carrying policy information. The <code>policy_ref</code> claim MAY be used 
+          as a lightweight alternative when the full <code>authorization_details</code> 
+          structure is not needed.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <section id="section-3.2.1">
           <h4 id="name-claim-definition">
 <a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-claim-definition" class="section-name selfRef">Claim Definition</a>
@@ -1904,7 +1919,7 @@ allow {
         </h3>
 <p id="section-3.3-1">
           The <code>context</code> field within <code>rego_policy</code> provides 
-          structured input data for policy evaluation. This data is passed to OPA 
+          structured input data for policy evaluation. This data is passed to a Rego-compatible policy engine
           as the <code>input</code> object.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <p id="section-3.3-2">
           The context structure is flexible and can include any attributes relevant 
@@ -1937,7 +1952,7 @@ allow {
         <div class="alignLeft art-ascii-art art-text artwork" id="section-4-1.1">
 <pre>
 +--------+       +--------+       +--------+       +--------+
-| Client |       |   AS   |       |   RS   |       |  OPA   |
+| Client |       |   AS   |       |   RS   |       |Policy  |
 +--------+       +--------+       +--------+       +--------+
     |                |                |                |
     | (1) AuthZ Req  |                |                |
@@ -1956,7 +1971,8 @@ allow {
     |                |                |                |
     | (4) Enriched   |                |                |
     |    Access Token|                |                |
-    |    with        |                |                |
+    |    with authz_ |                |                |
+    |    details /   |                |                |
     |    policy_ref  |                |                |
     |&lt;---------------|                |                |
     |                |                |                |
@@ -2003,8 +2019,11 @@ allow {
             requirements and policy constraints.<a href="#section-4.1-1.3" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.4">
-            Token Response: AS issues access token with <code>policy_ref</code> claim 
-            referencing the registered policy. Per RFC 9396 Section 7.1, the 
+            Token Response: AS issues access token. The primary mechanism 
+            is to include the enriched <code>authorization_details</code> array 
+            per RFC 9396 Section 7.1. Alternatively, the AS MAY include a 
+            <code>policy_ref</code> claim as a lightweight reference to the 
+            registered policy. The 
             token response MAY include enriched authorization information in 
             additional JSON fields (e.g., <code>policy</code> containing the full 
             policy content) alongside the access token.<a href="#section-4.1-1.4" class="pilcrow">¶</a>
@@ -2018,10 +2037,10 @@ allow {
             enriched token response.<a href="#section-4.1-1.6" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.7">
-            Policy Evaluation: RS sends policy and request input to OPA for evaluation.<a href="#section-4.1-1.7" class="pilcrow">¶</a>
+            Policy Evaluation: RS sends policy and request input to a Rego-compatible policy engine for evaluation.<a href="#section-4.1-1.7" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.8">
-            Enforcement: RS enforces OPA's allow/deny decision.<a href="#section-4.1-1.8" class="pilcrow">¶</a>
+            Enforcement: RS enforces the policy engine's allow/deny decision.<a href="#section-4.1-1.8" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.9">
             Response: RS returns result to client.<a href="#section-4.1-1.9" class="pilcrow">¶</a>
@@ -2186,7 +2205,10 @@ Content-Type: application/json
 <li class="normal" id="section-5.4-2.1">
             <strong>Auth Server Verification</strong>: Agents MUST verify that 
             the <code>auth_server</code> specified in the rego_profile is trusted 
-            before submitting authorization requests. Blindly following 
+            before submitting authorization requests. Agents MUST also verify 
+            that the <code>token_endpoint</code> matches the token endpoint published 
+            in the <code>auth_server</code>'s Authorization Server Metadata 
+            (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>). Blindly following 
             redirects could lead to credential theft.<a href="#section-5.4-2.1" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-5.4-2.2">
@@ -2219,7 +2241,8 @@ Content-Type: application/json
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-policy-validation" class="section-name selfRef">Policy Validation</a>
         </h3>
 <p id="section-6.1-1">
-          Upon receiving a policy_proposal, the AS MUST perform the following 
+          Upon receiving an <code>authorization_details</code> request containing the 
+            <code>rego_policy</code> type, the AS MUST perform the following
           validation steps:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.1-2">
           <li id="section-6.1-2.1">
@@ -2305,11 +2328,12 @@ Content-Type: application/json
         </ul>
 </section>
 <section id="section-7.2">
-        <h3 id="name-opa-integration">
-<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-opa-integration" class="section-name selfRef">OPA Integration</a>
+        <h3 id="name-policy-engine-integration">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-policy-engine-integration" class="section-name selfRef">Policy Engine Integration</a>
         </h3>
 <p id="section-7.2-1">
-          The RS evaluates the policy using OPA:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+          The RS evaluates the policy using a Rego-compatible policy engine
+          (such as Open Policy Agent):<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <figure id="figure-7">
           <div class="alignLeft art-json art-text artwork" id="section-7.2-2.1">
 <pre>
@@ -2349,7 +2373,7 @@ Content-Type: application/json
 <a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-enforcement-decision" class="section-name selfRef">Enforcement Decision</a>
         </h3>
 <p id="section-7.3-1">
-          Based on OPA's response:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+          Based on the policy engine's response:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.3-2.1">If <code>result</code> is <code>true</code>: Allow the operation;<a href="#section-7.3-2.1" class="pilcrow">¶</a>
 </li>
@@ -2377,9 +2401,10 @@ Content-Type: application/json
         </h3>
 <p id="section-8.1-1">
           When using traditional authorization code grant without PAR,
-          the policy proposal and policy_context SHOULD be included in 
+          the Rego policy and context SHOULD be included in 
+          the <code>authorization_details</code> parameter within 
           a JWT using the "request" parameter as defined in 
-          [RFC9101]. This mechanism, known as JWT-Secured Authorization 
+          <span>[<a href="#RFC9101" class="cite xref">RFC9101</a>]</span>. This mechanism, known as JWT-Secured Authorization 
           Request (JAR), is specifically designed for redirect-based 
           flows and provides integrity protection while maintaining 
           consistency with the PAR mechanism.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
@@ -2462,23 +2487,14 @@ Host: as.example.com
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
-Content-Type: application/json
+Content-Type: application/x-www-form-urlencoded
 
-{
-  "grant_type": "client_credentials",
-  "client_id": "spiffe://agent.example/agent",
-  "client_secret": "...",
-  "authorization_details": [
-    {
-      "type": "rego_policy",
-      "policy": {
-        "type": "rego",
-        "content": "...",
-        "entry_point": "allow"
-      }
-    }
-  ]
-}
+grant_type=client_credentials
+&amp;client_id=spiffe%3A%2F%2Fagent.example%2Fagent
+&amp;client_secret=...
+&amp;authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C
+  %22policy%22%3A%7B%22type%22%3A%22rego%22%2C%22content%22%3A%22...%22%2C
+  %22entry_point%22%3A%22allow%22%7D%7D%5D
 </pre>
 </div>
 <figcaption><a href="#figure-11" class="selfRef">Figure 11</a></figcaption></figure>
@@ -2489,34 +2505,27 @@ Content-Type: application/json
         </h3>
 <p id="section-8.3-1">
           When exchanging tokens, a new policy proposal can be 
-          provided to refine or extend the authorized operations:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+          provided to refine or restrict the authorized operations:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <figure id="figure-12">
           <div class="alignLeft art-http art-text artwork" id="section-8.3-2.1">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
-Content-Type: application/json
+Content-Type: application/x-www-form-urlencoded
 
-{
-  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-  "subject_token": "eyJhbGciOiJSUzI1NiJ9...",
-  "authorization_details": [
-    {
-      "type": "rego_policy",
-      "policy": {
-        "type": "rego",
-        "content": "...",
-        "entry_point": "allow"
-      }
-    }
-  ]
-}
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
+&amp;subject_token=eyJhbGciOiJSUzI1NiJ9...
+&amp;subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token
+&amp;authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C
+  %22policy%22%3A%7B%22type%22%3A%22rego%22%2C%22content%22%3A%22...%22%2C
+  %22entry_point%22%3A%22allow%22%7D%7D%5D
 </pre>
 </div>
 <figcaption><a href="#figure-12" class="selfRef">Figure 12</a></figcaption></figure>
 <p id="section-8.3-3">
-          The resulting access token will include both the original 
-          permissions and the new policy constraints.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+          The resulting access token will include the new, more 
+          restrictive policy constraints that MUST be a subset of the 
+          original token's permissions.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
 </section>
 <section id="section-8.4">
         <h3 id="name-security-considerations-by-">
@@ -2536,7 +2545,8 @@ Content-Type: application/json
 <dt id="section-8.4-2.3">Authorization Code with JAR:</dt>
           <dd style="margin-left: 1.5em" id="section-8.4-2.4">
             When using JWT-Secured Authorization Request (JAR, RFC 9101), 
-            authorization_details is protected by the JWT signature. 
+            authorization_details is protected by the JWT signature
+            (<span>[<a href="#RFC9101" class="cite xref">RFC9101</a>]</span>). 
             Implementations MUST validate the JWT before processing.<a href="#section-8.4-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
@@ -2613,6 +2623,27 @@ Content-Type: application/json
           The policy_ref in access tokens MUST reference policies stored securely 
           by the AS. Resource Servers MUST fetch policies only from trusted sources.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 </section>
+<section id="section-9.4">
+        <h3 id="name-policy-size-limits">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-policy-size-limits" class="section-name selfRef">Policy Size Limits</a>
+        </h3>
+<p id="section-9.4-1">
+          Rego policies embedded inline within authorization_details can
+          significantly increase token request and access token size.
+          Implementations MUST enforce limits on:<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.4-2.1">Maximum policy source size (RECOMMENDED limit: 8 KB for inline policies);<a href="#section-9.4-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.4-2.2">Maximum policy complexity (e.g., nesting depth, number of rules);<a href="#section-9.4-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.4-2.3">Total authorization_details payload size in token requests.<a href="#section-9.4-2.3" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-9.4-3">
+          For policies exceeding these limits, clients SHOULD use
+          pre-registered policies referenced via <code>policy_ref</code>
+          rather than inline policy content.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
+</section>
 </section>
 </div>
 <div id="iana">
@@ -2676,6 +2707,36 @@ Content-Type: application/json
         <dd class="break"></dd>
 </dl>
 </section>
+<section id="section-10.3">
+        <h3 id="name-oauth-extensions-error-regi">
+<a href="#section-10.3" class="section-number selfRef">10.3. </a><a href="#name-oauth-extensions-error-regi" class="section-name selfRef">OAuth Extensions Error Registration</a>
+        </h3>
+<p id="section-10.3-1">
+          This specification registers the following error code in the 
+          "OAuth Extensions Error" registry established by RFC 6749:<a href="#section-10.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10.3-2">
+          <dt id="section-10.3-2.1">Error Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.3-2.2">insufficient_authorization<a href="#section-10.3-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-10.3-2.3">Error Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.3-2.4">
+            The request requires higher authorization privileges than 
+            provided by the access token. The resource server MAY include 
+            a <code>rego_profile</code> object in the response body to guide 
+            the client toward obtaining sufficient authorization.<a href="#section-10.3-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-10.3-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.3-2.6">IETF<a href="#section-10.3-2.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-10.3-2.7">Specification Document:</dt>
+          <dd style="margin-left: 1.5em" id="section-10.3-2.8">Section 5.1 of this document<a href="#section-10.3-2.8" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
 </section>
 </div>
 <section id="section-11">
@@ -2699,21 +2760,17 @@ Content-Type: application/json
         <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6749">https://www.rfc-editor.org/info/rfc6749</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC9126">[RFC9126]</dt>
-        <dd>
-<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9126">https://www.rfc-editor.org/info/rfc9126</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC7519">[RFC7519]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7519">https://www.rfc-editor.org/info/rfc7519</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC8693">[RFC8693]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8693">https://www.rfc-editor.org/info/rfc8693</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC9396">[RFC9396]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9396">https://www.rfc-editor.org/info/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8414">https://www.rfc-editor.org/info/rfc8414</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -2722,6 +2779,18 @@ Content-Type: application/json
 <a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9126">https://www.rfc-editor.org/info/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9101">[RFC9101]</dt>
+        <dd>
+<span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: JWT-Secured Authorization Request (JAR)"</span>, <span class="seriesInfo">RFC 9101</span>, <span class="seriesInfo">DOI 10.17487/RFC9101</span>, <time datetime="2021-08" class="refDate">August 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9101">https://www.rfc-editor.org/info/rfc9101</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8693">https://www.rfc-editor.org/info/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="OPA">[OPA]</dt>
         <dd>
 <span class="refAuthor">Cloud Native Computing Foundation</span>, <span class="refTitle">"Open Policy Agent"</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://www.openpolicyagent.org/">https://www.openpolicyagent.org/</a>&gt;</span>. </dd>

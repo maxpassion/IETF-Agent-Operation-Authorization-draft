@@ -56,8 +56,8 @@
     </author>
 
     <date year="2026" month="March" day="17"/>
-    <area>Applications</area>
-    <workgroup></workgroup>
+    <area>Security</area>
+    <workgroup>Web Authorization Protocol</workgroup>
 
     <keyword>AI Agent</keyword>
     <keyword>Authorization</keyword>
@@ -118,6 +118,15 @@
         </li>
       </ul>
 
+      <section title="Requirements Language">
+        <t>
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", 
+          "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this 
+          document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> 
+          <xref target="RFC8174"/> when, and only when, they appear in all capitals.
+        </t>
+      </section>
+
       <section title="Component Specifications">
         <t>
           This framework integrates the following specifications:
@@ -135,32 +144,32 @@
           <tbody>
             <tr>
               <td>Agent Authentication</td>
-              <td>draft-ietf-oauth-spiffe-client-auth</td>
+              <td><xref target="I-D.ietf-oauth-spiffe-client-auth"/></td>
               <td>Agent workload identity via SPIFFE/WIT-SVID</td>
             </tr>
             <tr>
               <td>Identity Assertion Grant</td>
-              <td>draft-ietf-oauth-identity-assertion-authz-grant (ID-JAG)</td>
+              <td><xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/> (ID-JAG)</td>
               <td>JWT-based cross-domain identity assertion</td>
             </tr>
             <tr>
               <td>User Interaction &amp; Consent</td>
-              <td>draft-parecki-oauth-jwt-grant-interaction-response</td>
+              <td><xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/></td>
               <td>User consent via JWT grant interaction flow</td>
             </tr>
             <tr>
               <td>Policy Authorization</td>
-              <td>draft-liu-oauth-rego-policy</td>
+              <td><xref target="I-D.liu-oauth-rego-policy"/></td>
               <td>Fine-grained Rego policy support</td>
             </tr>
             <tr>
               <td>Consent Evidence</td>
-              <td>draft-liu-oauth-authorization-evidence</td>
+              <td><xref target="I-D.liu-oauth-authorization-evidence"/></td>
               <td>User confirmation records</td>
             </tr>
             <tr>
               <td>Multi-hop Delegation</td>
-              <td>draft-liu-oauth-chain-delegation</td>
+              <td><xref target="I-D.liu-oauth-chain-delegation"/></td>
               <td>Agent-to-agent delegation chains</td>
             </tr>
           </tbody>
@@ -198,7 +207,7 @@
           </li>
           <li>
             <strong>Resource Server:</strong> RS evaluates the policy at runtime using 
-            OPA engine with request context.
+            a Rego-compatible policy engine with request context.
           </li>
         </ul>
 
@@ -237,8 +246,7 @@
 |  Authorization Boundary                                   |
 +-----------------------------------------------------------+
 |  +-----------------------------------------------------+  |
-|  |  
-|  |                                                     |  |
+|  |  Scope (Traditional OAuth)                          |  |
 |  |  +-----------------------------------------------+  |  |
 |  |  |  Policy via RAR (Primary)                     |  |  |
 |  |  |  authorization_details: rego_policy            |  |  |
@@ -340,7 +348,7 @@
         |                        |                  | Resource Server  |
         |                        |                  |                  |
         |                        |   API Request   | - Token validation|
-        |                        |---------------->| - OPA enforcement |
+        |                        |---------------->| - Policy engine  |
         |                        |                  +------------------+
           ]]></artwork>
         </figure>
@@ -367,7 +375,7 @@
           <dt>Resource Server (RS):</dt>
           <dd>
             Hosts protected resources. Validates access tokens and enforces 
-            policies using OPA.
+            policies using a Rego-compatible policy engine.
           </dd>
         </dl>
       </section>
@@ -400,6 +408,8 @@
               <li>
                 <tt>agent_user_id</tt> (OPTIONAL): The user's identifier at the 
                 Agent system, enabling audit trail correlation at the Agent side.
+                Note: This is a non-registered extension field within the 
+                <tt>act</tt> claim structure.
               </li>
             </ul>
           </li>
@@ -408,28 +418,25 @@
         <figure>
           <artwork name="Access Token Structure" type="json"><![CDATA[
 {
-  // Standard OAuth claims
   "iss": "https://as.external.example",
-  "sub": "user_12345",                    // Resource App user ID
+  "sub": "user_12345",
   "aud": "https://api.external.example",
   "exp": 1731369540,
   "iat": 1731320700,
   "jti": "urn:uuid:token-abc-123",
-  
-  // Actor claim (RFC 8693) - identifies the agent acting on behalf of the user
+
   "act": {
     "sub": "wit://agent.example/sha256.abc123...",
-    "agent_user_id": "agent_user_001"     // Optional: for agent-side audit
+    "agent_user_id": "agent_user_001"
   },
-  
-  // Enriched authorization_details (RFC 9396 Section 7.1)
+
   "authorization_details": [
     {
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "ref": "policy-abc123",
-        "endpoint": "https://as.external.example/policies/..."
+        "uri": "https://as.external.example/policies/policy-abc123",
+        "entry_point": "allow"
       },
       "context": {
         "user": { "id": "user_12345" },
@@ -437,16 +444,14 @@
       }
     }
   ],
-  
-  // User consent evidence
+
   "evidence": {
     "id": "evidence-xyz",
-    "user_confirmation": { ... },
-    "as_signature": "..."
+    "user_confirmation": { "..." : "..." },
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   },
-  
-  // Delegation chain (if delegated)
-  "delegation_chain": [ ... ]
+
+  "delegation_chain": [ "..." ]
 }
           ]]></artwork>
         </figure>
@@ -458,7 +463,7 @@
         <figure>
           <artwork name="Complete Authorization Flow" type="ascii-art"><![CDATA[
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
-| User  |    | Home  |    |  AI    |    |External    |  RS   |    | OPA |
+| User  |    | Home  |    |  AI    |    |External    |  RS   |    |Policy|
 |       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
     |            |             |            |            |           |
@@ -599,10 +604,10 @@
           </li>
           <li>
             <t>Policy Evaluation: RS sends policy and request context 
-            to OPA.</t>
+            to the policy engine.</t>
           </li>
           <li>
-            <t>Authorization Decision: OPA returns allow/deny decision.</t>
+            <t>Authorization Decision: Policy engine returns allow/deny decision.</t>
           </li>
           <li>
             <t>Response: RS executes (or denies) the operation and 
@@ -626,10 +631,10 @@
      |                 |                 |                |
      | (has token)     |                 |                |
      |                 |                 |                |
-     | Delegation PAR  |                 |                |
+     | Token Exchange   |                 |                |
      | - subject_token |                 |                |
-     | - Agent B creds |                 |                |
-     | - sub-scope     |                 |                |
+     | - delegatee_wit |                 |                |
+     | - authz_details |                 |                |
      |---------------->|                 |                |
      |                 |                 |                |
      |                 | Validate:       |                |
@@ -655,7 +660,7 @@
       <t>
         The resulting token for Agent B includes a <tt>delegation_chain</tt> 
         recording the delegation hop, as defined in 
-        draft-liu-oauth-chain-delegation.
+        <xref target="I-D.liu-oauth-chain-delegation"/>.
       </t>
     </section>
 
@@ -830,7 +835,7 @@
 
       <t>
         Detailed specification of the Rego Profile format and agent adaptive 
-        behavior is defined in draft-liu-oauth-rego-policy.
+        behavior is defined in <xref target="I-D.liu-oauth-rego-policy"/>.
       </t>
     </section>
 
@@ -845,7 +850,7 @@
             Home IdP → Agent: ID Token with agent in audience;
           </li>
           <li>
-            Agent → External AS: SPIFFE authentication + ID Token hint;
+            Agent → External AS: SPIFFE authentication + JWT assertion (ID-JAG);
           </li>
           <li>
             External AS → RS: Signed access token with policy reference;
@@ -868,7 +873,7 @@
           <tbody>
             <tr>
               <td>Token substitution</td>
-              <td>Audience binding (id_token_hint.aud == agent ID)</td>
+              <td>JWT assertion audience binding (assertion.aud == AS identifier)</td>
             </tr>
             <tr>
               <td>Privilege escalation</td>
@@ -876,7 +881,7 @@
             </tr>
             <tr>
               <td>Unauthorized actions</td>
-              <td>OPA policy enforcement at RS</td>
+              <td>Rego policy enforcement at RS</td>
             </tr>
             <tr>
               <td>Consent forgery</td>
@@ -1005,20 +1010,21 @@
             across delegation hops;
           </li>
           <li>
-            Evidence records provide cryptographic proof of user consent at 
-            each delegation step.
+            Evidence records provide cryptographic proof of the original
+            user consent, propagated across delegation hops via
+            <tt>root_evidence_ref</tt>;
           </li>
         </ul>
 
         <t>
-          Implementations MUST support RFC 8693 for token exchange operations 
+          Implementations SHOULD support RFC 8693 for token exchange operations 
           and MAY implement the delegation chain extension for multi-hop scenarios.
         </t>
       </section>
 
       <section anchor="rel-transaction-tokens" title="Relationship to Transaction Tokens">
         <t>
-          Transaction Tokens (draft-ietf-oauth-transaction-tokens) focus on 
+          Transaction Tokens (<xref target="I-D.ietf-oauth-transaction-tokens"/>) focus on
           short-lived service-to-service authorization in microservices architectures. 
           This framework focuses on longer-lived user-to-agent delegation with explicit 
           human consent.
@@ -1051,7 +1057,7 @@
             <tr>
               <td>Token lifetime</td>
               <td>Minutes</td>
-              <td>Hours to days</td>
+              <td>Minutes to hours</td>
             </tr>
             <tr>
               <td>Authorization model</td>
@@ -1200,7 +1206,7 @@
             <tr>
               <td>ID-JAG</td>
               <td>MUST</td>
-              <td>All</td>
+              <td>Agent, AS</td>
             </tr>
             <tr>
               <td>JWT Grant Interaction Response</td>
@@ -1214,7 +1220,7 @@
             </tr>
             <tr>
               <td>Rego Policy</td>
-              <td>SHOULD</td>
+              <td>MUST</td>
               <td>Agent, AS, RS</td>
             </tr>
             <tr>
@@ -1255,8 +1261,9 @@
       <name>References</name>
       <references>
         <name>Normative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
 
@@ -1315,6 +1322,11 @@
           </front>
           <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation"/>
         </reference>
+      </references>
+
+      <references>
+        <name>Informative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
 
         <reference anchor="I-D.ietf-oauth-transaction-tokens">
           <front>
@@ -1326,10 +1338,7 @@
           </front>
           <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-transaction-tokens"/>
         </reference>
-      </references>
 
-      <references>
-        <name>Informative References</name>
         <reference anchor="CIBA" target="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html">
           <front>
             <title>OpenID Connect CIBA Core</title>
@@ -1362,19 +1371,19 @@ Content-Type: application/x-www-form-urlencoded
 OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
 OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
 
-grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
 &redirect_uri=https://myassistant.example/callback
-&authorization_details=[{"type":"rego_policy","policy":{"type":"rego",
-  "content":"package agent...","entry_point":"allow"},
-  "context":{"user":{"id":"user_12345"},"action":"add_to_cart"}}]
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
+  %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
           ]]></artwork>
         </figure>
       </section>
 
       <section title="Interaction Required Response">
         <figure>
-          <artwork name="Interaction Required" type="json"><![CDATA[
+          <artwork name="Interaction Required" type="http"><![CDATA[
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
@@ -1409,8 +1418,8 @@ Content-Type: application/json
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "ref": "policy-cart-50",
-        "endpoint": "https://as.shop.example/policies/policy-cart-50"
+        "uri": "https://as.shop.example/policies/policy-cart-50",
+        "entry_point": "allow"
       },
       "context": {
         "user": { "id": "user_12345" },
@@ -1426,7 +1435,7 @@ Content-Type: application/json
       "user_action": "confirmed_via_button_click",
       "timestamp": 1731320595
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..."
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   }
 }
           ]]></artwork>

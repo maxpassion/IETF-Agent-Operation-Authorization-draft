@@ -1,0 +1,3396 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>OAuth 2.0 Agent Authorization with Identity Binding and User Consent</title>
+<meta content="Dapeng Liu" name="author">
+<meta content="Hongru Zhu" name="author">
+<meta content="Suresh Krishnan" name="author">
+<meta content="Aaron Parecki" name="author">
+<meta content="
+       
+        This specification defines an extension to the OAuth 2.0 Identity Assertion 
+        Grant that adds explicit user consent through a confirmation URL mechanism. 
+        Building on the Identity Assertion Grant mechanism, this extension enables 
+        secure delegation to autonomous agents while maintaining user control. Unlike 
+        the Device Authorization Grant (RFC 8628), this flow does not require polling 
+        and is designed for AI agents with frontend capabilities. The specification 
+        maintains cryptographic binding between user and agent identities in the 
+        resulting access token and provides verifiable evidence of user consent.
+       
+    " name="description">
+<meta content="xml2rfc 3.31.0" name="generator">
+<meta content="OAuth 2.0" name="keyword">
+<meta content="AI Agent" name="keyword">
+<meta content="Authorization" name="keyword">
+<meta content="Identity Binding" name="keyword">
+<meta content="User Consent" name="keyword">
+<meta content="draft-liu-oauth-agent-authorization-00" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.31.0
+    Python 3.10.0
+    ConfigArgParse 1.7.1
+    google-i18n-address 3.1.1
+    intervaltree 3.1.0
+    Jinja2 3.1.6
+    lxml 6.0.0
+    platformdirs 4.3.8
+    pycountry 24.6.1
+    pypdf 6.6.2
+    PyYAML 6.0.2
+    requests 2.32.4
+    wcwidth 0.2.13
+    weasyprint 65.0
+-->
+<link href="draft-liu-oauth-agent-authorization-00.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">/*
+
+  NOTE: Changes at the bottom of this file overrides some earlier settings.
+
+  Once the style has stabilized and has been adopted as an official RFC style,
+  this can be consolidated so that style settings occur only in one place, but
+  for now the contents of this file consists first of the initial CSS work as
+  provided to the RFC Formatter (xml2rfc) work, followed by itemized and
+  commented changes found necessary during the development of the v3
+  formatters.
+
+*/
+
+/* fonts */
+@import url('https://static.ietf.org/fonts/noto-sans/import.css'); /* Sans-serif */
+@import url('https://static.ietf.org/fonts/noto-serif/import.css'); /* Serif (print) */
+@import url('https://static.ietf.org/fonts/roboto-mono/import.css'); /* Monospace */
+
+:root {
+  --font-sans: 'Noto Sans', Arial, Helvetica, sans-serif;
+  --font-serif: 'Noto Serif', 'Times', 'Times New Roman', serif;
+  --font-mono: 'Roboto Mono', Courier, 'Courier New', monospace;
+}
+
+@viewport {
+  zoom: 1.0;
+}
+@-ms-viewport {
+  width: extend-to-zoom;
+  zoom: 1.0;
+}
+/* general and mobile first */
+html {
+}
+body {
+  max-width: 90%;
+  margin: 1.5em auto;
+  color: #222;
+  background-color: #fff;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  scroll-behavior: smooth;
+  overflow-wrap: break-word;
+}
+.ears {
+  display: none;
+}
+
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  margin: 1em 0 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+#title {
+  clear: both;
+  border-bottom: 1px solid #ddd;
+  margin: 0 0 0.5em 0;
+  padding: 1em 0 0.5em;
+}
+.author {
+  padding-bottom: 4px;
+}
+h1 {
+  font-size: 26px;
+  margin: 1em 0;
+}
+h2 {
+  font-size: 22px;
+  margin-top: -20px;  /* provide offset for in-page anchors */
+  padding-top: 33px;
+}
+h3 {
+  font-size: 18px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h4 {
+  font-size: 16px;
+  margin-top: -36px;  /* provide offset for in-page anchors */
+  padding-top: 42px;
+}
+h5, h6 {
+  font-size: 14px;
+}
+#n-copyright-notice {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+/* general structure */
+p {
+  padding: 0;
+  margin: 0 0 1em 0;
+  text-align: left;
+}
+div, span {
+  position: relative;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+@media print {
+  svg {
+    max-height: 850px;
+    max-width: 660px;
+  }
+}
+svg[font-family~="serif" i], svg [font-family~="serif" i] {
+  font-family: var(--font-serif);
+}
+svg[font-family~="sans-serif" i], svg [font-family~="sans-serif" i] {
+  font-family: var(--font-sans);
+}
+svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
+  font-family: var(--font-mono);
+}
+.alignCenter.art-text {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 1em 1em 0;
+  margin-bottom: 1.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  display: table;
+  border: none;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 1em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.ulBare, li.ulBare {
+  margin-left: 0em !important;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+/* 
+dl.nohang > dt {
+  float: none;
+}
+*/
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+/* links */
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #22e; /* Arlen: WCAG 2019 */
+}
+a[href]:hover {
+  background-color: #f2f2f2;
+}
+figcaption a[href],
+a[href].selfRef {
+  color: #222;
+}
+/* XXX probably not this:
+a.selfRef:hover {
+  background-color: transparent;
+  cursor: default;
+} */
+
+/* Figures */
+tt, code, pre {
+  background-color: #f9f9f9;
+  font-family: var(--font-mono);
+}
+pre {
+  border: 1px solid #eee;
+  margin: 0;
+  padding: 1em;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption {
+  font-style: italic;
+  margin: 0 0 1em 0;
+}
+@media screen {
+  pre {
+    overflow-x: auto;
+    max-width: 100%;
+    max-width: calc(100% - 22px);
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 1.2em 2em;
+}
+blockquote {
+  background-color: #f9f9f9;
+  color: #111; /* Arlen: WCAG 2019 */
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin: 1em 0;
+}
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+.xref {
+  overflow-wrap: normal;
+}
+
+/* tables */
+table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  border: 1px solid #eee;
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5em 0.75em;
+}
+th {
+  text-align: left;
+  background-color: #e9e9e9;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f5f5f5;
+}
+table caption {
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+table p {
+  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
+     be allowed within tables more generally, it would be far better to select on a class. */
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  color: #666; /* Arlen: AHDJ 2019 */
+  text-decoration: none;
+  visibility: hidden;
+  user-select: none;
+  -ms-user-select: none;
+  -o-user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@media screen {
+  aside:hover > a.pilcrow,
+  p:hover > a.pilcrow,
+  blockquote:hover > a.pilcrow,
+  div:hover > a.pilcrow,
+  li:hover > a.pilcrow,
+  pre:hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: 0.9em;
+}
+#identifiers dt {
+  width: 3em;
+  clear: left;
+}
+#identifiers dd {
+  float: left;
+  margin-bottom: 0;
+}
+/* Fix PDF info block run off issue */
+@media print {
+  #identifiers dd {
+    max-width: 100%;
+  }
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #666; /* Arlen: WCAG 2019 */
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc  {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+nav.toc ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+nav.toc li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.refSubseries {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 600px) {
+  .index ul {
+    -moz-column-count: 2;
+    -moz-column-gap: 20px;
+  }
+  .index ul ul {
+    -moz-column-count: 1;
+    -moz-column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  font-family: var(--font-sans);
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+
+/* temporary notes */
+.rfcEditorRemove::before {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  padding: 0.2em;
+  content: "The RFC Editor will remove this note";
+  color: #9e2a00; /* Arlen: WCAG 2019 */
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+}
+.rfcEditorRemove {
+  position: relative;
+  padding-top: 1.8em;
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  border-radius: 3px;
+}
+.cref {
+  background-color: #ffd; /* Arlen: WCAG 2019 */
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 1023px) {
+  body {
+    padding-top: 2em;
+  }
+  #title {
+    padding: 1em 0;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-top: -18px;  /* provide offset for in-page anchors */
+    padding-top: 38px;
+  }
+  #identifiers dd {
+    max-width: 60%;
+  }
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    background-color: inherit;
+    border-bottom: 1px solid #ccc;
+  }
+  #toc h2 {
+    margin: -1px 0 0 0;
+    padding: 4px 0 4px 6px;
+    padding-right: 1em;
+    min-width: 190px;
+    font-size: 1.1em;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 6px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 1024px) {
+  body {
+    max-width: 724px;
+    margin: 42px auto;
+    padding-left: 1.5em;
+    padding-right: 29em;
+  }
+  #toc {
+    position: fixed;
+    top: 42px;
+    right: 42px;
+    width: 25%;
+    margin: 0;
+    padding: 0 1em;
+    z-index: 1;
+  }
+  #toc h2 {
+    border-top: none;
+    border-bottom: 1px solid #ddd;
+    font-size: 1em;
+    font-weight: normal;
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 0;
+    overflow: auto;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  .breakable pre {
+    break-inside: auto;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+/* This is commented out here, as the string-set: doesn't
+   pass W3C validation currently */
+/*
+.ears thead .left {
+  string-set: ears-top-left content();
+}
+
+.ears thead .center {
+  string-set: ears-top-center content();
+}
+
+.ears thead .right {
+  string-set: ears-top-right content();
+}
+
+.ears tfoot .left {
+  string-set: ears-bottom-left content();
+}
+
+.ears tfoot .center {
+  string-set: ears-bottom-center content();
+}
+
+.ears tfoot .right {
+  string-set: ears-bottom-right content();
+}
+*/
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+  /* The following is commented out here, but set appropriately by in code, as
+     the content depends on the document */
+  /*
+  @top-left {
+    content: 'Internet-Draft';
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-left {
+    content: string(ears-top-left);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-center {
+    content: string(ears-top-center);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @top-right {
+    content: string(ears-top-right);
+    vertical-align: bottom;
+    border-bottom: solid 1px #ccc;
+  }
+  @bottom-left {
+    content: string(ears-bottom-left);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-center {
+    content: string(ears-bottom-center);
+    vertical-align: top;
+    border-top: solid 1px #ccc;
+  }
+  @bottom-right {
+      content: '[Page ' counter(page) ']';
+      vertical-align: top;
+      border-top: solid 1px #ccc;
+  }
+  */
+
+}
+
+/* Changes introduced to fix issues found during implementation */
+/* Make sure links are clickable even if overlapped by following H* */
+a {
+  z-index: 2;
+}
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Leave room in document info to show Internet-Draft on one line */
+#identifiers dt {
+  width: 8em;
+}
+
+/* Don't waste quite as much whitespace between label and value in doc info */
+#identifiers dd {
+  margin-left: 1em;
+}
+
+/* Give floating toc a background color (needed when it's a div inside section */
+#toc {
+  background-color: white;
+}
+
+/* Make the collapsed ToC header render white on gray also when it's a link */
+@media screen and (max-width: 1023px) {
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+}
+
+/* Give the bottom of the ToC some whitespace */
+@media screen and (min-width: 1024px) {
+  #toc {
+    padding: 0 0 1em 1em;
+  }
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* prevent monospace from becoming overly large */
+tt, code, pre {
+  font-size: 95%;
+}
+
+/* Fix the height/width aspect for ascii art*/
+.sourcecode pre,
+.art-text pre {
+  line-height: 1.12;
+}
+
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin-right: 0.5em;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table td.text-left,
+table th.text-left {
+  text-align: left;
+}
+table td.text-center,
+table th.text-center {
+  text-align: center;
+}
+table td.text-right,
+table th.text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 30em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Provide table alignment support.  We can't use the alignX classes above
+   since they do unwanted things with caption and other styling. */
+table.right {
+ margin-left: auto;
+ margin-right: 0;
+}
+table.center {
+ margin-left: auto;
+ margin-right: auto;
+}
+table.left {
+ margin-left: 0;
+ margin-right: auto;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+caption a[href] {
+  color: #222;
+}
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+/* Tweak the invisible space above H* in order not to overlay links in text above */
+ h2 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 31px;
+ }
+ h3 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+ h4 {
+  margin-top: -18px;  /* provide offset for in-page anchors */
+  padding-top: 24px;
+ }
+/* Float artwork pilcrow to the right */
+@media screen {
+  .artwork a.pilcrow {
+    display: block;
+    line-height: 0.7;
+    margin-top: 0.15em;
+  }
+}
+/* Make pilcrows on dd visible */
+@media screen {
+  dd:hover > a.pilcrow {
+    visibility: visible;
+  }
+}
+/* Make the placement of figcaption match that of a table's caption
+   by removing the figure's added bottom margin */
+.alignLeft.art-text,
+.alignCenter.art-text,
+.alignRight.art-text {
+   margin-bottom: 0;
+}
+.alignLeft,
+.alignCenter,
+.alignRight {
+  margin: 1em 0 0 0;
+}
+/* In print, the pilcrow won't show on hover, so prevent it from taking up space,
+   possibly even requiring a new line */
+@media print {
+  a.pilcrow {
+    display: none;
+  }
+}
+/* Styling for the external metadata */
+div#external-metadata {
+  background-color: #eee;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+  display: none;
+}
+div#internal-metadata {
+  padding: 0.5em;                       /* to match the external-metadata padding */
+}
+/* Styling for title RFC Number */
+h1#rfcnum {
+  clear: both;
+  margin: 0 0 -1em;
+  padding: 1em 0 0 0;
+}
+/* Make .olPercent look the same as <ol><li> */
+dl.olPercent > dd {
+  margin-bottom: 0.25em;
+  min-height: initial;
+}
+/* Give aside some styling to set it apart */
+aside {
+  border-left: 1px solid #ddd;
+  margin: 1em 0 1em 2em;
+  padding: 0.2em 2em;
+}
+aside > dl,
+aside > ol,
+aside > ul,
+aside > table,
+aside > p {
+  margin-bottom: 0.5em;
+}
+/* Additional page break settings */
+@media print {
+  figcaption, table caption {
+    page-break-before: avoid;
+  }
+}
+/* Font size adjustments for print */
+@media print {
+  body  { font-size: 10pt;      line-height: normal; max-width: 96%; }
+  h1    { font-size: 1.72em;    padding-top: 1.5em; } /* 1*1.2*1.2*1.2 */
+  h2    { font-size: 1.44em;    padding-top: 1.5em; } /* 1*1.2*1.2 */
+  h3    { font-size: 1.2em;     padding-top: 1.5em; } /* 1*1.2 */
+  h4    { font-size: 1em;       padding-top: 1.5em; }
+  h5, h6 { font-size: 1em;      margin: initial; padding: 0.5em 0 0.3em; }
+}
+/* Sourcecode margin in print, when there's no pilcrow */
+@media print {
+  .artwork,
+  .artwork > pre,
+  .sourcecode {
+    margin-bottom: 1em;
+  }
+}
+/* Avoid narrow tables forcing too narrow table captions, which may render badly */
+table {
+  min-width: 20em;
+}
+/* ol type a */
+ol.type-a { list-style-type: lower-alpha; }
+ol.type-A { list-style-type: upper-alpha; }
+ol.type-i { list-style-type: lower-roman; }
+ol.type-I { list-style-type: upper-roman; }
+/* Apply the print table and row borders in general, on request from the RPC,
+and increase the contrast between border and odd row background slightly */
+table {
+  border: 1px solid #ddd;
+}
+td {
+  border-top: 1px solid #ddd;
+}
+tr {
+  break-inside: avoid;
+}
+tr:nth-child(2n+1) > td {
+  background-color: #f8f8f8;
+}
+/* Use style rules to govern display of the TOC. */
+@media screen and (max-width: 1023px) {
+  #toc nav { display: none; }
+  #toc.active nav { display: block; }
+}
+/* Add support for keepWithNext */
+.keepWithNext {
+  break-after: avoid-page;
+  break-after: avoid-page;
+}
+/* Add support for keepWithPrevious */
+.keepWithPrevious {
+  break-before: avoid-page;
+}
+/* Change the approach to avoiding breaks inside artwork etc. */
+figure, pre, table, .artwork, .sourcecode  {
+  break-before: auto;
+  break-after: auto;
+}
+/* Avoid breaks between <dt> and <dd> */
+dl {
+  break-before: auto;
+  break-inside: auto;
+}
+dt {
+  break-before: auto;
+  break-after: avoid-page;
+}
+dd {
+  break-before: avoid-page;
+  break-after: auto;
+  orphans: 3;
+  widows: 3
+}
+span.break, dd.break {
+  margin-bottom: 0;
+  min-height: 0;
+  break-before: auto;
+  break-inside: auto;
+  break-after: auto;
+}
+/* Undo break-before ToC */
+@media print {
+  #toc {
+    break-before: auto;
+  }
+}
+/* Text in compact lists should not get extra bottom margin space,
+   since that would makes the list not compact */
+ul.compact p, .ulCompact p,
+ol.compact p, .olCompact p {
+ margin: 0;
+}
+/* But the list as a whole needs the extra space at the end */
+section ul.compact,
+section .ulCompact,
+section ol.compact,
+section .olCompact {
+  margin-bottom: 1em;                    /* same as p not within ul.compact etc. */
+}
+/* The tt and code background above interferes with for instance table cell
+   backgrounds.  Changed to something a bit more selective. */
+tt, code {
+  background-color: transparent;
+}
+p tt, p code, li tt, li code, dt tt, dt code {
+  background-color: #f8f8f8;
+}
+/* Tweak the pre margin -- 0px doesn't come out well */
+pre {
+   margin-top: 0.5px;
+}
+/* Tweak the compact list text */
+ul.compact, .ulCompact,
+ol.compact, .olCompact,
+dl.compact, .dlCompact {
+  line-height: normal;
+}
+/* Don't add top margin for nested lists */
+li > ul, li > ol, li > dl,
+dd > ul, dd > ol, dd > dl,
+dl > dd > dl {
+  margin-top: initial;
+}
+/* Elements that should not be rendered on the same line as a <dt> */
+/* This should match the element list in writer.text.TextWriter.render_dl() */
+dd > div.artwork:first-child,
+dd > aside:first-child,
+dd > blockquote:first-child,
+dd > figure:first-child,
+dd > ol:first-child,
+dd > div.sourcecode:first-child,
+dd > table:first-child,
+dd > ul:first-child {
+  clear: left;
+}
+/* fix for weird browser behaviour when <dd/> is empty */
+dt+dd:empty::before{
+  content: "\00a0";
+}
+/* Make paragraph spacing inside <li> smaller than in body text, to fit better within the list */
+li > p {
+  margin-bottom: 0.5em
+}
+/* Don't let p margin spill out from inside list items */
+li > p:last-of-type:only-child {
+  margin-bottom: 0;
+}
+</style>
+<link href="rfc-local.css" rel="stylesheet" type="text/css">
+<script type="application/javascript">async function addMetadata(){try{const e=document.styleSheets[0].cssRules;for(let t=0;t<e.length;t++)if(/#identifiers/.exec(e[t].selectorText)){const a=e[t].cssText.replace("#identifiers","#external-updates");document.styleSheets[0].insertRule(a,document.styleSheets[0].cssRules.length)}}catch(e){console.log(e)}const e=document.getElementById("external-metadata");if(e)try{var t,a="",o=function(e){const t=document.getElementsByTagName("meta");for(let a=0;a<t.length;a++)if(t[a].getAttribute("name")===e)return t[a].getAttribute("content");return""}("rfc.number");if(o){t="https://www.rfc-editor.org/rfc/rfc"+o+".json";try{const e=await fetch(t);a=await e.json()}catch(e){t=document.URL.indexOf("html")>=0?document.URL.replace(/html$/,"json"):document.URL+".json";const o=await fetch(t);a=await o.json()}}if(!a)return;e.style.display="block";const s="",d="https://datatracker.ietf.org/doc",n="https://datatracker.ietf.org/ipr/search",c="https://www.rfc-editor.org/info",l=a.doc_id.toLowerCase(),i=a.doc_id.slice(0,3).toLowerCase(),f=a.doc_id.slice(3).replace(/^0+/,""),u={status:"Status",obsoletes:"Obsoletes",obsoleted_by:"Obsoleted By",updates:"Updates",updated_by:"Updated By",see_also:"See Also",errata_url:"Errata"};let h="<dl style='overflow:hidden' id='external-updates'>";["status","obsoletes","obsoleted_by","updates","updated_by","see_also","errata_url"].forEach(e=>{if("status"==e){a[e]=a[e].toLowerCase();var t=a[e].split(" "),o=t.length,w="",p=1;for(let e=0;e<o;e++)p<o?w=w+r(t[e])+" ":w+=r(t[e]),p++;a[e]=w}else if("obsoletes"==e||"obsoleted_by"==e||"updates"==e||"updated_by"==e){var g,m="",b=1;g=a[e].length;for(let t=0;t<g;t++)a[e][t]&&(a[e][t]=String(a[e][t]).toLowerCase(),m=b<g?m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>, ":m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>",b++);a[e]=m}else if("see_also"==e){var y,L="",C=1;y=a[e].length;for(let t=0;t<y;t++)if(a[e][t]){a[e][t]=String(a[e][t]);var _=a[e][t].slice(0,3),v=a[e][t].slice(3).replace(/^0+/,"");L=C<y?"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>, ":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>, ":"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>",C++}a[e]=L}else if("errata_url"==e){var R="";R=a[e]?R+"<a href='"+a[e]+"'>Errata exist</a> | <a href='"+d+"/"+l+"'>Datatracker</a>| <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>":"<a href='"+d+"/"+l+"'>Datatracker</a> | <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>",a[e]=R}""!=a[e]?"Errata"==u[e]?h+=`<dt>More info:</dt><dd>${a[e]}</dd>`:h+=`<dt>${u[e]}:</dt><dd>${a[e]}</dd>`:"Errata"==u[e]&&(h+=`<dt>More info:</dt><dd>${a[e]}</dd>`)}),h+="</dl>",e.innerHTML=h}catch(e){console.log(e)}else console.log("Could not locate metadata <div> element");function r(e){return e.charAt(0).toUpperCase()+e.slice(1)}}window.removeEventListener("load",addMetadata),window.addEventListener("load",addMetadata);</script>
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth Agent Authorization</td>
+<td class="right">March 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Liu, et al.</td>
+<td class="center">Expires 20 September 2026</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">OAuth Working Group</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-liu-oauth-agent-authorization-00</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-03-19" class="published">19 March 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2026-09-20">20 September 2026</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">D. Liu</div>
+<div class="org">Alibaba Group</div>
+</div>
+<div class="author">
+      <div class="author-name">H. Zhu</div>
+<div class="org">Alibaba Group</div>
+</div>
+<div class="author">
+      <div class="author-name">S. Krishnan</div>
+<div class="org">Cisco</div>
+</div>
+<div class="author">
+      <div class="author-name">A. Parecki</div>
+<div class="org">Okta</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">OAuth 2.0 Agent Authorization with Identity Binding and User Consent</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">
+        This specification defines an extension to the OAuth 2.0 Identity Assertion 
+        Grant that adds explicit user consent through a confirmation URL mechanism. 
+        Building on the Identity Assertion Grant mechanism, this extension enables 
+        secure delegation to autonomous agents while maintaining user control. Unlike 
+        the Device Authorization Grant (RFC 8628), this flow does not require polling 
+        and is designed for AI agents with frontend capabilities. The specification 
+        maintains cryptographic binding between user and agent identities in the 
+        resulting access token and provides verifiable evidence of user consent.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 20 September 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-motivation" class="internal xref">Motivation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-requirements-notation" class="internal xref">Requirements Notation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
+                <p id="section-toc.1-1.1.2.3.1" class="keepWithNext"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-architectural-overview" class="internal xref">Architectural Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-design-principles" class="internal xref">Design Principles</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-system-components" class="internal xref">System Components</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3">
+                <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="auto internal xref">2.3</a>.  <a href="#name-trust-relationships" class="internal xref">Trust Relationships</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-agent-authorization-grant-t" class="internal xref">Agent Authorization Grant Type</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-relationship-to-identity-as" class="internal xref">Relationship to Identity Assertion Grant</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-protocol-overview" class="internal xref">Protocol Overview</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-initial-authorization-reque" class="internal xref">Initial Authorization Request</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-authorization-server-valida" class="internal xref">Authorization Server Validation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-confirmation-url-response" class="internal xref">Confirmation URL Response</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-user-consent-flow" class="internal xref">User Consent Flow</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-consent-page-example" class="internal xref">Consent Page Example</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-policy-interpretation" class="internal xref">Policy Interpretation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2.2.1">
+                    <p id="section-toc.1-1.4.2.2.2.1.1"><a href="#section-4.2.1" class="auto internal xref">4.2.1</a>.  <a href="#name-interpretation-requirements" class="internal xref">Interpretation Requirements</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2.2.2">
+                    <p id="section-toc.1-1.4.2.2.2.2.1"><a href="#section-4.2.2" class="auto internal xref">4.2.2</a>.  <a href="#name-best-practices" class="internal xref">Best Practices</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2.2.3">
+                    <p id="section-toc.1-1.4.2.2.2.3.1"><a href="#section-4.2.3" class="auto internal xref">4.2.3</a>.  <a href="#name-policy-to-text-translation-" class="internal xref">Policy to Text Translation Example</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-user-confirmation-action" class="internal xref">User Confirmation Action</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-token-request" class="internal xref">Token Request</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-access-token-response" class="internal xref">Access Token Response</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-token-lifetime-recommendati" class="internal xref">Token Lifetime Recommendations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-token-introspection-respons" class="internal xref">Token Introspection Response</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-threat-model" class="internal xref">Threat Model</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-trust-boundaries" class="internal xref">Trust Boundaries</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-consent-security" class="internal xref">Consent Security</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-difference-from-device-auth" class="internal xref">Difference from Device Authorization Grant</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-confirmation-url-binding" class="internal xref">Confirmation URL Binding</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6">
+                <p id="section-toc.1-1.6.2.6.1"><a href="#section-6.6" class="auto internal xref">6.6</a>.  <a href="#name-token-revocation" class="internal xref">Token Revocation</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6.2.1">
+                    <p id="section-toc.1-1.6.2.6.2.1.1"><a href="#section-6.6.1" class="auto internal xref">6.6.1</a>.  <a href="#name-revocation-triggers" class="internal xref">Revocation Triggers</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6.2.2">
+                    <p id="section-toc.1-1.6.2.6.2.2.1"><a href="#section-6.6.2" class="auto internal xref">6.6.2</a>.  <a href="#name-revocation-propagation" class="internal xref">Revocation Propagation</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.6.2.3">
+                    <p id="section-toc.1-1.6.2.6.2.3.1"><a href="#section-6.6.3" class="auto internal xref">6.6.3</a>.  <a href="#name-revocation-evidence" class="internal xref">Revocation Evidence</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-identifier-minimization" class="internal xref">Identifier Minimization</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-evidence-retention" class="internal xref">Evidence Retention</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-logging-considerations" class="internal xref">Logging Considerations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-error-handling" class="internal xref">Error Handling</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-implementation-consideratio" class="internal xref">Implementation Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-deployment-patterns" class="internal xref">Deployment Patterns</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-performance-considerations" class="internal xref">Performance Considerations</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
+                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-interoperability-guidelines" class="internal xref">Interoperability Guidelines</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-abnf-syntax" class="internal xref">ABNF Syntax</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-jwt-claim-registration" class="internal xref">JWT Claim Registration</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-authorization-server-metada" class="internal xref">Authorization Server Metadata</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
+                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
+                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-change-log" class="internal xref">Change Log</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<div id="motivation">
+<section id="section-1.1">
+        <h3 id="name-motivation">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-motivation" class="section-name selfRef">Motivation</a>
+        </h3>
+<p id="section-1.1-1">
+          AI agents increasingly need to access protected resources on behalf of users.
+          However, existing OAuth 2.0 mechanisms do not adequately address the unique 
+          requirements of AI agent authorization:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1.1-2.1">
+            <strong>Identity Binding:</strong> AI agents operate with their own workload 
+            identities (e.g., SPIFFE IDs) distinct from user identities. Current OAuth 
+            flows do not provide standardized mechanisms to cryptographically bind user 
+            and agent identities in access tokens.<a href="#section-1.1-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-1.1-2.2">
+            <strong>Explicit Consent:</strong> Users must understand and approve what 
+            operations an AI agent can perform on their behalf. Traditional scope-based 
+            authorization is too coarse-grained for AI agent scenarios requiring 
+            fine-grained, context-aware policies.<a href="#section-1.1-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-1.1-2.3">
+            <strong>Audit and Accountability:</strong> Organizations deploying AI agents 
+            need verifiable evidence of user consent for compliance and security purposes. 
+            Current OAuth tokens do not include cryptographic evidence of consent.<a href="#section-1.1-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-1.1-2.4">
+            <strong>Cross-Domain Trust:</strong> AI agents often operate across organizational 
+            boundaries, requiring standardized mechanisms for identity assertion and 
+            authorization that work across trust domains.<a href="#section-1.1-2.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-1.1-3">
+          This specification addresses these gaps by extending the Identity Assertion 
+          Grant with a confirmation URL mechanism that ensures explicit user consent 
+          while maintaining strong identity binding between users and agents.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="requirements-notation">
+<section id="section-1.2">
+        <h3 id="name-requirements-notation">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-requirements-notation" class="section-name selfRef">Requirements Notation</a>
+        </h3>
+<p id="section-1.2-1">
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+          "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+          "OPTIONAL" in this document are to be interpreted as described in BCP 14
+          <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when,
+          they appear in all capitals, as shown here.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminology">
+<section id="section-1.3">
+        <h3 id="name-terminology">
+<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+        </h3>
+<p id="section-1.3-1">
+          This specification uses the terms defined in OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> 
+          and the Identity Assertion Grant specification 
+          <span>[<a href="#I-D.ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.ietf-oauth-identity-assertion-authz-grant</a>]</span>.<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.3-2">
+          <dt id="section-1.3-2.1">Agent:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.2">
+            An autonomous software application acting on behalf of a user. The agent
+            has its own workload identity (e.g., SPIFFE ID) separate from the user's
+            identity.<a href="#section-1.3-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.3">Confirmation URL:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.4">
+            A URL provided by the authorization server that enables the user to review
+            and approve an authorization request through a browser-based interface.<a href="#section-1.3-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.5">Identity Binding:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.6">
+            The cryptographic association between a user's identity and an agent's
+            identity within an access token, ensuring the token represents delegated
+            authority from that specific user to that specific agent.<a href="#section-1.3-2.6" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="architecture">
+<section id="section-2">
+      <h2 id="name-architectural-overview">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-architectural-overview" class="section-name selfRef">Architectural Overview</a>
+      </h2>
+<p id="section-2-1">
+        This section provides an architectural overview of the agent authorization 
+        framework, including design principles, system components, and trust relationships.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<div id="design-principles">
+<section id="section-2.1">
+        <h3 id="name-design-principles">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-design-principles" class="section-name selfRef">Design Principles</a>
+        </h3>
+<p id="section-2.1-1">
+          This specification is guided by the following design principles:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2.1-2">
+          <dt id="section-2.1-2.1">Security by Design:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.2">
+            All authorization decisions MUST be based on explicit, verifiable user consent. 
+            Cryptographic binding between user and agent identities prevents token 
+            substitution attacks.<a href="#section-2.1-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.3">User Control:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.4">
+            Users MUST have clear understanding and control over what operations AI agents 
+            can perform. Consent interfaces MUST present authorization details in 
+            human-readable form.<a href="#section-2.1-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.5">Minimal Token Size:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.6">
+            Access tokens SHOULD remain compact to avoid HTTP header size limitations. 
+            Detailed policy and evidence information is available via reference rather 
+            than embedded in tokens.<a href="#section-2.1-2.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.7">Backward Compatibility:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.8">
+            This specification extends existing OAuth 2.0 and Identity Assertion Grant 
+            mechanisms without breaking compatibility with standard OAuth deployments.<a href="#section-2.1-2.8" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.9">Auditability:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.10">
+            All authorization decisions MUST be auditable through cryptographically 
+            signed evidence records and comprehensive logging.<a href="#section-2.1-2.10" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="system-components">
+<section id="section-2.2">
+        <h3 id="name-system-components">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-system-components" class="section-name selfRef">System Components</a>
+        </h3>
+<p id="section-2.2-1">
+          The agent authorization framework involves the following components:<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2.2-2">
+          <dt id="section-2.2-2.1">User:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.2">
+            The resource owner who delegates authorization to an AI agent. The user 
+            authenticates with their Identity Provider and provides explicit consent 
+            for agent operations.<a href="#section-2.2-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-2.3">AI Agent:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.4">
+            An autonomous software application that acts on behalf of the user. The 
+            agent has its own workload identity (e.g., SPIFFE ID) and initiates 
+            authorization requests to access protected resources.<a href="#section-2.2-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-2.5">Home Identity Provider (Home IdP):</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.6">
+            The user's primary identity provider that authenticates the user and issues 
+            ID Tokens. The Home IdP is trusted by the user and typically operated by 
+            the user's organization or a trusted third party.<a href="#section-2.2-2.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-2.7">Authorization Server (AS):</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.8">
+            The OAuth 2.0 authorization server that validates agent requests, obtains 
+            user consent, and issues access tokens with identity binding. The AS 
+            operates in the resource domain and may be distinct from the Home IdP.<a href="#section-2.2-2.8" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-2.9">Resource Server (RS):</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.10">
+            The server hosting protected resources. The RS validates access tokens, 
+            evaluates authorization policies, and enforces access control decisions.<a href="#section-2.2-2.10" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.2-2.11">Policy Engine:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.2-2.12">
+            An optional component (e.g., Open Policy Agent) that evaluates authorization 
+            policies against request context. The Policy Engine may be integrated with 
+            the Resource Server or operate as a separate service.<a href="#section-2.2-2.12" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="trust-relationships">
+<section id="section-2.3">
+        <h3 id="name-trust-relationships">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-trust-relationships" class="section-name selfRef">Trust Relationships</a>
+        </h3>
+<p id="section-2.3-1">
+          The framework establishes the following trust relationships:<a href="#section-2.3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-2.3-2">
+          <li id="section-2.3-2.1">
+            <strong>User → Home IdP:</strong> The user trusts their Home IdP to 
+            authenticate them and issue valid ID Tokens. This is typically established 
+            through account registration and ongoing authentication.<a href="#section-2.3-2.1" class="pilcrow">¶</a>
+</li>
+          <li id="section-2.3-2.2">
+            <strong>User → Agent:</strong> The user trusts the AI agent to act on 
+            their behalf within defined boundaries. This trust is established through 
+            explicit consent during the authorization flow.<a href="#section-2.3-2.2" class="pilcrow">¶</a>
+</li>
+          <li id="section-2.3-2.3">
+            <strong>Agent → AS:</strong> The agent authenticates to the AS using its 
+            workload identity (e.g., SPIFFE ID). The AS validates the agent's identity 
+            through attestation or mTLS.<a href="#section-2.3-2.3" class="pilcrow">¶</a>
+</li>
+          <li id="section-2.3-2.4">
+            <strong>AS → Home IdP:</strong> The AS trusts the Home IdP to issue valid 
+            ID Tokens for user authentication. This trust is established through 
+            OIDC discovery and key validation.<a href="#section-2.3-2.4" class="pilcrow">¶</a>
+</li>
+          <li id="section-2.3-2.5">
+            <strong>RS → AS:</strong> The Resource Server trusts the AS to issue valid 
+            access tokens. This trust is established through token signature validation 
+            and issuer verification.<a href="#section-2.3-2.5" class="pilcrow">¶</a>
+</li>
+        </ol>
+<figure id="figure-1">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-2.3-3.1">
+<pre>
++--------+         +--------+         +--------+         +--------+
+|  User  |&lt;-------&gt;|  Home  |         |   AS   |&lt;-------&gt;|   RS   |
+|        |  Trust  |  IdP   |         |        |  Trust  |        |
++--------+         +--------+         +--------+         +--------+
+    ^                                     ^
+    | Trust                               | Trust
+    |                                     |
+    v                                     v
++--------+                           +--------+
+| Agent  |                           | Policy |
+|        |                           | Engine |
++--------+                           +--------+
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a></figcaption></figure>
+</section>
+</div>
+</section>
+</div>
+<div id="grant-type">
+<section id="section-3">
+      <h2 id="name-agent-authorization-grant-t">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-agent-authorization-grant-t" class="section-name selfRef">Agent Authorization Grant Type</a>
+      </h2>
+<p id="section-3-1">
+        This specification extends the Identity Assertion Grant 
+        (<span>[<a href="#I-D.ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.ietf-oauth-identity-assertion-authz-grant</a>]</span>) with a 
+        confirmation URL flow. It uses the same grant type value but adds additional 
+        request and response parameters. The grant enables an agent to obtain an 
+        access token that:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">Binds the user's identity to the agent's identity;<a href="#section-3-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-2.2">Reflects explicit user consent for specific operations;<a href="#section-3-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-2.3">Includes policy-based authorization constraints;<a href="#section-3-2.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-2.4">Contains verifiable evidence of user confirmation.<a href="#section-3-2.4" class="pilcrow">¶</a>
+</li>
+      </ul>
+<div id="relationship-to-id-jag">
+<section id="section-3.1">
+        <h3 id="name-relationship-to-identity-as">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-relationship-to-identity-as" class="section-name selfRef">Relationship to Identity Assertion Grant</a>
+        </h3>
+<p id="section-3.1-1">
+          This specification uses the same grant type value as the Identity Assertion 
+          Grant: <code>urn:ietf:params:oauth:grant-type:identity-assertion</code>. 
+          Implementations MUST support the base ID-JAG specification and this extension. 
+          The extension adds optional parameters for policy proposal and introduces a 
+          confirmation URL response instead of immediately issuing an access token.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="protocol-overview">
+<section id="section-3.2">
+        <h3 id="name-protocol-overview">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-protocol-overview" class="section-name selfRef">Protocol Overview</a>
+        </h3>
+<p id="section-3.2-1">
+          The following diagram illustrates the complete authorization flow:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<figure id="figure-2">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-3.2-2.1">
+<pre>
++--------+     +--------+     +--------+     +--------+     +--------+
+|  User  |     | Agent  |     |   AS   |     |  RS    |     |  OPA   |
+|        |     |        |     |        |     |        |     |        |
++--------+     +--------+     +--------+     +--------+     +--------+
+    |               |               |               |               |
+(1) | Authenticated |               |               |               |
+    |--------------&gt;|               |               |               |
+    | (ID Token)    |               |               |               |
+    |               |               |               |               |
+(2) |               | Identity      |               |               |
+    |               | Assertion     |               |               |
+    |               | Grant +       |               |               |
+    |               | Policy        |               |               |
+    |               |--------------&gt;|               |               |
+    |               |               |               |               |
+(3) |               | Confirmation  |               |               |
+    |               | URL +         |               |               |
+    |               | Session ID    |               |               |
+    |               |&lt;--------------|               |               |
+    |               |               |               |               |
+(4) |&lt;--------------| Redirect to   |               |               |
+    |               | Confirmation  |               |               |
+    |               | (with state)  |               |               |
+    |               |               |               |               |
+(5) | Review &amp;      |               |               |               |
+    | Approve       |               |               |               |
+    |-----------------------------&gt;|               |               |
+    |               |               |               |               |
+(6) |&lt;--------------| Callback      |               |               |
+    |               | (Auth Code)   |               |               |
+    |               |               |               |               |
+(7) |               | Exchange      |               |               |
+    |               | Code for      |               |               |
+    |               | Token         |               |               |
+    |               |--------------&gt;|               |               |
+    |               |               |               |               |
+(8) |               | Access Token  |               |               |
+    |               | (with binding)|               |               |
+    |               |&lt;--------------|               |               |
+    |               |               |               |               |
+(9) |               | API Request   |               |               |
+    |               | + Token       |               |               |
+    |               |------------------------------&gt;|               |
+    |               |               |               |               |
+(10)|               |               |               | Validate      |
+    |               |               |               | Token         |
+    |               |               |               |               |
+(11)|               |               |               | Policy Eval   |
+    |               |               |               |--------------&gt;|
+    |               |               |               |               |
+(12)|               |               |               | Decision      |
+    |               |               |               |&lt;--------------|
+    |               |               |               |               |
+(13)|               |               |               | Response      |
+    |               |&lt;------------------------------|               |
+    |               |               |               |               |
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a></figcaption></figure>
+<p id="section-3.2-3">
+          The flow consists of the following phases:<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.2-4">
+          <li id="section-3.2-4.1">
+            <strong>Authentication:</strong> User authenticates with the agent's 
+            Identity Provider and receives an ID Token.<a href="#section-3.2-4.1" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.2">
+            <strong>Initial Request:</strong> Agent submits Identity Assertion Grant 
+            request with policy proposal to the Authorization Server.<a href="#section-3.2-4.2" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.3">
+            <strong>Session Creation:</strong> AS validates request and returns 
+            confirmation URL with session identifier.<a href="#section-3.2-4.3" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.4">
+            <strong>Consent Redirection:</strong> Agent redirects user to AS consent 
+            page with CSRF protection (state parameter).<a href="#section-3.2-4.4" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.5">
+            <strong>User Consent:</strong> User reviews authorization details and 
+            approves or denies the request.<a href="#section-3.2-4.5" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.6">
+            <strong>Callback:</strong> AS redirects user back to agent with 
+            authorization code.<a href="#section-3.2-4.6" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.7">
+            <strong>Token Exchange:</strong> Agent exchanges authorization code for 
+            access token.<a href="#section-3.2-4.7" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.8">
+            <strong>Token Issuance:</strong> AS issues access token with identity 
+            binding (user + agent).<a href="#section-3.2-4.8" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.9">
+            <strong>API Access:</strong> Agent uses access token to access protected 
+            resources.<a href="#section-3.2-4.9" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.10">
+            <strong>Token Validation:</strong> Resource Server validates token 
+            signature and claims.<a href="#section-3.2-4.10" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.11">
+            <strong>Policy Evaluation:</strong> RS evaluates authorization policy 
+            using OPA or similar engine.<a href="#section-3.2-4.11" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.12">
+            <strong>Authorization Decision:</strong> Policy engine returns allow/deny 
+            decision.<a href="#section-3.2-4.12" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.2-4.13">
+            <strong>Response:</strong> RS returns API response based on authorization 
+            decision.<a href="#section-3.2-4.13" class="pilcrow">¶</a>
+</li>
+        </ol>
+</section>
+</div>
+<div id="initial-request">
+<section id="section-3.3">
+        <h3 id="name-initial-authorization-reque">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-initial-authorization-reque" class="section-name selfRef">Initial Authorization Request</a>
+        </h3>
+<p id="section-3.3-1">
+          The agent initiates the flow by submitting an Identity Assertion Grant
+          request to the authorization server's token endpoint, augmented with
+          policy proposal and context parameters:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<figure id="figure-3">
+          <div class="alignLeft art-text artwork" id="section-3.3-2.1">
+<pre>
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn:ietf:params:oauth:grant-type:identity-assertion
+&amp;assertion_type=urn:ietf:params:oauth:assertion-type:id_token
+&amp;assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lk...
+&amp;client_id=spiffe://agent.example.com/sha256.abc123...
+&amp;policy_proposal=eyJ0eXBlIjoicmVnbyIsImNvbnRlbnQiOiJwYWNr...
+&amp;policy_context=eyJ1c2VyIjp7ImlkIjoidXNlcl8xMjM0NSJ9fQ
+</pre>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a></figcaption></figure>
+<p id="section-3.3-3">
+          The request parameters are:<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.3-4">
+          <dt id="section-3.3-4.1">grant_type:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.2">
+            REQUIRED. The value
+            <code>urn:ietf:params:oauth:grant-type:identity-assertion</code> as defined
+            in <span>[<a href="#I-D.ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.ietf-oauth-identity-assertion-authz-grant</a>]</span>.<a href="#section-3.3-4.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-4.3">assertion_type:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.4">
+            REQUIRED. The value
+            <code>urn:ietf:params:oauth:assertion-type:id_token</code> indicating the
+            assertion is an OpenID Connect ID Token.<a href="#section-3.3-4.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-4.5">assertion:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.6">
+            REQUIRED. A signed ID Token containing the user's identity. The token
+            MUST include the agent's SPIFFE ID in the <code>aud</code> claim to bind
+            the token to the specific agent.<a href="#section-3.3-4.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-4.7">client_id:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.8">
+            REQUIRED. The agent's identifier, which SHOULD be a SPIFFE ID URI as
+            defined in <span>[<a href="#I-D.ietf-oauth-spiffe-client-auth" class="cite xref">I-D.ietf-oauth-spiffe-client-auth</a>]</span>.<a href="#section-3.3-4.8" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-4.9">policy_proposal:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.10">
+            OPTIONAL. A JSON-encoded Rego policy proposal as defined in
+            <span>[<a href="#I-D.liu-oauth-rego-policy" class="cite xref">I-D.liu-oauth-rego-policy</a>]</span>. When present, this defines
+            the fine-grained operations the agent is requesting authorization for.<a href="#section-3.3-4.10" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.3-4.11">policy_context:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.3-4.12">
+            OPTIONAL. A JSON object providing context data for policy evaluation,
+            including user identifiers and requested actions.<a href="#section-3.3-4.12" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="as-validation">
+<section id="section-3.4">
+        <h3 id="name-authorization-server-valida">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-authorization-server-valida" class="section-name selfRef">Authorization Server Validation</a>
+        </h3>
+<p id="section-3.4-1">
+          Upon receiving the request, the authorization server MUST validate:<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.4-2">
+          <li id="section-3.4-2.1">
+            <strong>ID Token Signature:</strong> Verify the ID Token signature using
+            the issuer's public keys. Validate standard OIDC claims including
+            <code>iss</code>, <code>exp</code>, and <code>nbf</code>.<a href="#section-3.4-2.1" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.4-2.2">
+            <strong>Audience Binding:</strong> Confirm that the <code>aud</code> claim
+            in the ID Token matches the agent's SPIFFE ID provided in
+            <code>client_id</code>. This ensures the ID Token was specifically issued
+            for this agent.<a href="#section-3.4-2.2" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.4-2.3">
+            <strong>Agent Authentication:</strong> Validate the agent's SPIFFE
+            credentials (if using mTLS or attestation-based client authentication).<a href="#section-3.4-2.3" class="pilcrow">¶</a>
+</li>
+          <li id="section-3.4-2.4">
+            <strong>Policy Syntax:</strong> If <code>policy_proposal</code> is present,
+            validate the Rego policy syntax and check for safety properties.<a href="#section-3.4-2.4" class="pilcrow">¶</a>
+</li>
+        </ol>
+<p id="section-3.4-3">
+          If validation fails, the authorization server returns an error response
+          as defined in Section 5.2 of <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>.<a href="#section-3.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="confirmation-response">
+<section id="section-3.5">
+        <h3 id="name-confirmation-url-response">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-confirmation-url-response" class="section-name selfRef">Confirmation URL Response</a>
+        </h3>
+<p id="section-3.5-1">
+          Upon successful validation, the authorization server does NOT immediately
+          issue an access token. Instead, it creates a pending authorization session
+          and returns a confirmation URL along with a session identifier:<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<figure id="figure-4">
+          <div class="alignLeft art-json art-text artwork" id="section-3.5-2.1">
+<pre>
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "confirmation_uri": "https://as.example.com/confirm?session=xyz789",
+  "session_id": "session_abc123xyz",
+  "expires_in": 300
+}
+</pre>
+</div>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a></figcaption></figure>
+<p id="section-3.5-3">
+          The response parameters are:<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.5-4">
+          <dt id="section-3.5-4.1">confirmation_uri:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-4.2">
+            REQUIRED. A URL that the agent MUST present to the user for consent.
+            The URL encodes a unique request identifier.<a href="#section-3.5-4.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.5-4.3">expires_in:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-4.4">
+            REQUIRED. The lifetime in seconds of the confirmation request (default: 300).<a href="#section-3.5-4.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.5-4.5">session_id:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-4.6">
+            REQUIRED. An opaque identifier for the pending authorization session. 
+            The agent uses this value to correlate the initial request with the 
+            subsequent callback.<a href="#section-3.5-4.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-3.5-4.7">expires_in:</dt>
+          <dd style="margin-left: 1.5em" id="section-3.5-4.8">
+            REQUIRED. The lifetime in seconds of the confirmation session (default: 300).<a href="#section-3.5-4.8" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-3.5-5">
+          The authorization server stores the pending authorization state including:<a href="#section-3.5-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.5-6.1">The validated ID Token claims (especially <code>sub</code> and <code>aud</code>);<a href="#section-3.5-6.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-3.5-6.2">The agent's SPIFFE ID;<a href="#section-3.5-6.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-3.5-6.3">The policy proposal (if provided);<a href="#section-3.5-6.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-3.5-6.4">A cryptographically random session identifier.<a href="#section-3.5-6.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-3.5-7">
+          The confirmation URI MUST be bound to the authenticated agent's identity 
+          (via the <code>aud</code> claim in the ID Token) to prevent session hijacking. 
+          The URI MUST be single-use and expire after the specified duration.<a href="#section-3.5-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="user-consent">
+<section id="section-4">
+      <h2 id="name-user-consent-flow">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-user-consent-flow" class="section-name selfRef">User Consent Flow</a>
+      </h2>
+<p id="section-4-1">
+        The agent redirects the user's browser to the confirmation URI. To prevent 
+        CSRF attacks, the agent SHOULD generate a state value and include it in the 
+        redirect. The authorization server then presents a consent interface that:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<figure id="figure-5">
+        <div class="alignLeft art-text artwork" id="section-4-2.1">
+<pre>
+HTTP/1.1 302 Found
+Location: https://as.example.com/confirm?session=xyz789&amp;state=af0ifjsldkj
+</pre>
+</div>
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a></figcaption></figure>
+<ol start="1" type="1" class="normal type-1" id="section-4-3">
+        <li id="section-4-3.1">
+          <p id="section-4-3.1.1">
+            <strong>Authenticates the User (if needed):</strong> If the user does not
+            have an active session with the authorization server, prompt for authentication.<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-4-3.2">
+          <p id="section-4-3.2.1">
+            <strong>Displays Authorization Details:</strong> Present human-readable
+            information about what the agent is requesting:<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-3.2.2.1">Agent identity (name, organization);<a href="#section-4-3.2.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4-3.2.2.2">Requested operations (derived from policy proposal);<a href="#section-4-3.2.2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4-3.2.2.3">Resource server being accessed;<a href="#section-4-3.2.2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4-3.2.2.4">Duration of authorization.<a href="#section-4-3.2.2.4" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li id="section-4-3.3">
+          <p id="section-4-3.3.1">
+            <strong>Presents Consent Options:</strong> Allow the user to approve or
+            deny the request.<a href="#section-4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<div id="consent-page">
+<section id="section-4.1">
+        <h3 id="name-consent-page-example">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-consent-page-example" class="section-name selfRef">Consent Page Example</a>
+        </h3>
+<figure id="figure-6">
+          <div class="alignLeft art-ascii-art art-text artwork" id="section-4.1-1.1">
+<pre>
++----------------------------------------------------------+
+|  Authorize Agent Access                                  |
++----------------------------------------------------------+
+|                                                          |
+|  Agent: MyShopping Assistant (myassistant.example.com)   |
+|                                                          |
+|  This agent is requesting permission to:                 |
+|                                                          |
+|  - Add items to your shopping cart (max $50 per item)    |
+|  - View product recommendations                          |
+|  - Update shipping address                               |
+|                                                          |
+|  Resource Server: Shop Example (shop.example.com)        |
+|                                                          |
+|  Duration: Until you revoke access                       |
+|                                                          |
+|  +------------------+     +------------------+           |
+|  |      Allow       |     |      Deny        |           |
+|  +------------------+     +------------------+           |
+|                                                          |
++----------------------------------------------------------+
+</pre>
+</div>
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a></figcaption></figure>
+<p id="section-4.1-2">
+          The authorization server is responsible for interpreting the policy proposal 
+          and presenting it in human-readable form. The example above shows how a Rego 
+          policy might be translated into user-friendly language.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="policy-interpretation">
+<section id="section-4.2">
+        <h3 id="name-policy-interpretation">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-policy-interpretation" class="section-name selfRef">Policy Interpretation</a>
+        </h3>
+<p id="section-4.2-1">
+          Authorization servers MUST interpret policy proposals and present them to users 
+          in a clear, understandable manner. The following guidelines apply:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<div id="interpretation-requirements">
+<section id="section-4.2.1">
+          <h4 id="name-interpretation-requirements">
+<a href="#section-4.2.1" class="section-number selfRef">4.2.1. </a><a href="#name-interpretation-requirements" class="section-name selfRef">Interpretation Requirements</a>
+          </h4>
+<p id="section-4.2.1-1">
+            The consent interface MUST display:<a href="#section-4.2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2.1-2.1">
+              <strong>Agent Identity:</strong> The name and identifier of the AI agent 
+              requesting authorization, verified through its authenticated workload identity.<a href="#section-4.2.1-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.1-2.2">
+              <strong>Requested Operations:</strong> A human-readable summary of the 
+              operations the agent is requesting permission to perform, derived from 
+              the policy proposal.<a href="#section-4.2.1-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.1-2.3">
+              <strong>Constraints and Limitations:</strong> Any constraints specified 
+              in the policy (e.g., monetary limits, time restrictions, resource scopes).<a href="#section-4.2.1-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.1-2.4">
+              <strong>Resource Server:</strong> The target resource server or service 
+              that the agent will access.<a href="#section-4.2.1-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.1-2.5">
+              <strong>Authorization Duration:</strong> The lifetime of the authorization 
+              and conditions for renewal or revocation.<a href="#section-4.2.1-2.5" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+<div id="interpretation-best-practices">
+<section id="section-4.2.2">
+          <h4 id="name-best-practices">
+<a href="#section-4.2.2" class="section-number selfRef">4.2.2. </a><a href="#name-best-practices" class="section-name selfRef">Best Practices</a>
+          </h4>
+<p id="section-4.2.2-1">
+            Authorization servers SHOULD follow these best practices for policy 
+            interpretation:<a href="#section-4.2.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2.2-2.1">
+              Use clear, non-technical language that average users can understand;<a href="#section-4.2.2-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.2-2.2">
+              Highlight high-risk operations (e.g., financial transactions, data deletion) 
+              with appropriate warnings;<a href="#section-4.2.2-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.2-2.3">
+              Provide expandable sections for users who want to see technical details 
+              of the policy;<a href="#section-4.2.2-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.2-2.4">
+              Include examples of what the agent can and cannot do with the requested 
+              authorization;<a href="#section-4.2.2-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.2-2.5">
+              Support multiple languages and accessibility features (screen readers, 
+              high contrast modes);<a href="#section-4.2.2-2.5" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-4.2.2-2.6">
+              Allow users to selectively approve or deny specific operations if the 
+              policy permits granular consent.<a href="#section-4.2.2-2.6" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+<div id="interpretation-example">
+<section id="section-4.2.3">
+          <h4 id="name-policy-to-text-translation-">
+<a href="#section-4.2.3" class="section-number selfRef">4.2.3. </a><a href="#name-policy-to-text-translation-" class="section-name selfRef">Policy to Text Translation Example</a>
+          </h4>
+<p id="section-4.2.3-1">
+            The following example illustrates how a Rego policy might be translated 
+            into human-readable consent text:<a href="#section-4.2.3-1" class="pilcrow">¶</a></p>
+<figure id="figure-7">
+            <div class="alignLeft art-text artwork" id="section-4.2.3-2.1">
+<pre>
+Policy (Rego):
+--------------
+package agent
+default allow = false
+
+allow {
+  input.action == "add_to_cart"
+  input.amount &lt;= 50.0
+}
+
+allow {
+  input.action == "view_recommendations"
+}
+
+Consent Display:
+----------------
+This agent is requesting permission to:
+
+✓ Add items to your shopping cart (maximum $50 per item)
+✓ View product recommendations for you
+
+This agent CANNOT:
+✗ Remove items from your cart
+✗ Complete purchases or access payment methods
+✗ Access your order history
+</pre>
+</div>
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a></figcaption></figure>
+</section>
+</div>
+</section>
+</div>
+<div id="user-action">
+<section id="section-4.3">
+        <h3 id="name-user-confirmation-action">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-user-confirmation-action" class="section-name selfRef">User Confirmation Action</a>
+        </h3>
+<p id="section-4.3-1">
+          When the user clicks "Allow", the authorization server:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.3-2">
+          <li id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">Records the user's consent with a timestamp;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">Generates a one-time authorization code;<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.3">
+            <p id="section-4.3-2.3.1">Redirects the user's browser back to the agent's redirect URI
+            with the authorization code and state parameter:<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<figure id="figure-8">
+          <div class="alignLeft art-text artwork" id="section-4.3-3.1">
+<pre>
+HTTP/1.1 302 Found
+Location: https://agent.example.com/callback?
+code=SplxlOBeZQQYbYS6WxSbIA&amp;state=af0ifjsldkj
+</pre>
+</div>
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a></figcaption></figure>
+<p id="section-4.3-4">
+          The <code>state</code> parameter MUST match the value provided in the 
+          redirect to the confirmation URI. The agent MUST validate the state 
+          parameter to prevent CSRF attacks.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="token-request">
+<section id="section-5">
+      <h2 id="name-token-request">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-token-request" class="section-name selfRef">Token Request</a>
+      </h2>
+<p id="section-5-1">
+        After receiving the authorization code, the agent exchanges it for an
+        access token:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<figure id="figure-9">
+        <div class="alignLeft art-text artwork" id="section-5-2.1">
+<pre>
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
+
+grant_type=authorization_code
+&amp;code=SplxlOBeZQQYbYS6WxSbIA
+&amp;redirect_uri=https://agent.example.com/callback
+</pre>
+</div>
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a></figcaption></figure>
+<p id="section-5-3">
+        The authorization server validates:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5-4.1">The authorization code is valid and unexpired;<a href="#section-5-4.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-5-4.2">The <code>redirect_uri</code> matches the registered URI;<a href="#section-5-4.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-5-4.3">The agent's client credentials are valid.<a href="#section-5-4.3" class="pilcrow">¶</a>
+</li>
+      </ul>
+<div id="token-response">
+<section id="section-5.1">
+        <h3 id="name-access-token-response">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-access-token-response" class="section-name selfRef">Access Token Response</a>
+        </h3>
+<p id="section-5.1-1">
+          Upon successful validation, the authorization server issues an access
+          token with identity binding:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<figure id="figure-10">
+          <div class="alignLeft art-json art-text artwork" id="section-5.1-2.1">
+<pre>
+{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Fz...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "read write",
+  "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA"
+}
+</pre>
+</div>
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a></figcaption></figure>
+<p id="section-5.1-3">
+          The JWT access token contains the following claims:<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.1-4">
+          <dt id="section-5.1-4.1">
+<code>iss</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.2">
+            The authorization server's identifier.<a href="#section-5.1-4.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.3">
+<code>sub</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.4">
+            The user's identifier at the resource server (extracted from ID Token).<a href="#section-5.1-4.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.5">
+<code>aud</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.6">
+            The resource server's identifier.<a href="#section-5.1-4.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.7">
+<code>act</code> (Actor):</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.8">
+            <p id="section-5.1-4.8.1">As defined in <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. Contains:<a href="#section-5.1-4.8.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.1-4.8.2.1">
+                <p id="section-5.1-4.8.2.1.1"><code>sub</code>: The agent's SPIFFE ID (from <code>client_id</code>);<a href="#section-5.1-4.8.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-5.1-4.8.2.2">
+                <p id="section-5.1-4.8.2.2.1"><code>agent_user_id</code> (OPTIONAL): The user's identifier at the
+                agent system.<a href="#section-5.1-4.8.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.9">
+<code>policy_ref</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.10">
+            OPTIONAL. A JSON string containing a policy identifier, or a JSON 
+            array of strings when multiple policies apply. The resource server 
+            can fetch the full policy content from the endpoint specified in the 
+            authorization server's metadata or via token introspection.<a href="#section-5.1-4.10" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.11">
+<code>evidence_ref</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.12">
+            OPTIONAL. A JSON string containing an evidence identifier referencing 
+            the user consent record. The full evidence details can be retrieved 
+            via token introspection.<a href="#section-5.1-4.12" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.13">
+<code>refresh_token</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.14">
+            OPTIONAL. If present, the refresh token MUST contain the same identity 
+            binding as the access token (i.e., the same <code>act</code> claim). When 
+            used to obtain a new access token, the resulting token MUST maintain 
+            the same user-agent binding unless the user explicitly re-authenticates.<a href="#section-5.1-4.14" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-4.15">
+<code>exp</code> (Expiration Time):</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-4.16">
+            REQUIRED. The expiration time of the access token. For AI agent scenarios, 
+            short-lived tokens (e.g., 1 hour) are RECOMMENDED to limit the window of 
+            exposure if a token is compromised. Longer durations MAY be used when 
+            combined with strong binding and continuous authentication mechanisms.<a href="#section-5.1-4.16" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<figure id="figure-11">
+          <div class="alignLeft art-json art-text artwork" id="section-5.1-5.1">
+<pre>
+{
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example.com",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-abc-123",
+
+  "act": {
+    "sub": "wit://agent.example.com/sha256.abc123...",
+    "agent_user_id": "agent_user_001"
+  },
+
+  "policy_ref": "policy-cart-50",
+  "evidence_ref": "evidence-xyz"
+}
+</pre>
+</div>
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a></figcaption></figure>
+<p id="section-5.1-6">
+          The full policy content and evidence details are available via token 
+          introspection or from the policy endpoint. This design keeps the token 
+          compact while enabling detailed verification when needed.<a href="#section-5.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-lifetime">
+<section id="section-5.2">
+        <h3 id="name-token-lifetime-recommendati">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-token-lifetime-recommendati" class="section-name selfRef">Token Lifetime Recommendations</a>
+        </h3>
+<p id="section-5.2-1">
+          Authorization servers SHOULD follow these token lifetime guidelines:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<span id="name-recommended-token-lifetimes"></span><div id="tbl-token-lifetime">
+<table class="center" id="table-1">
+          <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-recommended-token-lifetimes" class="selfRef">Recommended Token Lifetimes</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Token Type</th>
+              <th class="text-left" rowspan="1" colspan="1">Recommended Lifetime</th>
+              <th class="text-left" rowspan="1" colspan="1">Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Access Token</td>
+              <td class="text-left" rowspan="1" colspan="1">1 hour</td>
+              <td class="text-left" rowspan="1" colspan="1">Balance between usability and security</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Refresh Token</td>
+              <td class="text-left" rowspan="1" colspan="1">24 hours or session-based</td>
+              <td class="text-left" rowspan="1" colspan="1">Allow re-authentication without re-consent</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Confirmation Session</td>
+              <td class="text-left" rowspan="1" colspan="1">5 minutes</td>
+              <td class="text-left" rowspan="1" colspan="1">Minimize exposure of pending authorization</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Authorization Code</td>
+              <td class="text-left" rowspan="1" colspan="1">10 minutes</td>
+              <td class="text-left" rowspan="1" colspan="1">Standard OAuth 2.0 recommendation</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+<p id="section-5.2-3">
+          Authorization servers MAY adjust these values based on risk assessment, 
+          user authentication strength, and operational requirements. Tokens issued 
+          for high-risk operations (e.g., financial transactions) SHOULD have shorter 
+          lifetimes.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="token-introspection">
+<section id="section-5.3">
+        <h3 id="name-token-introspection-respons">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-token-introspection-respons" class="section-name selfRef">Token Introspection Response</a>
+        </h3>
+<p id="section-5.3-1">
+          When a resource server performs token introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, 
+          the authorization server MAY return additional claims beyond the standard 
+          OAuth 2.0 Token Introspection response:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<figure id="figure-12">
+          <div class="alignLeft art-json art-text artwork" id="section-5.3-2.1">
+<pre>
+{
+  "active": true,
+  "iss": "https://as.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example.com",
+  "exp": 1731369540,
+  "iat": 1731320700,
+
+  "act": {
+    "sub": "wit://agent.example.com/sha256.abc123...",
+    "agent_user_id": "agent_user_001"
+  },
+
+  "policy_ref": "policy-cart-50",
+  "evidence_ref": "evidence-xyz",
+
+  "policy_content": {
+    "type": "rego",
+    "content": "package agent\ndefault allow = false\nallow { input.amount &lt;= 50 }",
+    "entry_point": "allow"
+  },
+
+  "evidence_details": {
+    "id": "evidence-xyz",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart",
+      "user_action": "confirmed_via_button_click",
+      "timestamp": 1731320595
+    },
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..."
+  }
+}
+</pre>
+</div>
+<figcaption><a href="#figure-12" class="selfRef">Figure 12</a></figcaption></figure>
+<p id="section-5.3-3">
+          The introspection response includes:<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.3-4">
+          <dt id="section-5.3-4.1">
+<code>policy_content</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-4.2">
+            OPTIONAL. The full policy content referenced by <code>policy_ref</code>. 
+            This enables resource servers to evaluate policies without additional 
+            round-trips to the policy endpoint.<a href="#section-5.3-4.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.3-4.3">
+<code>evidence_details</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-4.4">
+            OPTIONAL. The complete evidence record referenced by <code>evidence_ref</code>. 
+            Includes user confirmation details and authorization server signature 
+            for audit purposes.<a href="#section-5.3-4.4" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.3-5">
+          Authorization servers SHOULD support token introspection for agent 
+          authorization tokens to enable resource servers to obtain complete 
+          authorization context. However, implementations MAY choose to omit 
+          <code>policy_content</code> and <code>evidence_details</code> from introspection 
+          responses for privacy or performance reasons, requiring resource servers 
+          to fetch this information separately from the policy and evidence endpoints.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="threats">
+<section id="section-6.1">
+        <h3 id="name-threat-model">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-threat-model" class="section-name selfRef">Threat Model</a>
+        </h3>
+<p id="section-6.1-1">
+          This specification addresses the following threats specific to AI agent 
+          authorization:<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<span id="name-threat-mitigations"></span><div id="tbl-threats">
+<table class="center" id="table-2">
+          <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-threat-mitigations" class="selfRef">Threat Mitigations</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Threat</th>
+              <th class="text-left" rowspan="1" colspan="1">Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Token substitution</td>
+              <td class="text-left" rowspan="1" colspan="1">Audience binding (ID Token aud == agent SPIFFE ID)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">CSRF attacks</td>
+              <td class="text-left" rowspan="1" colspan="1">State parameter validation (REQUIRED)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Confirmation URL hijacking</td>
+              <td class="text-left" rowspan="1" colspan="1">Bind confirmation request to authenticated agent session</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Unauthorized actions</td>
+              <td class="text-left" rowspan="1" colspan="1">Explicit user consent required via secure UI</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Consent forgery</td>
+              <td class="text-left" rowspan="1" colspan="1">Evidence records available via introspection</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Replay attacks</td>
+              <td class="text-left" rowspan="1" colspan="1">One-time authorization codes with short expiry</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Confirmation URL leakage</td>
+              <td class="text-left" rowspan="1" colspan="1">HTTPS required, single-use, short-lived (5 min)</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="trust">
+<section id="section-6.2">
+        <h3 id="name-trust-boundaries">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-trust-boundaries" class="section-name selfRef">Trust Boundaries</a>
+        </h3>
+<p id="section-6.2-1">
+          The framework establishes clear trust boundaries:<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2-2.1">
+            User → Agent: ID Token with agent in audience (binds user to agent);<a href="#section-6.2-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.2-2.2">
+            Agent → AS: SPIFFE authentication + ID Token assertion;<a href="#section-6.2-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.2-2.3">
+            AS → User: Secure consent interface (HTTPS);<a href="#section-6.2-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.2-2.4">
+            AS → Agent: Signed access token with identity binding;<a href="#section-6.2-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.2-2.5">
+            Agent → RS: Access token with policy reference and evidence.<a href="#section-6.2-2.5" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="consent-security">
+<section id="section-6.3">
+        <h3 id="name-consent-security">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-consent-security" class="section-name selfRef">Consent Security</a>
+        </h3>
+<p id="section-6.3-1">
+          The consent process MUST be secured:<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.3-2.1">
+            Confirmation URLs MUST be served over HTTPS and MUST NOT be sent over 
+            unencrypted channels;<a href="#section-6.3-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.3-2.2">
+            Confirmation URLs MUST be bound to the authenticated agent's identity 
+            (e.g., via mTLS or DPoP) to prevent hijacking;<a href="#section-6.3-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.3-2.3">
+            Confirmation URLs MUST be single-use and expire within 5 minutes;<a href="#section-6.3-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.3-2.4">
+            Authorization codes MUST be single-use and expire quickly (recommended: 
+            10 minutes);<a href="#section-6.3-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.3-2.5">
+            State parameter MUST be used and validated to prevent CSRF attacks;<a href="#section-6.3-2.5" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.3-2.6">
+            Evidence records SHOULD be made available via token introspection for 
+            audit purposes.<a href="#section-6.3-2.6" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="difference-from-device-flow">
+<section id="section-6.4">
+        <h3 id="name-difference-from-device-auth">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-difference-from-device-auth" class="section-name selfRef">Difference from Device Authorization Grant</a>
+        </h3>
+<p id="section-6.4-1">
+          This specification is sometimes confused with the Device Authorization Grant 
+          (RFC 8628). While both flows involve separated user interaction, they address 
+          different use cases:<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.4-2">
+          <dt id="section-6.4-2.1">Device Flow (RFC 8628):</dt>
+          <dd style="margin-left: 1.5em" id="section-6.4-2.2">
+            Designed for input-constrained devices (TVs, IoT) that cannot render 
+            browsers. Requires polling the token endpoint waiting for user approval. 
+            User enters a code on a separate device.<a href="#section-6.4-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-6.4-2.3">Agent Authorization Flow (this spec):</dt>
+          <dd style="margin-left: 1.5em" id="section-6.4-2.4">
+            Designed for AI agents with frontend capabilities. No polling required - 
+            uses standard OAuth redirect callback. User is redirected to authorization 
+            server's consent page directly from the agent's interface.<a href="#section-6.4-2.4" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-6.4-3">
+          Key differences:<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.4-4.1">No polling: Agent receives confirmation URL immediately;<a href="#section-6.4-4.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.4-4.2">No user codes: Standard OAuth redirect with authorization code;<a href="#section-6.4-4.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.4-4.3">Faster completion: Real-time redirect vs. polling interval delays;<a href="#section-6.4-4.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-6.4-4.4">Better UX: Seamless integration with agent's frontend.<a href="#section-6.4-4.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="confirmation-binding">
+<section id="section-6.5">
+        <h3 id="name-confirmation-url-binding">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-confirmation-url-binding" class="section-name selfRef">Confirmation URL Binding</a>
+        </h3>
+<p id="section-6.5-1">
+          The authorization server MUST bind the confirmation URL to the authenticated 
+          agent's identity. When the user completes consent, the AS MUST verify that 
+          the entity completing consent matches the original requester identified in 
+          the ID Token's <code>aud</code> claim.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-2">
+          This prevents an attacker from intercepting a confirmation URL and 
+          substituting their own identity during the consent flow (token confusion 
+          attack).<a href="#section-6.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="revocation">
+<section id="section-6.6">
+        <h3 id="name-token-revocation">
+<a href="#section-6.6" class="section-number selfRef">6.6. </a><a href="#name-token-revocation" class="section-name selfRef">Token Revocation</a>
+        </h3>
+<p id="section-6.6-1">
+          Token revocation for agent authorization tokens follows the OAuth 2.0 Token 
+          Revocation specification <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> with additional considerations 
+          for identity-bound tokens:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+<div id="revocation-triggers">
+<section id="section-6.6.1">
+          <h4 id="name-revocation-triggers">
+<a href="#section-6.6.1" class="section-number selfRef">6.6.1. </a><a href="#name-revocation-triggers" class="section-name selfRef">Revocation Triggers</a>
+          </h4>
+<p id="section-6.6.1-1">
+            Authorization servers SHOULD revoke agent authorization tokens in the 
+            following situations:<a href="#section-6.6.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.6.1-2.1">
+              User explicitly revokes authorization for the agent;<a href="#section-6.6.1-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.1-2.2">
+              Agent's workload identity is compromised or rotated;<a href="#section-6.6.1-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.1-2.3">
+              Policy associated with the token is updated or deprecated;<a href="#section-6.6.1-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.1-2.4">
+              User's account is suspended or terminated;<a href="#section-6.6.1-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.1-2.5">
+              Anomalous activity is detected indicating potential token misuse.<a href="#section-6.6.1-2.5" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+<div id="revocation-propagation">
+<section id="section-6.6.2">
+          <h4 id="name-revocation-propagation">
+<a href="#section-6.6.2" class="section-number selfRef">6.6.2. </a><a href="#name-revocation-propagation" class="section-name selfRef">Revocation Propagation</a>
+          </h4>
+<p id="section-6.6.2-1">
+            When an access token is revoked, the authorization server SHOULD also 
+            revoke associated artifacts:<a href="#section-6.6.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.6.2-2.1">
+              The refresh token used to obtain the access token;<a href="#section-6.6.2-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.2-2.2">
+              Other access tokens issued with the same user-agent binding;<a href="#section-6.6.2-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.2-2.3">
+              Pending confirmation sessions for the same agent.<a href="#section-6.6.2-2.3" class="pilcrow">¶</a>
+</li>
+          </ul>
+<p id="section-6.6.2-3">
+            Resource servers SHOULD check token revocation status through token 
+            introspection or by maintaining a local revocation cache. The cache 
+            SHOULD be updated frequently (e.g., every 5 minutes) to balance 
+            performance with security requirements.<a href="#section-6.6.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="revocation-evidence">
+<section id="section-6.6.3">
+          <h4 id="name-revocation-evidence">
+<a href="#section-6.6.3" class="section-number selfRef">6.6.3. </a><a href="#name-revocation-evidence" class="section-name selfRef">Revocation Evidence</a>
+          </h4>
+<p id="section-6.6.3-1">
+            Authorization servers SHOULD maintain evidence of token revocation 
+            for audit purposes. The evidence SHOULD include:<a href="#section-6.6.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.6.3-2.1">Token identifier (jti claim);<a href="#section-6.6.3-2.1" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.3-2.2">Revocation timestamp;<a href="#section-6.6.3-2.2" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.3-2.3">Reason for revocation;<a href="#section-6.6.3-2.3" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.3-2.4">Entity that initiated revocation (user, admin, system);<a href="#section-6.6.3-2.4" class="pilcrow">¶</a>
+</li>
+            <li class="normal" id="section-6.6.3-2.5">Notification status (if user was notified).<a href="#section-6.6.3-2.5" class="pilcrow">¶</a>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy">
+<section id="section-7">
+      <h2 id="name-privacy-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-7-1">
+        This specification involves processing of user identity information across 
+        trust domains. Implementers SHOULD consider the following privacy implications:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<div id="identifier-minimization">
+<section id="section-7.1">
+        <h3 id="name-identifier-minimization">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-identifier-minimization" class="section-name selfRef">Identifier Minimization</a>
+        </h3>
+<p id="section-7.1-1">
+          Agents SHOULD minimize exposure of user identifiers. The <code>sub</code> claim 
+          in access tokens SHOULD use pairwise pseudonymous identifiers as described 
+          in <span>[<a href="#RFC8618" class="cite xref">RFC8618</a>]</span> to prevent correlation across different resource 
+          servers.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="evidence-retention">
+<section id="section-7.2">
+        <h3 id="name-evidence-retention">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-evidence-retention" class="section-name selfRef">Evidence Retention</a>
+        </h3>
+<p id="section-7.2-1">
+          Authorization servers SHOULD limit retention periods for evidence records. 
+          Once the access token expires, the detailed evidence MAY be deleted while 
+          maintaining minimal audit logs for security purposes.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="logging-considerations">
+<section id="section-7.3">
+        <h3 id="name-logging-considerations">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-logging-considerations" class="section-name selfRef">Logging Considerations</a>
+        </h3>
+<p id="section-7.3-1">
+          Authorization servers SHOULD NOT log full ID Tokens or complete evidence 
+          records. Logs SHOULD contain only minimal identifiers necessary for 
+          security monitoring and debugging.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="error-handling">
+<section id="section-8">
+      <h2 id="name-error-handling">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-error-handling" class="section-name selfRef">Error Handling</a>
+      </h2>
+<p id="section-8-1">
+        This specification extends the error codes defined in Section 5.2 of 
+        <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> with the following values:<a href="#section-8-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-8-2">
+        <dt id="section-8-2.1">
+<code>invalid_policy_syntax</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.2">
+          The <code>policy_proposal</code> parameter contains malformed Rego policy. 
+          The error response SHOULD include a human-readable description of the 
+          syntax error.<a href="#section-8-2.2" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.3">
+<code>confirmation_expired</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.4">
+          The confirmation URL has expired (typically after 5 minutes). The agent 
+          MUST restart the authorization flow.<a href="#section-8-2.4" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.5">
+<code>user_denied_consent</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.6">
+          The user explicitly denied consent. The authorization server MAY provide 
+          this information to the agent via error response or silent callback.<a href="#section-8-2.6" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-2.7">
+<code>session_not_found</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-2.8">
+          The session identifier in the confirmation URL is invalid or has already 
+          been used. This MAY indicate a replay attack attempt.<a href="#section-8-2.8" class="pilcrow">¶</a>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="implementation">
+<section id="section-9">
+      <h2 id="name-implementation-consideratio">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-implementation-consideratio" class="section-name selfRef">Implementation Considerations</a>
+      </h2>
+<p id="section-9-1">
+        This section provides guidance for implementers of the agent authorization 
+        framework, including deployment patterns, performance considerations, and 
+        interoperability guidelines.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="deployment-patterns">
+<section id="section-9.1">
+        <h3 id="name-deployment-patterns">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-deployment-patterns" class="section-name selfRef">Deployment Patterns</a>
+        </h3>
+<p id="section-9.1-1">
+          The agent authorization framework supports several deployment patterns:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
+          <dt id="section-9.1-2.1">Single-Domain Deployment:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
+            The Home IdP, Authorization Server, and Resource Server are all operated 
+            by the same organization. This simplifies trust establishment but limits 
+            cross-organizational agent usage.<a href="#section-9.1-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.3">Federated Deployment:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
+            The Home IdP is operated by the user's organization, while the AS and RS 
+            are operated by a resource provider. This requires cross-domain trust 
+            establishment through OIDC federation.<a href="#section-9.1-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.5">Multi-Agent Deployment:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.6">
+            Multiple AI agents from different vendors access resources on behalf of 
+            the same user. Each agent has its own workload identity and may access 
+            different resource servers.<a href="#section-9.1-2.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.7">Delegated Agent Deployment:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.8">
+            An AI agent delegates authorization to a sub-agent (e.g., a specialized 
+            service agent). This requires support for delegation chains.<a href="#section-9.1-2.8" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="performance">
+<section id="section-9.2">
+        <h3 id="name-performance-considerations">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-performance-considerations" class="section-name selfRef">Performance Considerations</a>
+        </h3>
+<p id="section-9.2-1">
+          Implementers SHOULD consider the following performance factors:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.2-2.1">
+            <strong>Token Introspection Caching:</strong> Resource servers SHOULD cache 
+            introspection responses to reduce load on the authorization server. Cache 
+            duration should balance performance with security requirements.<a href="#section-9.2-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.2-2.2">
+            <strong>Policy Evaluation:</strong> Complex Rego policies may introduce 
+            latency. Resource servers SHOULD cache policy evaluation results when 
+            appropriate.<a href="#section-9.2-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.2-2.3">
+            <strong>Confirmation Session Storage:</strong> Authorization servers SHOULD 
+            use distributed session storage (e.g., Redis, memcached) for confirmation 
+            sessions to support horizontal scaling.<a href="#section-9.2-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.2-2.4">
+            <strong>Evidence Record Storage:</strong> Evidence records may accumulate 
+            rapidly. Implementers SHOULD establish retention policies and archival 
+            strategies.<a href="#section-9.2-2.4" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+<div id="interoperability">
+<section id="section-9.3">
+        <h3 id="name-interoperability-guidelines">
+<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-interoperability-guidelines" class="section-name selfRef">Interoperability Guidelines</a>
+        </h3>
+<p id="section-9.3-1">
+          To ensure interoperability between different implementations:<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.3-2.1">
+            Implementations MUST support the mandatory features defined in this 
+            specification;<a href="#section-9.3-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.3-2.2">
+            Implementations SHOULD support token introspection for complete 
+            authorization context;<a href="#section-9.3-2.2" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.3-2.3">
+            Implementations MAY support optional features (e.g., policy content 
+            in introspection responses) with graceful degradation;<a href="#section-9.3-2.3" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.3-2.4">
+            Implementations SHOULD publish their supported features in authorization 
+            server metadata;<a href="#section-9.3-2.4" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-9.3-2.5">
+            Implementations MUST handle unknown claims gracefully without failing.<a href="#section-9.3-2.5" class="pilcrow">¶</a>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="abnf">
+<section id="section-10">
+      <h2 id="name-abnf-syntax">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-abnf-syntax" class="section-name selfRef">ABNF Syntax</a>
+      </h2>
+<p id="section-10-1">
+        This specification uses the Augmented Backus-Naur Form (ABNF) notation 
+        defined in <span>[<a href="#RFC5234" class="cite xref">RFC5234</a>]</span>. The following terms are defined for 
+        use in this specification:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<figure id="figure-13">
+        <div class="alignLeft art-abnf art-text artwork" id="section-10-2.1">
+<pre>
+grant-type         = "urn:ietf:params:oauth:grant-type:identity-assertion"
+assertion-type     = "urn:ietf:params:oauth:assertion-type:id_token"
+
+policy-proposal    = "policy_proposal" "=" policy-json
+policy-json        = 1*( %x20-21 / %x23-7B / %x7D-7E )
+
+policy-context     = "policy_context" "=" context-json
+context-json       = 1*( %x20-21 / %x23-7B / %x7D-7E )
+
+confirmation-uri   = "confirmation_uri" "=" uri
+session-id         = "session_id" "=" 1*( ALPHA / DIGIT / "_" )
+state-param        = "state" "=" 1*( ALPHA / DIGIT / "-" / "_" / "." )
+
+error-code         = "invalid_policy_syntax" /
+                     "confirmation_expired" /
+                     "user_denied_consent" /
+                     "session_not_found"
+</pre>
+</div>
+<figcaption><a href="#figure-13" class="selfRef">Figure 13</a></figcaption></figure>
+</section>
+</div>
+<div id="iana">
+<section id="section-11">
+      <h2 id="name-iana-considerations">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<p id="section-11-1">
+        This specification extends the Identity Assertion Grant with additional 
+        parameters and token claims. No new grant type is registered since this 
+        specification uses the existing <code>urn:ietf:params:oauth:grant-type:identity-assertion</code> 
+        grant type defined in <span>[<a href="#I-D.ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.ietf-oauth-identity-assertion-authz-grant</a>]</span>.<a href="#section-11-1" class="pilcrow">¶</a></p>
+<div id="token-claims-registry">
+<section id="section-11.1">
+        <h3 id="name-jwt-claim-registration">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-jwt-claim-registration" class="section-name selfRef">JWT Claim Registration</a>
+        </h3>
+<p id="section-11.1-1">
+          This specification registers the following claims in the JSON Web Token 
+          Claims registry (<span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>):<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11.1-2">
+          <dt id="section-11.1-2.1">Claim Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.2">
+            <code>policy_ref</code><a href="#section-11.1-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.3">Claim Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.4">Reference to authorized policy/policies<a href="#section-11.1-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.6">IETF<a href="#section-11.1-2.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.7">Specification Document:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.8">[This document]<a href="#section-11.1-2.8" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<span class="break"></span><dl class="dlParallel" id="section-11.1-3">
+          <dt id="section-11.1-3.1">Claim Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-3.2">
+            <code>evidence_ref</code><a href="#section-11.1-3.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-3.3">Claim Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-3.4">Reference to user consent evidence record<a href="#section-11.1-3.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-3.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-3.6">IETF<a href="#section-11.1-3.6" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-3.7">Specification Document:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-3.8">[This document]<a href="#section-11.1-3.8" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-11.1-4">
+          Note: Full policy content and evidence details are available via token 
+          introspection rather than embedded in the token to minimize token size.<a href="#section-11.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata">
+<section id="section-11.2">
+        <h3 id="name-authorization-server-metada">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
+        </h3>
+<p id="section-11.2-1">
+          An authorization server supporting this specification SHOULD include the 
+          following parameters in its OAuth 2.0 Authorization Server Metadata 
+          document <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11.2-2">
+          <dt id="section-11.2-2.1">
+<code>agent_confirmation_endpoint</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.2-2.2">
+            URL of the confirmation page used for user consent. This endpoint 
+            accepts HTTP GET requests with a session identifier parameter.<a href="#section-11.2-2.2" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.2-2.3">
+<code>agent_policy_endpoint</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.2-2.4">
+            URL template for retrieving policy content by policy ID. The template 
+            MUST contain the placeholder <code>{policy_id}</code>.<a href="#section-11.2-2.4" class="pilcrow">¶</a>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.2-2.5">
+<code>agent_evidence_endpoint</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.2-2.6">
+            URL template for retrieving evidence content by evidence ID. The template 
+            MUST contain the placeholder <code>{evidence_id}</code>.<a href="#section-11.2-2.6" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<figure id="figure-14">
+          <div class="alignLeft art-json art-text artwork" id="section-11.2-3.1">
+<pre>
+{
+  "issuer": "https://as.example.com",
+  "authorization_endpoint": "https://as.example.com/authorize",
+  "token_endpoint": "https://as.example.com/token",
+  "agent_confirmation_endpoint": "https://as.example.com/confirm",
+  "agent_policy_endpoint": "https://as.example.com/policies/{policy_id}",
+  "agent_evidence_endpoint": "https://as.example.com/evidence/{evidence_id}"
+}
+</pre>
+</div>
+<figcaption><a href="#figure-14" class="selfRef">Figure 14</a></figcaption></figure>
+</section>
+</div>
+</section>
+</div>
+<section id="section-12">
+      <h2 id="name-references">
+<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<section id="section-12.1">
+        <h3 id="name-normative-references">
+<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6749">https://www.rfc-editor.org/info/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6750">[RFC6750]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6750">https://www.rfc-editor.org/info/rfc6750</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7009">[RFC7009]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T., Ed.</span>, <span class="refAuthor">Dronia, S.</span>, and <span class="refAuthor">M. Scurtescu</span>, <span class="refTitle">"OAuth 2.0 Token Revocation"</span>, <span class="seriesInfo">RFC 7009</span>, <span class="seriesInfo">DOI 10.17487/RFC7009</span>, <time datetime="2013-08" class="refDate">August 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7009">https://www.rfc-editor.org/info/rfc7009</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7519">https://www.rfc-editor.org/info/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7662">[RFC7662]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7662">https://www.rfc-editor.org/info/rfc7662</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8414">https://www.rfc-editor.org/info/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8693">[RFC8693]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8693">https://www.rfc-editor.org/info/rfc8693</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-identity-assertion-authz-grant">[I-D.ietf-oauth-identity-assertion-authz-grant]</dt>
+        <dd>
+<span class="refAuthor">Ying, K.</span> and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Identity Assertion Authorization Grant"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-identity-assertion-authz-grant-02</span>, <time datetime="2026-01" class="refDate">January 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-02">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-identity-assertion-authz-grant-02</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-spiffe-client-auth">[I-D.ietf-oauth-spiffe-client-auth]</dt>
+        <dd>
+<span class="refAuthor">Schwenkschuster, A.</span>, <span class="refTitle">"OAuth SPIFFE Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-spiffe-client-auth</span>, <time datetime="2026-03" class="refDate">March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-spiffe-client-auth</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.liu-oauth-rego-policy">[I-D.liu-oauth-rego-policy]</dt>
+      <dd>
+<span class="refAuthor">Liu, D.</span>, <span class="refTitle">"Rego Policy Language for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-liu-oauth-rego-policy</span>, <time datetime="2026-03" class="refDate">March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-liu-oauth-rego-policy">https://datatracker.ietf.org/doc/html/draft-liu-oauth-rego-policy</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<section id="section-12.2">
+        <h3 id="name-informative-references">
+<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC8618">[RFC8618]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refTitle">"Pairwise Pseudonymous Identifiers for OAuth 2.0"</span>, <span class="seriesInfo">RFC 8618</span>, <time datetime="2019" class="refDate">2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8618">https://www.rfc-editor.org/rfc/rfc8618</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5234">[RFC5234]</dt>
+        <dd>
+<span class="refAuthor">Crocker, D.</span> and <span class="refAuthor">P. Overell</span>, <span class="refTitle">"Augmented BNF for Syntax Specifications: ABNF"</span>, <span class="seriesInfo">RFC 5234</span>, <time datetime="2008" class="refDate">2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5234">https://www.rfc-editor.org/rfc/rfc5234</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="OPA">[OPA]</dt>
+      <dd>
+<span class="refAuthor">CNCF</span>, <span class="refTitle">"Open Policy Agent"</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://www.openpolicyagent.org/">https://www.openpolicyagent.org/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</section>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">
+        The authors would like to thank Brian Campbell for his valuable feedback
+        and insightful discussions on OAuth extension design. His contributions
+        helped shape key aspects of this framework.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="change-log">
+<section id="appendix-B">
+      <h2 id="name-change-log">
+<a href="#name-change-log" class="section-name selfRef">Change Log</a>
+      </h2>
+<p id="appendix-B-1">
+        <strong>draft-liu-oauth-agent-authorization-00:</strong><a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-B-2.1">Initial version based on Identity Assertion Grant extension;<a href="#appendix-B-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="appendix-B-2.2">Added confirmation URL flow with session binding;<a href="#appendix-B-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="appendix-B-2.3">Defined policy_ref and evidence_ref token claims;<a href="#appendix-B-2.3" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="appendix-B-2.4">Added privacy considerations and error handling;<a href="#appendix-B-2.4" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="appendix-B-2.5">Included ABNF syntax definitions and metadata endpoints.<a href="#appendix-B-2.5" class="pilcrow">¶</a>
+</li>
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Dapeng Liu</span></div>
+<div dir="auto" class="left"><span class="org">Alibaba Group</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:max.ldp@alibaba-inc.com" class="email">max.ldp@alibaba-inc.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Hongru Zhu</span></div>
+<div dir="auto" class="left"><span class="org">Alibaba Group</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:hongru.zhr@alibaba-inc.com" class="email">hongru.zhr@alibaba-inc.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Suresh Krishnan</span></div>
+<div dir="auto" class="left"><span class="org">Cisco</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:suresh.krishnan@gmail.com" class="email">suresh.krishnan@gmail.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Aaron Parecki</span></div>
+<div dir="auto" class="left"><span class="org">Okta</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:aaron@parecki.com" class="email">aaron@parecki.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

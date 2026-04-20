@@ -1242,7 +1242,7 @@ li > p:last-of-type:only-child {
 <div id="internal-metadata" class="document-information">
 <dl id="identifiers">
 <dt class="label-workgroup">Workgroup:</dt>
-<dd class="workgroup">Network Working Group</dd>
+<dd class="workgroup">Web Authorization Protocol</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
 <dd class="internet-draft">draft-liu-ai-agent-authorization-integration-00</dd>
 <dt class="label-published">Published:</dt>
@@ -1340,7 +1340,10 @@ li > p:last-of-type:only-child {
             <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
-                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-component-specifications" class="internal xref">Component Specifications</a></p>
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-requirements-language" class="internal xref">Requirements Language</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-component-specifications" class="internal xref">Component Specifications</a></p>
 </li>
             </ul>
 </li>
@@ -1348,7 +1351,7 @@ li > p:last-of-type:only-child {
             <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-authorization-model-policy-" class="internal xref">Authorization Model: Policy vs Scope</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
-                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-rego-policy-as-primary-auth" class="internal xref">Rego Policy as Primary Authorization Mechanism</a></p>
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-rego-policy-as-primary-auth" class="internal xref">Rego Policy as Primary Authorization Mechanism</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
                 <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-scope-as-optional-supplemen" class="internal xref">Scope as Optional Supplement</a></p>
@@ -1560,11 +1563,21 @@ li > p:last-of-type:only-child {
 </li>
       </ul>
 <section id="section-1.1">
-        <h3 id="name-component-specifications">
-<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-component-specifications" class="section-name selfRef">Component Specifications</a>
+        <h3 id="name-requirements-language">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-requirements-language" class="section-name selfRef">Requirements Language</a>
         </h3>
 <p id="section-1.1-1">
-          This framework integrates the following specifications:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", 
+          "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this 
+          document are to be interpreted as described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span>
+          <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they appear in all capitals.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+</section>
+<section id="section-1.2">
+        <h3 id="name-component-specifications">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-component-specifications" class="section-name selfRef">Component Specifications</a>
+        </h3>
+<p id="section-1.2-1">
+          This framework integrates the following specifications:<a href="#section-1.2-1" class="pilcrow">¶</a></p>
 <span id="name-framework-components"></span><div id="tbl-components">
 <table class="center" id="table-1">
           <caption>
@@ -1581,32 +1594,43 @@ li > p:last-of-type:only-child {
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Agent Authentication</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-ietf-oauth-spiffe-client-auth</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.ietf-oauth-spiffe-client-auth" class="cite xref">I-D.ietf-oauth-spiffe-client-auth</a>]</span>
+</td>
               <td class="text-left" rowspan="1" colspan="1">Agent workload identity via SPIFFE/WIT-SVID</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Identity Assertion Grant</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-ietf-oauth-identity-assertion-authz-grant (ID-JAG)</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.ietf-oauth-identity-assertion-authz-grant" class="cite xref">I-D.ietf-oauth-identity-assertion-authz-grant</a>]</span> (ID-JAG)</td>
               <td class="text-left" rowspan="1" colspan="1">JWT-based cross-domain identity assertion</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">User Interaction &amp; Consent</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-parecki-oauth-jwt-grant-interaction-response</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.parecki-oauth-jwt-grant-interaction-response" class="cite xref">I-D.parecki-oauth-jwt-grant-interaction-response</a>]</span>
+</td>
               <td class="text-left" rowspan="1" colspan="1">User consent via JWT grant interaction flow</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Policy Authorization</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-liu-oauth-rego-policy</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.liu-oauth-rego-policy" class="cite xref">I-D.liu-oauth-rego-policy</a>]</span>
+</td>
               <td class="text-left" rowspan="1" colspan="1">Fine-grained Rego policy support</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Consent Evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-liu-oauth-authorization-evidence</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.liu-oauth-authorization-evidence" class="cite xref">I-D.liu-oauth-authorization-evidence</a>]</span>
+</td>
               <td class="text-left" rowspan="1" colspan="1">User confirmation records</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Multi-hop Delegation</td>
-              <td class="text-left" rowspan="1" colspan="1">draft-liu-oauth-chain-delegation</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span>[<a href="#I-D.liu-oauth-chain-delegation" class="cite xref">I-D.liu-oauth-chain-delegation</a>]</span>
+</td>
               <td class="text-left" rowspan="1" colspan="1">Agent-to-agent delegation chains</td>
             </tr>
           </tbody>
@@ -1648,7 +1672,7 @@ li > p:last-of-type:only-child {
 </li>
           <li class="normal" id="section-2.1-2.3">
             <strong>Resource Server:</strong> RS evaluates the policy at runtime using 
-            OPA engine with request context.<a href="#section-2.1-2.3" class="pilcrow">¶</a>
+            a Rego-compatible policy engine with request context.<a href="#section-2.1-2.3" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-2.1-3">
@@ -1685,8 +1709,7 @@ li > p:last-of-type:only-child {
 |  Authorization Boundary                                   |
 +-----------------------------------------------------------+
 |  +-----------------------------------------------------+  |
-|  |
-|  |                                                     |  |
+|  |  Scope (Traditional OAuth)                          |  |
 |  |  +-----------------------------------------------+  |  |
 |  |  |  Policy via RAR (Primary)                     |  |  |
 |  |  |  authorization_details: rego_policy            |  |  |
@@ -1795,7 +1818,7 @@ li > p:last-of-type:only-child {
         |                        |                  | Resource Server  |
         |                        |                  |                  |
         |                        |   API Request   | - Token validation|
-        |                        |----------------&gt;| - OPA enforcement |
+        |                        |----------------&gt;| - Policy engine  |
         |                        |                  +------------------+
 </pre>
 </div>
@@ -1822,7 +1845,7 @@ li > p:last-of-type:only-child {
 <dt id="section-3.1-2.7">Resource Server (RS):</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.8">
             Hosts protected resources. Validates access tokens and enforces 
-            policies using OPA.<a href="#section-3.1-2.8" class="pilcrow">¶</a>
+            policies using a Rego-compatible policy engine.<a href="#section-3.1-2.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -1854,7 +1877,9 @@ li > p:last-of-type:only-child {
 </li>
               <li class="normal" id="section-3.2-2.2.2.2">
                 <code>agent_user_id</code> (OPTIONAL): The user's identifier at the 
-                Agent system, enabling audit trail correlation at the Agent side.<a href="#section-3.2-2.2.2.2" class="pilcrow">¶</a>
+                Agent system, enabling audit trail correlation at the Agent side.
+                Note: This is a non-registered extension field within the 
+                <code>act</code> claim structure.<a href="#section-3.2-2.2.2.2" class="pilcrow">¶</a>
 </li>
             </ul>
 </li>
@@ -1863,28 +1888,25 @@ li > p:last-of-type:only-child {
           <div class="alignLeft art-json art-text artwork" id="section-3.2-3.1">
 <pre>
 {
-  // Standard OAuth claims
   "iss": "https://as.external.example",
-  "sub": "user_12345",                    // Resource App user ID
+  "sub": "user_12345",
   "aud": "https://api.external.example",
   "exp": 1731369540,
   "iat": 1731320700,
   "jti": "urn:uuid:token-abc-123",
 
-  // Actor claim (RFC 8693) - identifies the agent acting on behalf of the user
   "act": {
     "sub": "wit://agent.example/sha256.abc123...",
-    "agent_user_id": "agent_user_001"     // Optional: for agent-side audit
+    "agent_user_id": "agent_user_001"
   },
 
-  // Enriched authorization_details (RFC 9396 Section 7.1)
   "authorization_details": [
     {
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "ref": "policy-abc123",
-        "endpoint": "https://as.external.example/policies/..."
+        "uri": "https://as.external.example/policies/policy-abc123",
+        "entry_point": "allow"
       },
       "context": {
         "user": { "id": "user_12345" },
@@ -1893,15 +1915,13 @@ li > p:last-of-type:only-child {
     }
   ],
 
-  // User consent evidence
   "evidence": {
     "id": "evidence-xyz",
-    "user_confirmation": { ... },
-    "as_signature": "..."
+    "user_confirmation": { "..." : "..." },
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   },
 
-  // Delegation chain (if delegated)
-  "delegation_chain": [ ... ]
+  "delegation_chain": [ "..." ]
 }
 </pre>
 </div>
@@ -1922,7 +1942,7 @@ li > p:last-of-type:only-child {
           <div class="alignLeft art-ascii-art art-text artwork" id="section-4.1-1.1">
 <pre>
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
-| User  |    | Home  |    |  AI    |    |External    |  RS   |    | OPA |
+| User  |    | Home  |    |  AI    |    |External    |  RS   |    |Policy|
 |       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
     |            |             |            |            |           |
@@ -2083,10 +2103,10 @@ li > p:last-of-type:only-child {
 </li>
           <li id="section-4.2-1.13">
             <p id="section-4.2-1.13.1">Policy Evaluation: RS sends policy and request context 
-            to OPA.<a href="#section-4.2-1.13.1" class="pilcrow">¶</a></p>
+            to the policy engine.<a href="#section-4.2-1.13.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.2-1.14">
-            <p id="section-4.2-1.14.1">Authorization Decision: OPA returns allow/deny decision.<a href="#section-4.2-1.14.1" class="pilcrow">¶</a></p>
+            <p id="section-4.2-1.14.1">Authorization Decision: Policy engine returns allow/deny decision.<a href="#section-4.2-1.14.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.2-1.15">
             <p id="section-4.2-1.15.1">Response: RS executes (or denies) the operation and 
@@ -2113,10 +2133,10 @@ li > p:last-of-type:only-child {
      |                 |                 |                |
      | (has token)     |                 |                |
      |                 |                 |                |
-     | Delegation PAR  |                 |                |
+     | Token Exchange   |                 |                |
      | - subject_token |                 |                |
-     | - Agent B creds |                 |                |
-     | - sub-scope     |                 |                |
+     | - delegatee_wit |                 |                |
+     | - authz_details |                 |                |
      |----------------&gt;|                 |                |
      |                 |                 |                |
      |                 | Validate:       |                |
@@ -2142,7 +2162,7 @@ li > p:last-of-type:only-child {
 <p id="section-5-3">
         The resulting token for Agent B includes a <code>delegation_chain</code> 
         recording the delegation hop, as defined in 
-        draft-liu-oauth-chain-delegation.<a href="#section-5-3" class="pilcrow">¶</a></p>
+        <span>[<a href="#I-D.liu-oauth-chain-delegation" class="cite xref">I-D.liu-oauth-chain-delegation</a>]</span>.<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="consent-modes">
@@ -2343,7 +2363,7 @@ li > p:last-of-type:only-child {
         pre-programmed knowledge of each resource server's policies.<a href="#section-8-4" class="pilcrow">¶</a></p>
 <p id="section-8-5">
         Detailed specification of the Rego Profile format and agent adaptive 
-        behavior is defined in draft-liu-oauth-rego-policy.<a href="#section-8-5" class="pilcrow">¶</a></p>
+        behavior is defined in <span>[<a href="#I-D.liu-oauth-rego-policy" class="cite xref">I-D.liu-oauth-rego-policy</a>]</span>.<a href="#section-8-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security">
@@ -2362,7 +2382,7 @@ li > p:last-of-type:only-child {
             Home IdP → Agent: ID Token with agent in audience;<a href="#section-9.1-2.1" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-9.1-2.2">
-            Agent → External AS: SPIFFE authentication + ID Token hint;<a href="#section-9.1-2.2" class="pilcrow">¶</a>
+            Agent → External AS: SPIFFE authentication + JWT assertion (ID-JAG);<a href="#section-9.1-2.2" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-9.1-2.3">
             External AS → RS: Signed access token with policy reference;<a href="#section-9.1-2.3" class="pilcrow">¶</a>
@@ -2391,7 +2411,7 @@ li > p:last-of-type:only-child {
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Token substitution</td>
-              <td class="text-left" rowspan="1" colspan="1">Audience binding (id_token_hint.aud == agent ID)</td>
+              <td class="text-left" rowspan="1" colspan="1">JWT assertion audience binding (assertion.aud == AS identifier)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Privilege escalation</td>
@@ -2399,7 +2419,7 @@ li > p:last-of-type:only-child {
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Unauthorized actions</td>
-              <td class="text-left" rowspan="1" colspan="1">OPA policy enforcement at RS</td>
+              <td class="text-left" rowspan="1" colspan="1">Rego policy enforcement at RS</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Consent forgery</td>
@@ -2530,12 +2550,13 @@ li > p:last-of-type:only-child {
             across delegation hops;<a href="#section-10.3-3.2" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-10.3-3.3">
-            Evidence records provide cryptographic proof of user consent at 
-            each delegation step.<a href="#section-10.3-3.3" class="pilcrow">¶</a>
+            Evidence records provide cryptographic proof of the original
+            user consent, propagated across delegation hops via
+            <code>root_evidence_ref</code>;<a href="#section-10.3-3.3" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-10.3-4">
-          Implementations MUST support RFC 8693 for token exchange operations 
+          Implementations SHOULD support RFC 8693 for token exchange operations 
           and MAY implement the delegation chain extension for multi-hop scenarios.<a href="#section-10.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2545,7 +2566,7 @@ li > p:last-of-type:only-child {
 <a href="#section-10.4" class="section-number selfRef">10.4. </a><a href="#name-relationship-to-transaction" class="section-name selfRef">Relationship to Transaction Tokens</a>
         </h3>
 <p id="section-10.4-1">
-          Transaction Tokens (draft-ietf-oauth-transaction-tokens) focus on 
+          Transaction Tokens (<span>[<a href="#I-D.ietf-oauth-transaction-tokens" class="cite xref">I-D.ietf-oauth-transaction-tokens</a>]</span>) focus on
           short-lived service-to-service authorization in microservices architectures. 
           This framework focuses on longer-lived user-to-agent delegation with explicit 
           human consent.<a href="#section-10.4-1" class="pilcrow">¶</a></p>
@@ -2578,7 +2599,7 @@ li > p:last-of-type:only-child {
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Token lifetime</td>
               <td class="text-left" rowspan="1" colspan="1">Minutes</td>
-              <td class="text-left" rowspan="1" colspan="1">Hours to days</td>
+              <td class="text-left" rowspan="1" colspan="1">Minutes to hours</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Authorization model</td>
@@ -2726,7 +2747,7 @@ li > p:last-of-type:only-child {
             <tr>
               <td class="text-left" rowspan="1" colspan="1">ID-JAG</td>
               <td class="text-left" rowspan="1" colspan="1">MUST</td>
-              <td class="text-left" rowspan="1" colspan="1">All</td>
+              <td class="text-left" rowspan="1" colspan="1">Agent, AS</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">JWT Grant Interaction Response</td>
@@ -2740,7 +2761,7 @@ li > p:last-of-type:only-child {
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Rego Policy</td>
-              <td class="text-left" rowspan="1" colspan="1">SHOULD</td>
+              <td class="text-left" rowspan="1" colspan="1">MUST</td>
               <td class="text-left" rowspan="1" colspan="1">Agent, AS, RS</td>
             </tr>
             <tr>
@@ -2789,13 +2810,17 @@ li > p:last-of-type:only-child {
 <a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6749">[RFC6749]</dt>
         <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6749">https://www.rfc-editor.org/info/rfc6749</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9126">[RFC9126]</dt>
-        <dd>
-<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9126">https://www.rfc-editor.org/info/rfc9126</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8693">[RFC8693]</dt>
         <dd>
@@ -2826,12 +2851,8 @@ li > p:last-of-type:only-child {
 <span class="refAuthor">Liu, D.</span>, <span class="refTitle">"Authorization Evidence for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-liu-oauth-authorization-evidence</span>, <time datetime="2026-03" class="refDate">March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-liu-oauth-authorization-evidence">https://datatracker.ietf.org/doc/html/draft-liu-oauth-authorization-evidence</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.liu-oauth-chain-delegation">[I-D.liu-oauth-chain-delegation]</dt>
-        <dd>
-<span class="refAuthor">Liu, D.</span>, <span class="refTitle">"Chain Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-liu-oauth-chain-delegation</span>, <time datetime="2026-03" class="refDate">March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation">https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.ietf-oauth-transaction-tokens">[I-D.ietf-oauth-transaction-tokens]</dt>
       <dd>
-<span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens</a>&gt;</span>. </dd>
+<span class="refAuthor">Liu, D.</span>, <span class="refTitle">"Chain Delegation for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-liu-oauth-chain-delegation</span>, <time datetime="2026-03" class="refDate">March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation">https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -2840,6 +2861,14 @@ li > p:last-of-type:only-child {
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="RFC9126">[RFC9126]</dt>
+        <dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Sakimura, N.</span>, <span class="refAuthor">Tonge, D.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"OAuth 2.0 Pushed Authorization Requests"</span>, <span class="seriesInfo">RFC 9126</span>, <span class="seriesInfo">DOI 10.17487/RFC9126</span>, <time datetime="2021-09" class="refDate">September 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9126">https://www.rfc-editor.org/info/rfc9126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.ietf-oauth-transaction-tokens">[I-D.ietf-oauth-transaction-tokens]</dt>
+        <dd>
+<span class="refAuthor">Tulshibagwale, A.</span>, <span class="refAuthor">Fletcher, G.</span>, and <span class="refAuthor">P. Kasselman</span>, <span class="refTitle">"Transaction Tokens"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-transaction-tokens</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="CIBA">[CIBA]</dt>
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID Connect CIBA Core"</span>, <time datetime="2021" class="refDate">2021</time>, <span>&lt;<a href="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html">https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html</a>&gt;</span>. </dd>
@@ -2868,12 +2897,12 @@ Content-Type: application/x-www-form-urlencoded
 OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
 OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
 
-grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &amp;assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
 &amp;redirect_uri=https://myassistant.example/callback
-&amp;authorization_details=[{"type":"rego_policy","policy":{"type":"rego",
-  "content":"package agent...","entry_point":"allow"},
-  "context":{"user":{"id":"user_12345"},"action":"add_to_cart"}}]
+&amp;authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
+  %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
 </pre>
 </div>
 <figcaption><a href="#figure-7" class="selfRef">Figure 7</a></figcaption></figure>
@@ -2883,7 +2912,7 @@ grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-interaction-required-respon" class="section-name selfRef">Interaction Required Response</a>
         </h3>
 <figure id="figure-8">
-          <div class="alignLeft art-json art-text artwork" id="appendix-A.2-1.1">
+          <div class="alignLeft art-http art-text artwork" id="appendix-A.2-1.1">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -2923,8 +2952,8 @@ Content-Type: application/json
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "ref": "policy-cart-50",
-        "endpoint": "https://as.shop.example/policies/policy-cart-50"
+        "uri": "https://as.shop.example/policies/policy-cart-50",
+        "entry_point": "allow"
       },
       "context": {
         "user": { "id": "user_12345" },
@@ -2940,7 +2969,7 @@ Content-Type: application/json
       "user_action": "confirmed_via_button_click",
       "timestamp": 1731320595
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..."
+    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
   }
 }
 </pre>
