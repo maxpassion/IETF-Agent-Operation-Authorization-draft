@@ -4,7 +4,7 @@ Agent Operation Authorization (AOA) specification drafts for IETF standardizatio
 
 ## Background
 
-The AOA (Agent Operation Authorization) framework provides standardized protocols for agent authorization in OAuth 2.0 ecosystems. These drafts address emerging security requirements for AI agent interactions, cross-domain delegation, and cryptographic evidence binding.
+The AOA (Agent Operation Authorization) framework defines a suite of protocols for securing AI agent operations within OAuth 2.0 ecosystems. It addresses agent identity, delegated authorization, fine-grained policy-based access control using the Rego policy language, and cryptographic evidence binding — enabling agents to operate autonomously while remaining under user-authorized boundaries.
 
 > **Note on Agent Identity**: AOA does not define new authentication mechanisms for agents. Instead, it treats agent identity as workload identity, leveraging [WIMSE](https://datatracker.ietf.org/group/wimse/about/) (Workload Identity in Multi-System Environments) for authentication. This design choice enables seamless integration with existing infrastructure while focusing AOA on the authorization layer.
 >
