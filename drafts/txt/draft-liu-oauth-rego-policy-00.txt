@@ -71,41 +71,41 @@ Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
      1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   3
-     1.2.  Applicability . . . . . . . . . . . . . . . . . . . . . .   4
-     1.3.  RAR Integration . . . . . . . . . . . . . . . . . . . . .   4
-   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   5
+     1.2.  RAR Integration . . . . . . . . . . . . . . . . . . . . .   4
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   4
    3.  RAR Authorization Data Type . . . . . . . . . . . . . . . . .   5
      3.1.  rego_policy . . . . . . . . . . . . . . . . . . . . . . .   5
        3.1.1.  Type Definition . . . . . . . . . . . . . . . . . . .   5
        3.1.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   5
-       3.1.3.  Policy Requirements . . . . . . . . . . . . . . . . .   7
+       3.1.3.  Policy Requirements . . . . . . . . . . . . . . . . .   6
      3.2.  policy_ref Claim  . . . . . . . . . . . . . . . . . . . .   7
        3.2.1.  Claim Definition  . . . . . . . . . . . . . . . . . .   7
-       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   8
+       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   7
      3.3.  Policy Context  . . . . . . . . . . . . . . . . . . . . .   8
    4.  Protocol Flow . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.1.  Step Details  . . . . . . . . . . . . . . . . . . . . . .  10
-   5.  Reverse-Guided Authorization  . . . . . . . . . . . . . . . .  10
+     4.1.  Step Details  . . . . . . . . . . . . . . . . . . . . . .  11
+   5.  Reverse-Guided Authorization  . . . . . . . . . . . . . . . .  11
      5.1.  Error Response Format . . . . . . . . . . . . . . . . . .  11
-     5.2.  Rego Profile Structure  . . . . . . . . . . . . . . . . .  11
-     5.3.  Agent Adaptive Behavior . . . . . . . . . . . . . . . . .  12
-     5.4.  Security Considerations . . . . . . . . . . . . . . . . .  12
-   6.  Authorization Server Processing . . . . . . . . . . . . . . .  13
-     6.1.  Policy Validation . . . . . . . . . . . . . . . . . . . .  13
-     6.2.  Policy Registration . . . . . . . . . . . . . . . . . . .  13
-     6.3.  Error Responses . . . . . . . . . . . . . . . . . . . . .  14
-   7.  Resource Server Enforcement . . . . . . . . . . . . . . . . .  14
-     7.1.  Policy Retrieval  . . . . . . . . . . . . . . . . . . . .  14
-     7.2.  Policy Engine Integration . . . . . . . . . . . . . . . .  14
-     7.3.  Enforcement Decision  . . . . . . . . . . . . . . . . . .  15
-   8.  Applicability to Different Authorization Flows  . . . . . . .  15
-     8.1.  Authorization Code Grant (without PAR)  . . . . . . . . .  16
-     8.2.  Client Credentials Grant  . . . . . . . . . . . . . . . .  17
-     8.3.  Token Exchange (RFC 8693) . . . . . . . . . . . . . . . .  17
-     8.4.  Security Considerations by Flow . . . . . . . . . . . . .  18
-   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  18
-     9.1.  Policy Injection  . . . . . . . . . . . . . . . . . . . .  18
+     5.2.  Rego Profile Structure  . . . . . . . . . . . . . . . . .  12
+     5.3.  Agent Adaptive Behavior . . . . . . . . . . . . . . . . .  13
+     5.4.  Security Considerations . . . . . . . . . . . . . . . . .  13
+   6.  Authorization Server Processing . . . . . . . . . . . . . . .  14
+     6.1.  Policy Validation . . . . . . . . . . . . . . . . . . . .  14
+     6.2.  Policy Registration . . . . . . . . . . . . . . . . . . .  14
+     6.3.  Error Responses . . . . . . . . . . . . . . . . . . . . .  15
+   7.  Resource Server Enforcement . . . . . . . . . . . . . . . . .  15
+     7.1.  Policy Retrieval  . . . . . . . . . . . . . . . . . . . .  15
+     7.2.  Policy Engine Integration . . . . . . . . . . . . . . . .  15
+     7.3.  Enforcement Decision  . . . . . . . . . . . . . . . . . .  16
+   8.  Applicability to Different Authorization Flows  . . . . . . .  17
+     8.1.  JWT Grant with Interaction Response . . . . . . . . . . .  17
+     8.2.  Client Credentials Grant  . . . . . . . . . . . . . . . .  18
+     8.3.  Token Exchange (RFC 8693) . . . . . . . . . . . . . . . .  18
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  19
+     9.1.  Policy Injection  . . . . . . . . . . . . . . . . . . . .  19
      9.2.  Policy Scope Escalation . . . . . . . . . . . . . . . . .  19
+     9.3.  Policy Integrity  . . . . . . . . . . . . . . . . . . . .  19
+     9.4.  Policy URI Fetching . . . . . . . . . . . . . . . . . . .  20
 
 
 
@@ -114,21 +114,20 @@ Liu, et al.             Expires 18 September 2026               [Page 2]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-     9.3.  Policy Integrity  . . . . . . . . . . . . . . . . . . . .  19
-     9.4.  Policy Size Limits  . . . . . . . . . . . . . . . . . . .  19
-   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  19
-     10.1.  RAR Authorization Data Type Registration . . . . . . . .  19
-     10.2.  JWT Claims Registration  . . . . . . . . . . . . . . . .  20
-     10.3.  OAuth Extensions Error Registration  . . . . . . . . . .  20
-   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  20
-     11.1.  Normative References . . . . . . . . . . . . . . . . . .  20
-     11.2.  Informative References . . . . . . . . . . . . . . . . .  21
-   Appendix A.  Example Policies . . . . . . . . . . . . . . . . . .  21
-     A.1.  Amount-Based Authorization  . . . . . . . . . . . . . . .  21
-     A.2.  Time-Window Authorization . . . . . . . . . . . . . . . .  22
-     A.3.  Role-Based Authorization  . . . . . . . . . . . . . . . .  22
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  23
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  23
+     9.5.  Policy Size Limits  . . . . . . . . . . . . . . . . . . .  20
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  20
+     10.1.  RAR Authorization Data Type Registration . . . . . . . .  20
+     10.2.  JWT Claims Registration  . . . . . . . . . . . . . . . .  21
+     10.3.  OAuth Extensions Error Registration  . . . . . . . . . .  21
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  21
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  21
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  22
+   Appendix A.  Example Policies . . . . . . . . . . . . . . . . . .  22
+     A.1.  Amount-Based Authorization  . . . . . . . . . . . . . . .  22
+     A.2.  Time-Window Authorization . . . . . . . . . . . . . . . .  23
+     A.3.  Role-Based Authorization  . . . . . . . . . . . . . . . .  23
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  24
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  24
 
 1.  Introduction
 
@@ -140,11 +139,11 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    conditions such as transaction amounts, time windows, or resource
    attributes.
 
-   This specification extends OAuth 2.0 to support the Rego policy
-   language, as used by Open Policy Agent (OPA).  Rego enables
-   expressive, declarative policies that can encode complex
-   authorization rules.  By integrating Rego into OAuth flows, this
-   specification enables:
+   This specification extends OAuth 2.0 [RFC6749] to support the Rego
+   policy language, as used by Open Policy Agent (OPA) [OPA].  Rego
+   [Rego] enables expressive, declarative policies that can encode
+   complex authorization rules.  By integrating Rego into OAuth flows,
+   this specification enables:
 
    *  Clients to propose fine-grained operation policies in
       authorization requests;
@@ -165,32 +164,13 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 
 
+
 Liu, et al.             Expires 18 September 2026               [Page 3]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-1.2.  Applicability
-
-   This specification is designed to work with Rich Authorization
-   Requests (RAR) [RFC9396] as the primary mechanism for carrying policy
-   proposals.  The rego_policy authorization data type MAY be used with
-   various OAuth 2.0 authorization flows, including but not limited to:
-
-   *  Authorization Code Grant (with or without PAR);
-
-   *  Client Credentials Grant;
-
-   *  Token Exchange [RFC8693];
-
-   *  Resource Owner Password Credentials Grant.
-
-   Different authorization flows may have different security
-   considerations when using policy proposals.  Implementations SHOULD
-   carefully evaluate the security implications discussed in Section 7
-   based on their specific deployment scenario.
-
-1.3.  RAR Integration
+1.2.  RAR Integration
 
    This specification defines the rego_policy authorization data type
    for use with Rich Authorization Requests (RAR) [RFC9396].  The policy
@@ -199,10 +179,9 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    Key aspects of the RAR integration:
 
-   *  *Authorization Data Type*: The rego_policy type is registered in
-      the RAR Authorization Data Types registry (Section 9.4 of RFC
-      9396).  It contains the policy content, entry point, and optional
-      context.
+   *  *Authorization Data Type*: The rego_policy type is defined for use
+      with the authorization_details parameter per RFC 9396.  It
+      contains the policy content, entry point, and optional context.
 
    *  *Token Response*: Per RFC 9396 Section 7.1, the access token
       includes enriched authorization_details as the primary mechanism
@@ -210,21 +189,14 @@ Internet-Draft            Rego Policy in OAuth                March 2026
       included as a lightweight alternative (see Section 3.2).
 
    *  *Complementary Use*: RAR enables structured authorization requests
-      with type-specific details, while Rego Policy enables expressive,
-      Turing-complete policy definitions.  Implementations MAY combine
+      with type-specific details, while Rego Policy enables expressive
+      declarative policy definitions.  Implementations MAY combine
       rego_policy with other RAR types.
 
    Implementations SHOULD ensure consistency between
    authorization_details requirements and Rego policy evaluations.  The
    Authorization Server MAY use RAR types to determine applicable policy
    templates or validation rules.
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 4]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
 
 2.  Terminology
 
@@ -243,8 +215,16 @@ Internet-Draft            Rego Policy in OAuth                March 2026
       policy proposal within the authorization_details parameter.
 
    Policy Reference:  An identifier for a policy that has been validated
-      and registered by the Authorization Server, included in access
-      tokens via the policy_ref claim.
+      and registered by the Authorization Server, included in JWT
+      [RFC7519] access tokens via the policy_ref claim defined in this
+      specification.
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 4]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
 
 3.  RAR Authorization Data Type
 
@@ -268,11 +248,31 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 3.1.2.  Structure
 
+{
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.user.tier == \"premium\"\n  input.action in {\"manage_portfolio\", \"view_reports\"}\n}",
+        "entry_point": "allow"
+      },
+      "actions": ["manage_portfolio", "view_reports"],
+      "locations": ["https://api.example.com/portfolios"]
+    }
+  ]
+}
 
+                               Figure 1
 
+   In addition to the common fields defined in RFC 9396 Section 2 (such
+   as actions, locations, datatypes, and identifier), the rego_policy
+   authorization data type defines the following type-specific fields:
 
+   policy:  REQUIRED.  An object containing the Rego policy definition.
 
-
+   context:  OPTIONAL.  An object providing additional structured data
+      for policy evaluation at authorization time.
 
 
 
@@ -282,61 +282,31 @@ Liu, et al.             Expires 18 September 2026               [Page 5]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-{
-  "authorization_details": [
-    {
-      "type": "rego_policy",
-      "policy": {
-        "type": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount <= 50.0\n}",
-        "entry_point": "allow"
-      },
-      "context": {
-        "user": {"id": "user_123", "tier": "premium"},
-        "environment": {"channel": "mobile-app"}
-      }
-    }
-  ]
-}
-
-                               Figure 1
-
-   The rego_policy authorization data type has the following fields:
-
-   type:  REQUIRED.  The authorization data type identifier.  MUST be
-      "rego_policy" for this specification.
-
-   policy:  REQUIRED.  An object containing the Rego policy definition.
-
-   context:  OPTIONAL.  An object providing structured input data for
-      policy evaluation.  This data is passed to the Rego policy engine
-      as the input object.
+   The common RAR fields provide a declarative summary of the requested
+   operations and resources.  The AS MAY use these fields for quick
+   scope filtering without parsing the Rego policy.  The AS SHOULD
+   verify that the policy does not exceed the scope declared in the
+   common fields.
 
    The policy object has the following fields:
 
    type:  REQUIRED.  The policy language type.  MUST be "rego" for this
       specification.  Future extensions MAY define additional types.
 
-   content:  REQUIRED (if uri not present).  The Rego policy as a
-      string.  The policy MUST be syntactically valid Rego.
+   content:  REQUIRED (if uri is not present).  The Rego policy as a
+      string.  The policy MUST be syntactically valid Rego.  If both
+      content and uri are present, content takes precedence and uri is
+      ignored.
 
    uri:  OPTIONAL.  A URI reference to an externally hosted policy.  If
-      provided, the AS MAY fetch the policy from this location.
+      provided, the AS MAY fetch the policy from this location.  The AS
+      MUST apply SSRF protections when fetching from this URI (see
+      Section 9).
 
    entry_point:  OPTIONAL.  The rule name that serves as the policy
       entry point.  Defaults to "allow".  For authorization decisions,
       this SHOULD be "allow".  Future extensions MAY define additional
       entry points for non-boolean evaluations.
-
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 6]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
 
 3.1.3.  Policy Requirements
 
@@ -353,9 +323,20 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    3.  Default Deny: The policy SHOULD include default allow = false to
        ensure deny-by-default behavior.
 
-   4.  Input Reference: The policy accesses context data via the input
-       object, which is populated from the context field of the
-       rego_policy authorization data type.
+   4.  Input Reference: The policy accesses data via the input object.
+       The structure and content of the input object are determined by
+       the evaluating party (AS or RS) and MAY include token claims, API
+       request parameters, resource attributes, and other contextual
+       data as agreed between the client and the resource server.
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 6]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
 
    package agent
 
@@ -376,8 +357,19 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    Authorization Requests (RAR), the enriched authorization_details
    array in the access token (per RFC 9396 Section 7.1) is the primary
    mechanism for carrying policy information.  The policy_ref claim MAY
-   be used as a lightweight alternative when the full
-   authorization_details structure is not needed.
+   be used as a lightweight alternative when:
+
+   *  The inline policy content would make the access token exceed
+      practical size limits (see Section 9);
+
+   *  The Resource Server already has a cached copy of the policy and
+      only needs an identifier to look it up;
+
+   *  The deployment uses opaque (non-JWT) access tokens where token
+      introspection provides the policy content.
+
+   When policy_ref is used, the AS performs policy registration as
+   described in Section 6.
 
 3.2.1.  Claim Definition
 
@@ -387,14 +379,20 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    Usage:  Access tokens
 
+3.2.2.  Structure
+
+
+
+
+
+
+
 
 
 Liu, et al.             Expires 18 September 2026               [Page 7]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
-
-3.2.2.  Structure
 
    {
      "policy_ref": {
@@ -424,23 +422,25 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 3.3.  Policy Context
 
-   The context field within rego_policy provides structured input data
-   for policy evaluation.  This data is passed to a Rego-compatible
-   policy engine as the input object.
+   The context field within rego_policy provides additional structured
+   data that the client wishes to include at authorization request time.
+   This data MAY be merged into the input object during policy
+   evaluation.
 
-   The context structure is flexible and can include any attributes
-   relevant to policy evaluation.  Common categories include:
+   The input object used for policy evaluation is constructed by the
+   evaluating party and is not limited to the context field.  Common
+   input categories include:
 
-   *  user: User identity and attributes;
+   *  user: User identity and attributes (from token claims or AS data);
 
-   *  agent: Agent identity, platform, instance, and client metadata;
+   *  client: Client/agent identity and metadata (from client
+      registration);
 
-   *  resource: Target resource attributes;
+   *  action: Requested action details (from the API request);
 
-   *  action: Requested action details;
+   *  resource: Target resource attributes (from the resource server);
 
-   *  environment: Contextual conditions (time, location, channel,
-      language, device fingerprint).
+   *  environment: Contextual conditions (time, location, device).
 
 
 
@@ -450,13 +450,65 @@ Liu, et al.             Expires 18 September 2026               [Page 8]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-   See Section 3.1 for an example of context within the
-   authorization_details structure.
+   The specific input structure is determined by bilateral agreement
+   between the client and the resource server, typically documented in
+   developer integration guides.
 
 4.  Protocol Flow
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 9]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
+
    +--------+       +--------+       +--------+       +--------+
    | Client |       |   AS   |       |   RS   |       |Policy  |
+   |        |       |        |       |        |       |Engine  |
    +--------+       +--------+       +--------+       +--------+
        |                |                |                |
        | (1) AuthZ Req  |                |                |
@@ -470,78 +522,78 @@ Internet-Draft            Rego Policy in OAuth                March 2026
        |                | (2) Validate   |                |
        |                | policy syntax  |                |
        |                |                |                |
-       |                | (3) Evaluate   |                |
-       |                | policy         |                |
+       |                | (3) Scope      |                |
+       |                | check          |                |
        |                |                |                |
        | (4) Enriched   |                |                |
        |    Access Token|                |                |
        |    with authz_ |                |                |
-       |    details /   |                |                |
-       |    policy_ref  |                |                |
+       |    details     |                |                |
        |<---------------|                |                |
        |                |                |                |
        | (5) API Request|                |                |
        | with token     |                |                |
        |-------------------------------->|                |
        |                |                |                |
-       |                |                | (6) Fetch      |
-       |                |                | policy via     |
-       |                |                | policy_ref     |
-       |                |                |--------------->|
+       |                |                | (6) Extract    |
+       |                |                | policy from    |
+       |                |                | authz_details  |
        |                |                |                |
        |                |                | (7) Evaluate   |
        |                |                | policy         |
+       |                |                |--------------->|
+       |                |                |                |
+       |                |                | (8) Result     |
        |                |                |<---------------|
        |                |                |                |
-       |                |                | (8) Enforce    |
+       |                |                | (9) Enforce    |
        |                |                | decision       |
        |                |                |                |
-       | (9) Response   |                |                |
+       | (10) Response  |                |                |
        |<--------------------------------|                |
 
+                                  Figure 4
 
 
-Liu, et al.             Expires 18 September 2026               [Page 9]
+
+
+Liu, et al.             Expires 18 September 2026              [Page 10]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-                                  Figure 4
-
 4.1.  Step Details
 
-   1.  Authorization Request: Client sends authorization request with
-       authorization_details containing an object of type rego_policy,
-       with policy and optional context fields.  This leverages RAR (RFC
-       9396) for structured authorization requests.
+   1.   Authorization Request: Client sends authorization request with
+        authorization_details containing an object of type rego_policy,
+        with policy and optional context fields.  This leverages RAR
+        (RFC 9396) for structured authorization requests.
 
-   2.  Syntax Validation: AS validates that the Rego policy is
-       syntactically correct and safe to execute.
+   2.   Syntax Validation: AS validates that the Rego policy is
+        syntactically correct and safe to evaluate.
 
-   3.  Policy Evaluation: AS evaluates the policy against the request
-       context to determine authorization scope.  This may involve
-       checking user consent requirements and policy constraints.
+   3.   Policy Scope Check: AS verifies the policy does not exceed the
+        client's registered permissions and checks user consent
+        requirements.  The AS does not perform full runtime policy
+        evaluation (which occurs at the RS).
 
-   4.  Token Response: AS issues access token.  The primary mechanism is
-       to include the enriched authorization_details array per RFC 9396
-       Section 7.1.  Alternatively, the AS MAY include a policy_ref
-       claim as a lightweight reference to the registered policy.  The
-       token response MAY include enriched authorization information in
-       additional JSON fields (e.g., policy containing the full policy
-       content) alongside the access token.
+   4.   Token Response: AS issues access token with enriched
+        authorization_details array per RFC 9396 Section 7.1, containing
+        the validated policy.
 
-   5.  API Request: Client presents token to Resource Server.
+   5.   API Request: Client presents token to Resource Server.
 
-   6.  Policy Fetch: RS retrieves the policy via policy_ref from AS (if
-       not cached).  The policy may have been returned directly in the
-       enriched token response.
+   6.   Policy Extraction: RS extracts the Rego policy from the enriched
+        authorization_details in the access token.
 
-   7.  Policy Evaluation: RS sends policy and request input to a Rego-
-       compatible policy engine for evaluation.
+   7.   Policy Evaluation: RS sends the policy and request input to a
+        Rego-compatible policy engine for evaluation.
 
-   8.  Enforcement: RS enforces the policy engine's allow/deny decision.
+   8.   Result: The policy engine returns an allow/deny decision.
 
-   9.  Response: RS returns result to client.
+   9.   Enforcement: RS enforces the policy engine's decision.
+
+   10.  Response: RS returns result to client.
 
 5.  Reverse-Guided Authorization
 
@@ -552,22 +604,19 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    guidance that enables agents to construct appropriate authorization
    requests.
 
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026              [Page 10]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
-
 5.1.  Error Response Format
 
    When an agent's request lacks sufficient authorization, the resource
    server returns an HTTP 403 Forbidden response with a JSON body
    containing a rego_profile object.  This object provides machine-
    readable guidance on the required authorization conditions.
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 11]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
 
    HTTP/1.1 403 Forbidden
    Content-Type: application/json
@@ -593,8 +642,7 @@ Internet-Draft            Rego Policy in OAuth                March 2026
        },
        "confirmation_required": true,
        "evidence_required": true,
-       "auth_server": "https://as.example.com",
-       "token_endpoint": "https://as.example.com/token"
+       "auth_server": "https://as.example.com"
      }
    }
 
@@ -604,39 +652,48 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    The rego_profile object contains the following fields:
 
-   profile_uri:  REQUIRED.  URI of the policy profile document that
-      defines the authorization requirements for this resource.
+   profile_uri:  REQUIRED.  URI identifying the authorization profile
+      for this resource.  This URI serves as an opaque identifier; the
+      document at this URI is intended for developer documentation and
+      is not machine-parsed by the agent.
 
    required_scope:  OPTIONAL.  Array of scope values that the access
       token MUST include.
-
-
-
-
-Liu, et al.             Expires 18 September 2026              [Page 11]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
 
    required_claims:  OPTIONAL.  Array of claim names that MUST be
       present in the token.
 
    constraints:  OPTIONAL.  Object defining policy constraints that MUST
-      be satisfied.  Each constraint specifies the data type,
-      description, and whether it is required.
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 12]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
+
+      be satisfied.  Each key is a constraint name; the value is an
+      object with the following descriptors: type (data type),
+      description (human-readable explanation), enum (allowed values),
+      and required (boolean, whether the constraint must be provided).
 
    confirmation_required:  OPTIONAL.  Boolean indicating whether user
       consent is required.  If true, the agent MUST obtain explicit user
-      approval.
+      approval.  When used with JWT Grant Interaction Response
+      [I-D.parecki-oauth-jwt-grant-interaction-response], this
+      corresponds to the interaction_required error code and interaction
+      flow.
 
    evidence_required:  OPTIONAL.  Boolean indicating whether
       authorization evidence recording is required.
 
    auth_server:  REQUIRED.  Identifier of the authorization server
-      capable of issuing tokens that satisfy these requirements.
-
-   token_endpoint:  REQUIRED.  URL of the token endpoint where the agent
-      can request appropriate authorization.
+      capable of issuing tokens that satisfy these requirements.  The
+      agent can discover the token endpoint and other metadata via OAuth
+      2.0 Authorization Server Metadata (RFC 8414) using this
+      identifier.
 
 5.3.  Agent Adaptive Behavior
 
@@ -649,12 +706,13 @@ Internet-Draft            Rego Policy in OAuth                March 2026
        proceeding.
 
    3.  Construct a new authorization request including required scopes,
-       policy proposal satisfying constraints, and appropriate policy
-       context.
+       policy proposal satisfying constraints, and any additional
+       parameters required by the resource server.
 
    4.  If confirmation_required is true, initiate user consent flow.
 
-   5.  Submit the authorization request to the specified token_endpoint.
+   5.  Discover the token endpoint via the auth_server's metadata (RFC
+       8414) and submit the authorization request.
 
    This adaptive approach enables agents to "learn" authorization
    requirements dynamically, reducing the need for pre-programmed
@@ -667,19 +725,17 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 
 
-
-
-Liu, et al.             Expires 18 September 2026              [Page 12]
+Liu, et al.             Expires 18 September 2026              [Page 13]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
    *  *Auth Server Verification*: Agents MUST verify that the
       auth_server specified in the rego_profile is trusted before
-      submitting authorization requests.  Agents MUST also verify that
-      the token_endpoint matches the token endpoint published in the
-      auth_server's Authorization Server Metadata ([RFC8414]).  Blindly
-      following redirects could lead to credential theft.
+      submitting authorization requests.  Agents MUST use only the token
+      endpoint discovered from the auth_server's Authorization Server
+      Metadata ([RFC8414]).  Blindly following redirects could lead to
+      credential theft.
 
    *  *Constraint Validation*: Agents SHOULD validate that constraint
       values are reasonable before including them in authorization
@@ -707,30 +763,38 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    2.  Entry Point Check: Verify the policy defines an allow rule.
 
    3.  Safety Check: Ensure the policy does not contain dangerous
-       operations (e.g., infinite loops, external HTTP calls in
-       restricted environments).
+       operations (e.g., external HTTP calls via http.send, excessive
+       resource consumption).
 
-   4.  Scope Check: Optionally verify the policy does not exceed the
-       client's registered permissions.
+   4.  Scope Check: Verify the policy does not exceed the client's
+       registered permissions.  The AS SHOULD use the common RAR fields
+       (actions, locations) for scope checking rather than analyzing the
+       Rego policy AST (see Section 3.1).
 
 6.2.  Policy Registration
 
-   After validation, the AS registers the policy:
+   When the AS issues a policy_ref claim instead of embedding the full
+   policy in authorization_details, the AS MUST register the policy:
 
    1.  Assign a unique policy identifier;
 
-   2.  Store the policy content (or reference);
-
-   3.  Associate the policy with the authorization session;
 
 
 
-Liu, et al.             Expires 18 September 2026              [Page 13]
+Liu, et al.             Expires 18 September 2026              [Page 14]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
+   2.  Store the policy content;
+
+   3.  Associate the policy with the authorization session;
+
    4.  Optionally, pre-compile the policy for faster evaluation.
+
+   When the AS embeds the validated policy directly in the enriched
+   authorization_details (the primary path), explicit registration is
+   not required — the policy travels with the token.
 
 6.3.  Error Responses
 
@@ -747,8 +811,14 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 7.1.  Policy Retrieval
 
-   When the RS receives an access token with a policy_ref claim, it
-   retrieves the policy using one of the following methods:
+   The RS obtains the Rego policy from the access token.  The primary
+   mechanism is to extract the policy from the enriched
+   authorization_details array included in the token per RFC 9396
+   Section 7.1.
+
+   When the token uses the policy_ref claim instead of inline policy
+   content, the RS retrieves the policy using one of the following
+   methods:
 
    *  Fetch from AS: Use the endpoint URL in the policy_ref to retrieve
       the policy.
@@ -760,31 +830,29 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 7.2.  Policy Engine Integration
 
-   The RS evaluates the policy using a Rego-compatible policy engine
-   (such as Open Policy Agent):
+   After extracting the Rego policy from the token, the RS MUST load the
+   policy into a Rego-compatible policy engine before querying it.
+   Common loading mechanisms include:
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026              [Page 14]
+Liu, et al.             Expires 18 September 2026              [Page 15]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
+
+   *  OPA REST API: PUT /v1/policies/{id} to register the policy, then
+      query the Data API;
+
+   *  OPA Go Library: Load the policy programmatically using the
+      embedded OPA SDK;
+
+   *  OPA Compile API: Submit the policy and input together for ad-hoc
+      evaluation.
+
+   Once loaded, the RS queries the policy engine with the request
+   context as input:
 
    POST /v1/data/agent/allow HTTP/1.1
    Host: opa.example.com
@@ -796,12 +864,11 @@ Internet-Draft            Rego Policy in OAuth                March 2026
          "id": "user_12345",
          "tier": "premium"
        },
-       "action": "add_to_cart",
+       "action": "manage_portfolio",
        "resource": {
-         "type": "cart",
-         "id": "cart_789"
-       },
-       "amount": 45.00
+         "type": "portfolio",
+         "id": "portfolio_001"
+       }
      }
    }
 
@@ -821,75 +888,8 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    *  If result is false: Deny with 403 Forbidden;
 
-   *  If evaluation fails: Deny with 500 Internal Server Error.
-
-8.  Applicability to Different Authorization Flows
-
-   The policy proposal mechanism defined in this specification is
-   designed to be flexible and applicable to various OAuth 2.0
-   authorization flows.  This section provides examples for common use
-   cases beyond PAR.
 
 
-
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026              [Page 15]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
-
-8.1.  Authorization Code Grant (without PAR)
-
-   When using traditional authorization code grant without PAR, the Rego
-   policy and context SHOULD be included in the authorization_details
-   parameter within a JWT using the "request" parameter as defined in
-   [RFC9101].  This mechanism, known as JWT-Secured Authorization
-   Request (JAR), is specifically designed for redirect-based flows and
-   provides integrity protection while maintaining consistency with the
-   PAR mechanism.
-
-GET /authorize?
-  response_type=code&
-  client_id=spiffe://agent.example/agent&
-  request=eyJhbGciOiJSUzI1NiIsImtpZCI6ImFnZW50LWtleSJ9.ewogICJyZXNwb25zZV90eXBlIjogImNvZGUiLAogICJjbGllbnRfaWQiOiAic3BpZmZlOi8vYWdlbnQuZXhhbXBsZS9hZ2VudCIsCiAgInBvbGljeV9wcm9wb3NhbCI6IHsidHlwZSI6ICJyZWdvIiwiY29udGVudCI6ICIuLi4iLCJlbnRyeV9wb2ludCI6ICJhbGxvdyJ9LAogICJwb2xpY3lfY29udGV4dCI6IHsuLi59LAogICJyZWRpcmVjdF91cmkiOiAiaHR0cHM6Ly9hZ2VudC5leGFtcGxlL2NhbGxiYWNrIiwKICAic3RhdGUiOiAieHl6MTIzIn0.signature&
-  state=xyz123 HTTP/1.1
-Host: as.example.com
-
-                               Figure 9
-
-   The JWT payload (decoded) contains:
-
-{
-  "response_type": "code",
-  "client_id": "spiffe://agent.example/agent",
-  "authorization_details": [
-    {
-      "type": "rego_policy",
-      "policy": {
-        "type": "rego",
-        "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \"read\"\\n}",
-        "entry_point": "allow"
-      },
-      "context": {
-        "user": {"id": "user_123"},
-        "agent": {"id": "spiffe://agent.example/agent"}
-      }
-    }
-  ],
-  "redirect_uri": "https://agent.example/callback",
-  "state": "xyz123"
-}
-
-                              Figure 10
-
-   Using the JWT request parameter provides the following benefits:
-
-   *  *Integrity Protection:* The JWT signature prevents tampering with
-      the policy proposal and context;
 
 
 
@@ -898,18 +898,77 @@ Liu, et al.             Expires 18 September 2026              [Page 16]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-   *  *Privacy:* Policy content is not exposed in URLs, server logs, or
-      browser history;
+   *  If result is undefined (OPA returns an empty object with no result
+      field): Deny with 403 Forbidden.  Note that policies following the
+      RECOMMENDED default allow = false pattern (see Section 3.1.3) will
+      always produce a defined boolean result, so undefined only occurs
+      when the default declaration is omitted;
 
-   *  *Consistency:* Same structure as PAR, just different transport
-      mechanism;
+   *  If the policy engine is unreachable or encounters an internal
+      error: Deny with 500 Internal Server Error.
 
-   *  *No Length Limits:* Avoids URL length restrictions that affect
-      query parameters.
+8.  Applicability to Different Authorization Flows
 
-   Implementations MUST validate the JWT signature before processing the
-   policy proposal.  The client's public key can be obtained through
-   pre-registration or dynamic client registration.
+   The rego_policy authorization data type defined in this specification
+   can be used with any OAuth 2.0 authorization flow that supports Rich
+   Authorization Requests (RAR) [RFC9396].  This section illustrates
+   usage with flows that are particularly relevant to AI agent
+   scenarios.
+
+8.1.  JWT Grant with Interaction Response
+
+   The JWT Authorization Grant Interaction Response
+   [I-D.parecki-oauth-jwt-grant-interaction-response] is the RECOMMENDED
+   flow for AI agent scenarios.  In this flow, an agent presents a JWT
+   assertion to the token endpoint.  If user interaction (e.g., consent)
+   is required before the token can be issued, the AS returns an
+   interaction_required error with an interaction_uri where the user can
+   complete the interaction.  The agent then polls for the token.
+
+   When combined with Rego Policy, the agent includes
+   authorization_details containing the rego_policy type in the JWT
+   grant request.  The AS validates the policy proposal, performs scope
+   checks, and determines whether user consent is needed before issuing
+   the token.
+
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9...
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C
+  %22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package%20agent%5Cn...
+  %22entry_point%22%3A%22allow%22%7D%2C
+  %22actions%22%3A%5B%22manage_portfolio%22%2C%22view_reports%22%5D%7D%5D
+
+             Figure 9: JWT Grant Request with Rego Policy
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 17]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
+
+   HTTP/1.1 400 Bad Request
+   Content-Type: application/json
+
+   {
+     "error": "interaction_required",
+     "interaction_uri": "https://as.example.com/interact/abc123",
+     "interval": 5,
+     "expires_in": 600
+   }
+
+                  Figure 10: Interaction Required Response
+
+   After the user completes the interaction, the agent retries the same
+   JWT grant request.  The AS then issues the access token with the
+   enriched authorization_details containing the validated Rego policy.
 
 8.2.  Client Credentials Grant
 
@@ -931,8 +990,25 @@ grant_type=client_credentials
 
 8.3.  Token Exchange (RFC 8693)
 
-   When exchanging tokens, a new policy proposal can be provided to
-   refine or restrict the authorized operations:
+   When exchanging tokens [RFC8693], a new policy proposal can be
+   provided to refine or restrict the authorized operations:
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 18]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
 
 POST /token HTTP/1.1
 Host: as.example.com
@@ -947,70 +1023,22 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
                               Figure 12
 
-
-
-Liu, et al.             Expires 18 September 2026              [Page 17]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
-
    The resulting access token will include the new, more restrictive
    policy constraints that MUST be a subset of the original token's
    permissions.
-
-8.4.  Security Considerations by Flow
-
-   Different authorization flows have different security characteristics
-   when using RAR with rego_policy:
-
-   PAR with RAR (Recommended):  authorization_details is transmitted in
-      the PAR request body with JWT signature protection.  Provides
-      integrity and confidentiality.  Highest security for policy
-      proposals.
-
-   Authorization Code with JAR:  When using JWT-Secured Authorization
-      Request (JAR, RFC 9101), authorization_details is protected by the
-      JWT signature ([RFC9101]).  Implementations MUST validate the JWT
-      before processing.
-
-   Client Credentials:  Direct AS communication with TLS; standard
-      client authentication usually sufficient. authorization_details is
-      in the request body.
-
-   Token Exchange:  Similar security to Client Credentials; ensure
-      policy binding to the exchanged token subject.
-
-   General security requirements for all flows:
-
-   *  *Integrity Protection:* authorization_details SHOULD be signed
-      when transmitted through untrusted channels (e.g., browser
-      redirects).  Use JAR or PAR for protection.
-
-   *  *Length Considerations:* Rego policies may be large.
-      Implementations SHOULD use PAR or JAR to avoid URL length
-      limitations.
-
-   *  *RAR Type Validation:* AS MUST validate that the type field is
-      "rego_policy" and reject unknown types.
 
 9.  Security Considerations
 
 9.1.  Policy Injection
 
-   Rego policies submitted by clients are executable code.  The AS MUST:
+   Rego policies submitted by clients are evaluable policy definitions.
+   Although Rego is declarative and guarantees termination, the AS MUST:
 
    *  Validate policy syntax before registration;
 
-   *  Execute policies in sandboxed environments;
+   *  Evaluate policies in sandboxed environments;
 
-
-
-Liu, et al.             Expires 18 September 2026              [Page 18]
-
-Internet-Draft            Rego Policy in OAuth                March 2026
-
-
-   *  Limit policy execution time and resource usage;
+   *  Limit policy evaluation time and resource usage;
 
    *  Restrict dangerous built-in functions (e.g., http.send).
 
@@ -1026,14 +1054,44 @@ Internet-Draft            Rego Policy in OAuth                March 2026
    securely by the AS.  Resource Servers MUST fetch policies only from
    trusted sources.
 
-9.4.  Policy Size Limits
+
+
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026              [Page 19]
+
+Internet-Draft            Rego Policy in OAuth                March 2026
+
+
+9.4.  Policy URI Fetching
+
+   When the policy.uri field is present, the AS fetches policy content
+   from a client-provided URI.  This introduces Server-Side Request
+   Forgery (SSRF) risks.  The AS MUST:
+
+   *  Reject URIs pointing to private/internal network addresses (e.g.,
+      10.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, ::1);
+
+   *  Enforce HTTPS for all policy URIs;
+
+   *  Set strict timeouts and size limits on fetched content;
+
+   *  Validate that the fetched content is syntactically valid Rego
+      before any evaluation.
+
+9.5.  Policy Size Limits
 
    Rego policies embedded inline within authorization_details can
    significantly increase token request and access token size.
    Implementations MUST enforce limits on:
 
-   *  Maximum policy source size (RECOMMENDED limit: 8 KB for inline
-      policies);
+   *  Maximum policy source size (RECOMMENDED limit: 4 KB for inline
+      policies).  Note that JWT access tokens are typically carried in
+      HTTP Authorization headers, where many proxies and load balancers
+      enforce an 8 KB total header size limit;
 
    *  Maximum policy complexity (e.g., nesting depth, number of rules);
 
@@ -1047,9 +1105,8 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 10.1.  RAR Authorization Data Type Registration
 
-   This specification registers the following authorization data type in
-   the "OAuth Authorization Data Types" registry established by RFC
-   9396:
+   This specification defines the following authorization data type for
+   use with the authorization_details parameter defined in RFC 9396:
 
    Type Name:  rego_policy
 
@@ -1057,14 +1114,15 @@ Internet-Draft            Rego Policy in OAuth                March 2026
       including policy content, entry point, and optional evaluation
       context.
 
-   Change Controller:  IETF
 
 
 
-Liu, et al.             Expires 18 September 2026              [Page 19]
+Liu, et al.             Expires 18 September 2026              [Page 20]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
+
+   Change Controller:  IETF
 
    Specification Document:  Section 3 of this document
 
@@ -1111,16 +1169,18 @@ Internet-Draft            Rego Policy in OAuth                March 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
 
-   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
-              RFC 6749, DOI 10.17487/RFC6749, October 2012,
-              <https://www.rfc-editor.org/info/rfc6749>.
 
 
 
-Liu, et al.             Expires 18 September 2026              [Page 20]
+
+Liu, et al.             Expires 18 September 2026              [Page 21]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/info/rfc6749>.
 
    [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
               (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
@@ -1138,20 +1198,17 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
 11.2.  Informative References
 
-   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
-              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
-              RFC 9126, DOI 10.17487/RFC9126, September 2021,
-              <https://www.rfc-editor.org/info/rfc9126>.
-
-   [RFC9101]  Sakimura, N., Bradley, J., and M. Jones, "The OAuth 2.0
-              Authorization Framework: JWT-Secured Authorization Request
-              (JAR)", RFC 9101, DOI 10.17487/RFC9101, August 2021,
-              <https://www.rfc-editor.org/info/rfc9101>.
-
    [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
               and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/info/rfc8693>.
+
+   [I-D.parecki-oauth-jwt-grant-interaction-response]
+              Parecki, A., Campbell, B., and D. Liu, "JWT Authorization
+              Grant Interaction Response", Work in Progress, Internet-
+              Draft, draft-parecki-oauth-jwt-grant-interaction-response-
+              00, 24 March 2026, <https://datatracker.ietf.org/doc/html/
+              draft-parecki-oauth-jwt-grant-interaction-response-00>.
 
    [OPA]      Cloud Native Computing Foundation, "Open Policy Agent",
               2024, <https://www.openpolicyagent.org/>.
@@ -1172,8 +1229,7 @@ A.1.  Amount-Based Authorization
 
 
 
-
-Liu, et al.             Expires 18 September 2026              [Page 21]
+Liu, et al.             Expires 18 September 2026              [Page 22]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
@@ -1229,7 +1285,7 @@ A.3.  Role-Based Authorization
 
 
 
-Liu, et al.             Expires 18 September 2026              [Page 22]
+Liu, et al.             Expires 18 September 2026              [Page 23]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
@@ -1285,4 +1341,4 @@ Authors' Addresses
 
 
 
-Liu, et al.             Expires 18 September 2026              [Page 23]
+Liu, et al.             Expires 18 September 2026              [Page 24]

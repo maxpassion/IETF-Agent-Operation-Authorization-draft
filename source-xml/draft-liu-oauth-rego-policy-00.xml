@@ -88,8 +88,8 @@
       </t>
 
       <t>
-        This specification extends OAuth 2.0 to support the Rego policy language, 
-        as used by Open Policy Agent (OPA). Rego enables expressive, declarative 
+        This specification extends OAuth 2.0 <xref target="RFC6749"/> to support the Rego policy language, 
+        as used by Open Policy Agent (OPA) <xref target="OPA"/>. Rego <xref target="Rego"/> enables expressive, declarative 
         policies that can encode complex authorization rules. By integrating Rego 
         into OAuth flows, this specification enables:
       </t>
@@ -109,41 +109,6 @@
         </t>
       </section>
 
-      <section title="Applicability">
-        <t>
-          This specification is designed to work with Rich Authorization 
-          Requests (RAR) <xref target="RFC9396"/> as the primary mechanism 
-          for carrying policy proposals. The rego_policy authorization 
-          data type MAY be used with various OAuth 2.0 authorization flows, 
-          including but not limited to:
-        </t>
-
-        <ul>
-          <li>
-            Authorization Code Grant (with or without PAR);
-          </li>
-          
-          <li>
-            Client Credentials Grant;
-          </li>
-          
-          <li>
-            Token Exchange <xref target="RFC8693"/>;
-          </li>
-          
-          <li>
-            Resource Owner Password Credentials Grant.
-          </li>
-        </ul>
-
-        <t>
-          Different authorization flows may have different security 
-          considerations when using policy proposals. Implementations 
-          SHOULD carefully evaluate the security implications discussed 
-          in Section 7 based on their specific deployment scenario.
-        </t>
-      </section>
-
       <section title="RAR Integration">
         <t>
           This specification defines the <tt>rego_policy</tt> 
@@ -159,8 +124,8 @@
         <ul>
           <li>
             <strong>Authorization Data Type</strong>: The 
-            <tt>rego_policy</tt> type is registered in the RAR 
-            Authorization Data Types registry (Section 9.4 of RFC 9396). 
+            <tt>rego_policy</tt> type is defined for use with the 
+            <tt>authorization_details</tt> parameter per RFC 9396. 
             It contains the policy content, entry point, and optional context.
           </li>
           <li>
@@ -174,7 +139,7 @@
           <li>
             <strong>Complementary Use</strong>: RAR enables structured 
             authorization requests with type-specific details, while Rego Policy 
-            enables expressive, Turing-complete policy definitions. Implementations 
+            enables expressive declarative policy definitions. Implementations 
             MAY combine rego_policy with other RAR types.
           </li>
         </ul>
@@ -218,8 +183,8 @@
         <dt>Policy Reference:</dt>
         <dd>
           An identifier for a policy that has been validated and registered by the 
-          Authorization Server, included in access tokens via the <tt>policy_ref</tt> 
-          claim.
+          Authorization Server, included in JWT <xref target="RFC7519"/> access 
+          tokens via the <tt>policy_ref</tt> claim defined in this specification.
         </dd>
       </dl>
     </section>
@@ -260,13 +225,11 @@
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.action == \"add_to_cart\"\n  input.amount <= 50.0\n}",
+        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.user.tier == \"premium\"\n  input.action in {\"manage_portfolio\", \"view_reports\"}\n}",
         "entry_point": "allow"
       },
-      "context": {
-        "user": {"id": "user_123", "tier": "premium"},
-        "environment": {"channel": "mobile-app"}
-      }
+      "actions": ["manage_portfolio", "view_reports"],
+      "locations": ["https://api.example.com/portfolios"]
     }
   ]
 }
@@ -274,17 +237,14 @@
           </figure>
 
           <t>
-            The <tt>rego_policy</tt> authorization data type has the 
-            following fields:
+            In addition to the common fields defined in RFC 9396 
+            Section 2 (such as <tt>actions</tt>, <tt>locations</tt>, 
+            <tt>datatypes</tt>, and <tt>identifier</tt>), the 
+            <tt>rego_policy</tt> authorization data type defines the 
+            following type-specific fields:
           </t>
 
           <dl>
-            <dt>type:</dt>
-            <dd>
-              REQUIRED. The authorization data type identifier. MUST be 
-              "rego_policy" for this specification.
-            </dd>
-
             <dt>policy:</dt>
             <dd>
               REQUIRED. An object containing the Rego policy definition.
@@ -292,10 +252,18 @@
 
             <dt>context:</dt>
             <dd>
-              OPTIONAL. An object providing structured input data for policy 
-              evaluation. This data is passed to the Rego policy engine as the <tt>input</tt> object.
+              OPTIONAL. An object providing additional structured data 
+              for policy evaluation at authorization time.
             </dd>
           </dl>
+
+          <t>
+            The common RAR fields provide a declarative summary of the 
+            requested operations and resources. The AS MAY use these 
+            fields for quick scope filtering without parsing the Rego 
+            policy. The AS SHOULD verify that the policy does not 
+            exceed the scope declared in the common fields.
+          </t>
 
           <t>
             The <tt>policy</tt> object has the following fields:
@@ -310,14 +278,18 @@
 
             <dt>content:</dt>
             <dd>
-              REQUIRED (if uri not present). The Rego policy as a string. 
-              The policy MUST be syntactically valid Rego.
+              REQUIRED (if <tt>uri</tt> is not present). The Rego policy 
+              as a string. The policy MUST be syntactically valid Rego. 
+              If both <tt>content</tt> and <tt>uri</tt> are present, 
+              <tt>content</tt> takes precedence and <tt>uri</tt> is ignored.
             </dd>
 
             <dt>uri:</dt>
             <dd>
               OPTIONAL. A URI reference to an externally hosted policy. 
               If provided, the AS MAY fetch the policy from this location.
+              The AS MUST apply SSRF protections when fetching from this 
+              URI (see <xref target="security"/>).
             </dd>
 
             <dt>entry_point:</dt>
@@ -351,9 +323,13 @@
               <tt>default allow = false</tt> to ensure deny-by-default behavior.
             </li>
             <li>
-              Input Reference: The policy accesses context data via 
-              the <tt>input</tt> object, which is populated from the <tt>context</tt> 
-              field of the <tt>rego_policy</tt> authorization data type.
+              Input Reference: The policy accesses data via the 
+              <tt>input</tt> object. The structure and content of the 
+              <tt>input</tt> object are determined by the evaluating 
+              party (AS or RS) and MAY include token claims, API 
+              request parameters, resource attributes, and other 
+              contextual data as agreed between the client and the 
+              resource server.
             </li>
           </ol>
 
@@ -380,8 +356,21 @@ allow {
           Requests (RAR), the enriched <tt>authorization_details</tt> array in the 
           access token (per RFC 9396 Section 7.1) is the primary mechanism for 
           carrying policy information. The <tt>policy_ref</tt> claim MAY be used 
-          as a lightweight alternative when the full <tt>authorization_details</tt> 
-          structure is not needed.
+          as a lightweight alternative when:
+        </t>
+
+        <ul>
+          <li>The inline policy content would make the access token exceed 
+            practical size limits (see <xref target="security"/>);</li>
+          <li>The Resource Server already has a cached copy of the policy 
+            and only needs an identifier to look it up;</li>
+          <li>The deployment uses opaque (non-JWT) access tokens where 
+            token introspection provides the policy content.</li>
+        </ul>
+
+        <t>
+          When <tt>policy_ref</tt> is used, the AS performs policy 
+          registration as described in <xref target="as-processing"/>.
         </t>
 
         <section title="Claim Definition">
@@ -444,26 +433,29 @@ allow {
       <section anchor="policy-context" title="Policy Context">
         <t>
           The <tt>context</tt> field within <tt>rego_policy</tt> provides 
-          structured input data for policy evaluation. This data is passed to a Rego-compatible policy engine
-          as the <tt>input</tt> object.
+          additional structured data that the client wishes to include 
+          at authorization request time. This data MAY be merged into 
+          the <tt>input</tt> object during policy evaluation.
         </t>
 
         <t>
-          The context structure is flexible and can include any attributes relevant 
-          to policy evaluation. Common categories include:
+          The <tt>input</tt> object used for policy evaluation is 
+          constructed by the evaluating party and is not limited to 
+          the <tt>context</tt> field. Common input categories include:
         </t>
 
         <ul>
-          <li>user: User identity and attributes;</li>
-          <li>agent: Agent identity, platform, instance, and client metadata;</li>
-          <li>resource: Target resource attributes;</li>
-          <li>action: Requested action details;</li>
-          <li>environment: Contextual conditions (time, location, channel, language, device fingerprint).</li>
+          <li>user: User identity and attributes (from token claims or AS data);</li>
+          <li>client: Client/agent identity and metadata (from client registration);</li>
+          <li>action: Requested action details (from the API request);</li>
+          <li>resource: Target resource attributes (from the resource server);</li>
+          <li>environment: Contextual conditions (time, location, device).</li>
         </ul>
 
         <t>
-          See Section 3.1 for an example of context within the authorization_details 
-          structure.
+          The specific <tt>input</tt> structure is determined by 
+          bilateral agreement between the client and the resource 
+          server, typically documented in developer integration guides.
         </t>
       </section>
     </section>
@@ -473,6 +465,7 @@ allow {
         <artwork name="Rego Policy Flow" type="ascii-art"><![CDATA[
 +--------+       +--------+       +--------+       +--------+
 | Client |       |   AS   |       |   RS   |       |Policy  |
+|        |       |        |       |        |       |Engine  |
 +--------+       +--------+       +--------+       +--------+
     |                |                |                |
     | (1) AuthZ Req  |                |                |
@@ -486,33 +479,34 @@ allow {
     |                | (2) Validate   |                |
     |                | policy syntax  |                |
     |                |                |                |
-    |                | (3) Evaluate   |                |
-    |                | policy         |                |
+    |                | (3) Scope      |                |
+    |                | check          |                |
     |                |                |                |
     | (4) Enriched   |                |                |
     |    Access Token|                |                |
     |    with authz_ |                |                |
-    |    details /   |                |                |
-    |    policy_ref  |                |                |
+    |    details     |                |                |
     |<---------------|                |                |
     |                |                |                |
     | (5) API Request|                |                |
     | with token     |                |                |
     |-------------------------------->|                |
     |                |                |                |
-    |                |                | (6) Fetch      |
-    |                |                | policy via     |
-    |                |                | policy_ref     |
-    |                |                |--------------->|
+    |                |                | (6) Extract    |
+    |                |                | policy from    |
+    |                |                | authz_details  |
     |                |                |                |
     |                |                | (7) Evaluate   |
     |                |                | policy         |
+    |                |                |--------------->|
+    |                |                |                |
+    |                |                | (8) Result     |
     |                |                |<---------------|
     |                |                |                |
-    |                |                | (8) Enforce    |
+    |                |                | (9) Enforce    |
     |                |                | decision       |
     |                |                |                |
-    | (9) Response   |                |                |
+    | (10) Response  |                |                |
     |<--------------------------------|                |
         ]]></artwork>
       </figure>
@@ -528,36 +522,36 @@ allow {
           </li>
           <li>
             Syntax Validation: AS validates that the Rego policy 
-            is syntactically correct and safe to execute.
+            is syntactically correct and safe to evaluate.
           </li>
           <li>
-            Policy Evaluation: AS evaluates the policy against the request context
-            to determine authorization scope. This may involve checking user consent
-            requirements and policy constraints.
+            Policy Scope Check: AS verifies the policy does not 
+            exceed the client's registered permissions and checks 
+            user consent requirements. The AS does not perform 
+            full runtime policy evaluation (which occurs at the RS).
           </li>
           <li>
-            Token Response: AS issues access token. The primary mechanism 
-            is to include the enriched <tt>authorization_details</tt> array 
-            per RFC 9396 Section 7.1. Alternatively, the AS MAY include a 
-            <tt>policy_ref</tt> claim as a lightweight reference to the 
-            registered policy. The 
-            token response MAY include enriched authorization information in 
-            additional JSON fields (e.g., <tt>policy</tt> containing the full 
-            policy content) alongside the access token.
+            Token Response: AS issues access token with enriched 
+            <tt>authorization_details</tt> array per RFC 9396 
+            Section 7.1, containing the validated policy.
           </li>
           <li>
             API Request: Client presents token to Resource Server.
           </li>
           <li>
-            Policy Fetch: RS retrieves the policy via <tt>policy_ref</tt> from AS
-            (if not cached). The policy may have been returned directly in the
-            enriched token response.
+            Policy Extraction: RS extracts the Rego policy from 
+            the enriched <tt>authorization_details</tt> in the 
+            access token.
           </li>
           <li>
-            Policy Evaluation: RS sends policy and request input to a Rego-compatible policy engine for evaluation.
+            Policy Evaluation: RS sends the policy and request 
+            input to a Rego-compatible policy engine for evaluation.
           </li>
           <li>
-            Enforcement: RS enforces the policy engine's allow/deny decision.
+            Result: The policy engine returns an allow/deny decision.
+          </li>
+          <li>
+            Enforcement: RS enforces the policy engine's decision.
           </li>
           <li>
             Response: RS returns result to client.
@@ -610,8 +604,7 @@ Content-Type: application/json
     },
     "confirmation_required": true,
     "evidence_required": true,
-    "auth_server": "https://as.example.com",
-    "token_endpoint": "https://as.example.com/token"
+    "auth_server": "https://as.example.com"
   }
 }
           ]]></artwork>
@@ -626,8 +619,10 @@ Content-Type: application/json
         <dl>
           <dt>profile_uri:</dt>
           <dd>
-            REQUIRED. URI of the policy profile document that defines the 
-            authorization requirements for this resource.
+            REQUIRED. URI identifying the authorization profile for this 
+            resource. This URI serves as an opaque identifier; the 
+            document at this URI is intended for developer documentation 
+            and is not machine-parsed by the agent.
           </dd>
 
           <dt>required_scope:</dt>
@@ -643,14 +638,21 @@ Content-Type: application/json
           <dt>constraints:</dt>
           <dd>
             OPTIONAL. Object defining policy constraints that MUST be satisfied. 
-            Each constraint specifies the data type, description, and whether it 
-            is required.
+            Each key is a constraint name; the value is an object with the 
+            following descriptors: <tt>type</tt> (data type), 
+            <tt>description</tt> (human-readable explanation), 
+            <tt>enum</tt> (allowed values), and <tt>required</tt> 
+            (boolean, whether the constraint must be provided).
           </dd>
 
           <dt>confirmation_required:</dt>
           <dd>
             OPTIONAL. Boolean indicating whether user consent is required. 
-            If true, the agent MUST obtain explicit user approval.
+            If true, the agent MUST obtain explicit user approval. When 
+            used with JWT Grant Interaction Response 
+            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>, 
+            this corresponds to the <tt>interaction_required</tt> error code 
+            and interaction flow.
           </dd>
 
           <dt>evidence_required:</dt>
@@ -662,13 +664,10 @@ Content-Type: application/json
           <dt>auth_server:</dt>
           <dd>
             REQUIRED. Identifier of the authorization server capable of 
-            issuing tokens that satisfy these requirements.
-          </dd>
-
-          <dt>token_endpoint:</dt>
-          <dd>
-            REQUIRED. URL of the token endpoint where the agent can request 
-            appropriate authorization.
+            issuing tokens that satisfy these requirements. The agent 
+            can discover the token endpoint and other metadata via 
+            OAuth 2.0 Authorization Server Metadata (RFC 8414) using 
+            this identifier.
           </dd>
         </dl>
       </section>
@@ -689,14 +688,16 @@ Content-Type: application/json
           </li>
           <li>
             Construct a new authorization request including required scopes, 
-            policy proposal satisfying constraints, and appropriate policy context.
+            policy proposal satisfying constraints, and any additional 
+            parameters required by the resource server.
           </li>
           <li>
             If <tt>confirmation_required</tt> is true, initiate user consent flow.
           </li>
           <li>
-            Submit the authorization request to the specified 
-            <tt>token_endpoint</tt>.
+            Discover the token endpoint via the 
+            <tt>auth_server</tt>'s metadata (RFC 8414) and 
+            submit the authorization request.
           </li>
         </ol>
 
@@ -717,9 +718,9 @@ Content-Type: application/json
           <li>
             <strong>Auth Server Verification</strong>: Agents MUST verify that 
             the <tt>auth_server</tt> specified in the rego_profile is trusted 
-            before submitting authorization requests. Agents MUST also verify 
-            that the <tt>token_endpoint</tt> matches the token endpoint published 
-            in the <tt>auth_server</tt>'s Authorization Server Metadata 
+            before submitting authorization requests. Agents MUST 
+            use only the token endpoint discovered from the 
+            <tt>auth_server</tt>'s Authorization Server Metadata 
             (<xref target="RFC8414"/>). Blindly following 
             redirects could lead to credential theft.
           </li>
@@ -762,27 +763,39 @@ Content-Type: application/json
           </li>
           <li>
             Safety Check: Ensure the policy does not contain 
-            dangerous operations (e.g., infinite loops, external HTTP calls in 
-            restricted environments).
+            dangerous operations (e.g., external HTTP calls via 
+            <tt>http.send</tt>, excessive resource consumption).
           </li>
           <li>
-            Scope Check: Optionally verify the policy does not 
-            exceed the client's registered permissions.
+            Scope Check: Verify the policy does not exceed the 
+            client's registered permissions. The AS SHOULD use the 
+            common RAR fields (<tt>actions</tt>, <tt>locations</tt>) 
+            for scope checking rather than analyzing the Rego policy 
+            AST (see <xref target="rego-policy"/>).
           </li>
         </ol>
       </section>
 
       <section title="Policy Registration">
         <t>
-          After validation, the AS registers the policy:
+          When the AS issues a <tt>policy_ref</tt> claim instead of 
+          embedding the full policy in <tt>authorization_details</tt>, 
+          the AS MUST register the policy:
         </t>
 
         <ol>
           <li>Assign a unique policy identifier;</li>
-          <li>Store the policy content (or reference);</li>
+          <li>Store the policy content;</li>
           <li>Associate the policy with the authorization session;</li>
           <li>Optionally, pre-compile the policy for faster evaluation.</li>
         </ol>
+
+        <t>
+          When the AS embeds the validated policy directly in the 
+          enriched <tt>authorization_details</tt> (the primary path), 
+          explicit registration is not required — the policy travels 
+          with the token.
+        </t>
       </section>
 
       <section title="Error Responses">
@@ -804,8 +817,16 @@ Content-Type: application/json
     <section anchor="rs-enforcement" title="Resource Server Enforcement">
       <section title="Policy Retrieval">
         <t>
-          When the RS receives an access token with a <tt>policy_ref</tt> claim, 
-          it retrieves the policy using one of the following methods:
+          The RS obtains the Rego policy from the access token. The 
+          primary mechanism is to extract the policy from the enriched 
+          <tt>authorization_details</tt> array included in the token 
+          per RFC 9396 Section 7.1.
+        </t>
+
+        <t>
+          When the token uses the <tt>policy_ref</tt> claim instead 
+          of inline policy content, the RS retrieves the policy using 
+          one of the following methods:
         </t>
 
         <ul>
@@ -826,8 +847,23 @@ Content-Type: application/json
 
       <section title="Policy Engine Integration">
         <t>
-          The RS evaluates the policy using a Rego-compatible policy engine
-          (such as Open Policy Agent):
+          After extracting the Rego policy from the token, the RS MUST 
+          load the policy into a Rego-compatible policy engine before 
+          querying it. Common loading mechanisms include:
+        </t>
+
+        <ul>
+          <li>OPA REST API: <tt>PUT /v1/policies/{id}</tt> to register 
+            the policy, then query the Data API;</li>
+          <li>OPA Go Library: Load the policy programmatically using 
+            the embedded OPA SDK;</li>
+          <li>OPA Compile API: Submit the policy and input together 
+            for ad-hoc evaluation.</li>
+        </ul>
+
+        <t>
+          Once loaded, the RS queries the policy engine with the 
+          request context as input:
         </t>
 
         <figure>
@@ -842,12 +878,11 @@ Content-Type: application/json
       "id": "user_12345",
       "tier": "premium"
     },
-    "action": "add_to_cart",
+    "action": "manage_portfolio",
     "resource": {
-      "type": "cart",
-      "id": "cart_789"
-    },
-    "amount": 45.00
+      "type": "portfolio",
+      "id": "portfolio_001"
+    }
   }
 }
           ]]></artwork>
@@ -869,104 +904,88 @@ Content-Type: application/json
 
         <ul>
           <li>If <tt>result</tt> is <tt>true</tt>: Allow the operation;</li>
-          <li>If <tt>result</tt> is <tt>false</tt>: Deny with 403 Forbidden;</li>
-          <li>If evaluation fails: Deny with 500 Internal Server Error.</li>
+          <li>If <tt>result</tt> is <tt>false</tt>: Deny with 
+            403 Forbidden;</li>
+          <li>If <tt>result</tt> is undefined (OPA returns an empty 
+            object with no <tt>result</tt> field): Deny with 
+            403 Forbidden. Note that policies following the 
+            RECOMMENDED <tt>default allow = false</tt> pattern 
+            (see Section 3.1.3) will always produce a defined 
+            boolean result, so undefined only occurs when the 
+            default declaration is omitted;</li>
+          <li>If the policy engine is unreachable or encounters an internal 
+            error: Deny with 500 Internal Server Error.</li>
         </ul>
       </section>
     </section>
 
     <section anchor="multi-scenario" title="Applicability to Different Authorization Flows">
       <t>
-        The policy proposal mechanism defined in this specification 
-        is designed to be flexible and applicable to various OAuth 2.0 
-        authorization flows. This section provides examples for common 
-        use cases beyond PAR.
+        The <tt>rego_policy</tt> authorization data type defined in this 
+        specification can be used with any OAuth 2.0 authorization flow 
+        that supports Rich Authorization Requests (RAR) 
+        <xref target="RFC9396"/>. This section illustrates usage with 
+        flows that are particularly relevant to AI agent scenarios.
       </t>
 
-      <section title="Authorization Code Grant (without PAR)">
+      <section title="JWT Grant with Interaction Response">
         <t>
-          When using traditional authorization code grant without PAR,
-          the Rego policy and context SHOULD be included in 
-          the <tt>authorization_details</tt> parameter within 
-          a JWT using the "request" parameter as defined in 
-          <xref target="RFC9101"/>. This mechanism, known as JWT-Secured Authorization 
-          Request (JAR), is specifically designed for redirect-based 
-          flows and provides integrity protection while maintaining 
-          consistency with the PAR mechanism.
+          The JWT Authorization Grant Interaction Response 
+          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> 
+          is the RECOMMENDED flow for AI agent scenarios. In this flow, 
+          an agent presents a JWT assertion to the token endpoint. If 
+          user interaction (e.g., consent) is required before the token 
+          can be issued, the AS returns an <tt>interaction_required</tt> 
+          error with an <tt>interaction_uri</tt> where the user can 
+          complete the interaction. The agent then polls for the token.
+        </t>
+
+        <t>
+          When combined with Rego Policy, the agent includes 
+          <tt>authorization_details</tt> containing the 
+          <tt>rego_policy</tt> type in the JWT grant request. The AS 
+          validates the policy proposal, performs scope checks, and 
+          determines whether user consent is needed before issuing 
+          the token.
         </t>
 
         <figure>
-          <artwork name="Auth Code with JWT Request" type="http"><![CDATA[
-GET /authorize?
-  response_type=code&
-  client_id=spiffe://agent.example/agent&
-  request=eyJhbGciOiJSUzI1NiIsImtpZCI6ImFnZW50LWtleSJ9.ewogICJyZXNwb25zZV90eXBlIjogImNvZGUiLAogICJjbGllbnRfaWQiOiAic3BpZmZlOi8vYWdlbnQuZXhhbXBsZS9hZ2VudCIsCiAgInBvbGljeV9wcm9wb3NhbCI6IHsidHlwZSI6ICJyZWdvIiwiY29udGVudCI6ICIuLi4iLCJlbnRyeV9wb2ludCI6ICJhbGxvdyJ9LAogICJwb2xpY3lfY29udGV4dCI6IHsuLi59LAogICJyZWRpcmVjdF91cmkiOiAiaHR0cHM6Ly9hZ2VudC5leGFtcGxlL2NhbGxiYWNrIiwKICAic3RhdGUiOiAieHl6MTIzIn0.signature&
-  state=xyz123 HTTP/1.1
+          <name>JWT Grant Request with Rego Policy</name>
+          <artwork type="http"><![CDATA[
+POST /token HTTP/1.1
 Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9...
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C
+  %22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package%20agent%5Cn...
+  %22entry_point%22%3A%22allow%22%7D%2C
+  %22actions%22%3A%5B%22manage_portfolio%22%2C%22view_reports%22%5D%7D%5D
           ]]></artwork>
         </figure>
 
-        <t>
-          The JWT payload (decoded) contains:
-        </t>
-
         <figure>
-          <artwork name="JWT Request Payload" type="json"><![CDATA[
+          <name>Interaction Required Response</name>
+          <artwork type="json"><![CDATA[
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
 {
-  "response_type": "code",
-  "client_id": "spiffe://agent.example/agent",
-  "authorization_details": [
-    {
-      "type": "rego_policy",
-      "policy": {
-        "type": "rego",
-        "content": "package agent\\ndefault allow = false\\n\\nallow {\\n  input.action == \"read\"\\n}",
-        "entry_point": "allow"
-      },
-      "context": {
-        "user": {"id": "user_123"},
-        "agent": {"id": "spiffe://agent.example/agent"}
-      }
-    }
-  ],
-  "redirect_uri": "https://agent.example/callback",
-  "state": "xyz123"
+  "error": "interaction_required",
+  "interaction_uri": "https://as.example.com/interact/abc123",
+  "interval": 5,
+  "expires_in": 600
 }
           ]]></artwork>
         </figure>
 
         <t>
-          Using the JWT request parameter provides the following 
-          benefits:
-        </t>
-
-        <ul>
-          <li>
-            <strong>Integrity Protection:</strong> The JWT signature 
-            prevents tampering with the policy proposal and context;
-          </li>
-          
-          <li>
-            <strong>Privacy:</strong> Policy content is not exposed in 
-            URLs, server logs, or browser history;
-          </li>
-          
-          <li>
-            <strong>Consistency:</strong> Same structure as PAR, just 
-            different transport mechanism;
-          </li>
-          
-          <li>
-            <strong>No Length Limits:</strong> Avoids URL length 
-            restrictions that affect query parameters.
-          </li>
-        </ul>
-
-        <t>
-          Implementations MUST validate the JWT signature before 
-          processing the policy proposal. The client's public key can 
-          be obtained through pre-registration or dynamic client 
-          registration.
+          After the user completes the interaction, the agent retries 
+          the same JWT grant request. The AS then issues the access 
+          token with the enriched <tt>authorization_details</tt> 
+          containing the validated Rego policy.
         </t>
       </section>
 
@@ -994,7 +1013,7 @@ grant_type=client_credentials
 
       <section title="Token Exchange (RFC 8693)">
         <t>
-          When exchanging tokens, a new policy proposal can be 
+          When exchanging tokens <xref target="RFC8693"/>, a new policy proposal can be 
           provided to refine or restrict the authorized operations:
         </t>
 
@@ -1020,74 +1039,21 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
       </section>
 
-      <section title="Security Considerations by Flow">
-        <t>
-          Different authorization flows have different security 
-          characteristics when using RAR with rego_policy:
-        </t>
 
-        <dl>
-          <dt>PAR with RAR (Recommended):</dt>
-          <dd>
-            authorization_details is transmitted in the PAR request body 
-            with JWT signature protection. Provides integrity and confidentiality.
-            Highest security for policy proposals.
-          </dd>
-
-          <dt>Authorization Code with JAR:</dt>
-          <dd>
-            When using JWT-Secured Authorization Request (JAR, RFC 9101), 
-            authorization_details is protected by the JWT signature
-            (<xref target="RFC9101"/>). 
-            Implementations MUST validate the JWT before processing.
-          </dd>
-
-          <dt>Client Credentials:</dt>
-          <dd>
-            Direct AS communication with TLS; standard client authentication 
-            usually sufficient. authorization_details is in the request body.
-          </dd>
-
-          <dt>Token Exchange:</dt>
-          <dd>
-            Similar security to Client Credentials; ensure policy binding 
-            to the exchanged token subject.
-          </dd>
-        </dl>
-
-        <t>
-          General security requirements for all flows:
-        </t>
-
-        <ul>
-          <li>
-            <strong>Integrity Protection:</strong> authorization_details 
-            SHOULD be signed when transmitted through untrusted channels 
-            (e.g., browser redirects). Use JAR or PAR for protection.
-          </li>
-          <li>
-            <strong>Length Considerations:</strong> Rego policies may be 
-            large. Implementations SHOULD use PAR or JAR to avoid URL 
-            length limitations.
-          </li>
-          <li>
-            <strong>RAR Type Validation:</strong> AS MUST validate that 
-            the type field is "rego_policy" and reject unknown types.
-          </li>
-        </ul>
-      </section>
     </section>
 
     <section anchor="security" title="Security Considerations">
       <section title="Policy Injection">
         <t>
-          Rego policies submitted by clients are executable code. The AS MUST:
+          Rego policies submitted by clients are evaluable policy 
+          definitions. Although Rego is declarative and guarantees 
+          termination, the AS MUST:
         </t>
 
         <ul>
           <li>Validate policy syntax before registration;</li>
-          <li>Execute policies in sandboxed environments;</li>
-          <li>Limit policy execution time and resource usage;</li>
+          <li>Evaluate policies in sandboxed environments;</li>
+          <li>Limit policy evaluation time and resource usage;</li>
           <li>Restrict dangerous built-in functions (e.g., http.send).</li>
         </ul>
       </section>
@@ -1107,6 +1073,23 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
       </section>
 
+      <section title="Policy URI Fetching">
+        <t>
+          When the <tt>policy.uri</tt> field is present, the AS fetches 
+          policy content from a client-provided URI. This introduces 
+          Server-Side Request Forgery (SSRF) risks. The AS MUST:
+        </t>
+
+        <ul>
+          <li>Reject URIs pointing to private/internal network addresses 
+            (e.g., 10.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, ::1);</li>
+          <li>Enforce HTTPS for all policy URIs;</li>
+          <li>Set strict timeouts and size limits on fetched content;</li>
+          <li>Validate that the fetched content is syntactically valid Rego 
+            before any evaluation.</li>
+        </ul>
+      </section>
+
       <section title="Policy Size Limits">
         <t>
           Rego policies embedded inline within authorization_details can
@@ -1115,7 +1098,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <ul>
-          <li>Maximum policy source size (RECOMMENDED limit: 8 KB for inline policies);</li>
+          <li>Maximum policy source size (RECOMMENDED limit: 4 KB for inline policies). 
+            Note that JWT access tokens are typically carried in HTTP 
+            Authorization headers, where many proxies and load balancers 
+            enforce an 8 KB total header size limit;</li>
           <li>Maximum policy complexity (e.g., nesting depth, number of rules);</li>
           <li>Total authorization_details payload size in token requests.</li>
         </ul>
@@ -1131,9 +1117,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     <section anchor="iana" title="IANA Considerations">
       <section title="RAR Authorization Data Type Registration">
         <t>
-          This specification registers the following authorization data type 
-          in the "OAuth Authorization Data Types" registry established by 
-          RFC 9396:
+          This specification defines the following authorization data type 
+          for use with the <tt>authorization_details</tt> parameter 
+          defined in RFC 9396:
         </t>
 
         <dl>
@@ -1211,9 +1197,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <references>
         <name>Informative References</name>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9101.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.parecki-oauth-jwt-grant-interaction-response.xml"/>
         <reference anchor="OPA" target="https://www.openpolicyagent.org/">
           <front>
             <title>Open Policy Agent</title>

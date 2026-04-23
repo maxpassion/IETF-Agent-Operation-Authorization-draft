@@ -66,13 +66,12 @@ Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
      1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   3
-     1.2.  Applicability . . . . . . . . . . . . . . . . . . . . . .   3
-   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   4
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   3
    3.  The delegation_chain Claim  . . . . . . . . . . . . . . . . .   4
      3.1.  Claim Definition  . . . . . . . . . . . . . . . . . . . .   4
      3.2.  Structure . . . . . . . . . . . . . . . . . . . . . . . .   4
-     3.3.  Delegation Lifecycle  . . . . . . . . . . . . . . . . . .   5
-     3.4.  Field Definitions . . . . . . . . . . . . . . . . . . . .   6
+     3.3.  Delegation Lifecycle  . . . . . . . . . . . . . . . . . .   4
+     3.4.  Field Definitions . . . . . . . . . . . . . . . . . . . .   5
      3.5.  Chain Ordering  . . . . . . . . . . . . . . . . . . . . .   7
    4.  Delegation Protocol Flow  . . . . . . . . . . . . . . . . . .   7
      4.1.  Step 1-4: Initial Authorization . . . . . . . . . . . . .   8
@@ -106,6 +105,7 @@ Table of Contents
      B.1.  Token Structure . . . . . . . . . . . . . . . . . . . . .  19
      B.2.  Verification Requirements . . . . . . . . . . . . . . . .  20
      B.3.  Security Considerations . . . . . . . . . . . . . . . . .  20
+     B.4.  Relationship to OAuth Identity Chaining . . . . . . . . .  20
 
 
 
@@ -114,7 +114,6 @@ Liu, et al.             Expires 18 September 2026               [Page 2]
 Internet-Draft           OAuth Chain Delegation               March 2026
 
 
-     B.4.  Relationship to OAuth Identity Chaining . . . . . . . . .  20
    Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  21
 
 1.  Introduction
@@ -150,33 +149,6 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals.
 
-1.2.  Applicability
-
-   While this specification is optimized for use with Token Exchange
-   [RFC8693], the mechanism defined herein is designed to be general-
-   purpose and MAY be used with various OAuth 2.0 authorization flows,
-   including but not limited to:
-
-   *  Authorization Code Grant (with or without PAR);
-
-   *  Client Credentials Grant;
-
-   *  Token Exchange [RFC8693];
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 3]
-
-Internet-Draft           OAuth Chain Delegation               March 2026
-
-
-   *  Resource Owner Password Credentials Grant.
-
-   Different authorization flows may have different security
-   considerations when using this specification.  Implementations SHOULD
-   carefully evaluate the security implications based on their specific
-   deployment scenario.
-
 2.  Terminology
 
    Delegator:  An agent that transfers a subset of its authorization to
@@ -190,6 +162,13 @@ Internet-Draft           OAuth Chain Delegation               March 2026
 
    Delegation Chain:  An ordered sequence of delegation hops from the
       most recent back to the original authorization.
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 3]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
 
    Root Authorization:  The original authorization granted by a human
       principal, from which all delegations derive.
@@ -210,21 +189,6 @@ Internet-Draft           OAuth Chain Delegation               March 2026
 
    The delegation_chain is an ordered array of delegation records, from
    most recent to earliest.  Each record represents one delegation hop.
-
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 4]
-
-Internet-Draft           OAuth Chain Delegation               March 2026
-
 
 {
   "delegation_chain": [
@@ -252,6 +216,16 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    A delegation record transitions through three phases during its
    lifecycle:
 
+
+
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 4]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
    1.  *Delegation Proposal Phase:* The delegating agent creates a
        delegation proposal that includes the delegated policy, delegatee
        identity, and operation context.  This phase corresponds to the
@@ -271,16 +245,6 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    This three-phase model ensures cryptographic binding between user
    authorization, agent identity, and policy constraints throughout the
    delegation chain.
-
-
-
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 5]
-
-Internet-Draft           OAuth Chain Delegation               March 2026
-
 
 3.4.  Field Definitions
 
@@ -310,6 +274,14 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    +--------------------+-----------+-----------+---------------------------------------+
    |root_evidence_ref   |string     |CONDITIONAL|Reference to the root authorization    |
    |                    |           |           |evidence record as defined in          |
+
+
+
+Liu, et al.             Expires 18 September 2026               [Page 5]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
    |                    |           |           |[I-D.liu-oauth-authorization-evidence].|
    |                    |           |           |This field MUST be present for the     |
    |                    |           |           |first delegation (User → Agent A) and  |
@@ -330,13 +302,6 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    +--------------------+-----------+-----------+---------------------------------------+
 
                   Table 1: delegation_chain Record Fields
-
-
-
-Liu, et al.             Expires 18 September 2026               [Page 6]
-
-Internet-Draft           OAuth Chain Delegation               March 2026
-
 
    The as_signature, and the delegator_signature when present, MUST be
    computed over the same set of fields using JSON Canonicalization
@@ -366,6 +331,13 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    *  *Malicious AS Prevention:* A compromised AS cannot unilaterally
       forge delegations without the delegator's consent;
 
+
+
+Liu, et al.             Expires 18 September 2026               [Page 6]
+
+Internet-Draft           OAuth Chain Delegation               March 2026
+
+
    *  *Non-Repudiation:* The delegator cannot deny having authorized the
       delegation;
 
@@ -384,6 +356,34 @@ Internet-Draft           OAuth Chain Delegation               March 2026
    delegator.
 
 4.  Delegation Protocol Flow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

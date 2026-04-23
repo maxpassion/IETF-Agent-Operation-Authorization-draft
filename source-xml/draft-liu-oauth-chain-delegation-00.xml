@@ -105,40 +105,6 @@
         </t>
       </section>
 
-      <section title="Applicability">
-        <t>
-          While this specification is optimized for use with Token 
-          Exchange <xref target="RFC8693"/>, the 
-          mechanism defined herein is designed to be general-purpose 
-          and MAY be used with various OAuth 2.0 authorization flows, 
-          including but not limited to:
-        </t>
-
-        <ul>
-          <li>
-            Authorization Code Grant (with or without PAR);
-          </li>
-          
-          <li>
-            Client Credentials Grant;
-          </li>
-          
-          <li>
-            Token Exchange <xref target="RFC8693"/>;
-          </li>
-          
-          <li>
-            Resource Owner Password Credentials Grant.
-          </li>
-        </ul>
-
-        <t>
-          Different authorization flows may have different security 
-          considerations when using this specification. Implementations 
-          SHOULD carefully evaluate the security implications based on 
-          their specific deployment scenario.
-        </t>
-      </section>
     </section>
 
     <section anchor="terminology" title="Terminology">
