@@ -80,7 +80,7 @@ Table of Contents
        3.1.3.  Policy Requirements . . . . . . . . . . . . . . . . .   6
      3.2.  policy_ref Claim  . . . . . . . . . . . . . . . . . . . .   7
        3.2.1.  Claim Definition  . . . . . . . . . . . . . . . . . .   7
-       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   7
+       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   8
      3.3.  Policy Context  . . . . . . . . . . . . . . . . . . . . .   8
    4.  Protocol Flow . . . . . . . . . . . . . . . . . . . . . . . .   9
      4.1.  Step Details  . . . . . . . . . . . . . . . . . . . . . .  11
@@ -282,11 +282,20 @@ Liu, et al.             Expires 18 September 2026               [Page 5]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
-   The common RAR fields provide a declarative summary of the requested
-   operations and resources.  The AS MAY use these fields for quick
-   scope filtering without parsing the Rego policy.  The AS SHOULD
-   verify that the policy does not exceed the scope declared in the
-   common fields.
+   The common RAR fields and the Rego policy serve different consumers
+   at different stages of the authorization flow.  The common fields
+   (actions, locations) provide a declarative upper bound on the
+   requested operations and resources, enabling the Authorization Server
+   to approve or reject the request without parsing Rego.  The Rego
+   policy expresses the conditional authorization logic that the
+   Resource Server evaluates at request time with runtime context as
+   input.  This layered design allows Authorization Server
+   implementations to function without embedding a Rego engine, while
+   preserving the full expressiveness of policy-based authorization at
+   the Resource Server.
+
+   The AS SHOULD verify that the policy does not exceed the scope
+   declared in the common fields.
 
    The policy object has the following fields:
 
@@ -320,15 +329,6 @@ Internet-Draft            Rego Policy in OAuth                March 2026
        declaration.  The recommended package name is "agent" or a
        domain-specific namespace.
 
-   3.  Default Deny: The policy SHOULD include default allow = false to
-       ensure deny-by-default behavior.
-
-   4.  Input Reference: The policy accesses data via the input object.
-       The structure and content of the input object are determined by
-       the evaluating party (AS or RS) and MAY include token claims, API
-       request parameters, resource attributes, and other contextual
-       data as agreed between the client and the resource server.
-
 
 
 
@@ -337,6 +337,15 @@ Liu, et al.             Expires 18 September 2026               [Page 6]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
+
+   3.  Default Deny: The policy SHOULD include default allow = false to
+       ensure deny-by-default behavior.
+
+   4.  Input Reference: The policy accesses data via the input object.
+       The structure and content of the input object are determined by
+       the evaluating party (AS or RS) and MAY include token claims, API
+       request parameters, resource attributes, and other contextual
+       data as agreed between the client and the resource server.
 
    package agent
 
@@ -377,15 +386,6 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    Claim Type:  Object
 
-   Usage:  Access tokens
-
-3.2.2.  Structure
-
-
-
-
-
-
 
 
 
@@ -393,6 +393,10 @@ Liu, et al.             Expires 18 September 2026               [Page 7]
 
 Internet-Draft            Rego Policy in OAuth                March 2026
 
+
+   Usage:  Access tokens
+
+3.2.2.  Structure
 
    {
      "policy_ref": {
@@ -438,10 +442,6 @@ Internet-Draft            Rego Policy in OAuth                March 2026
 
    *  action: Requested action details (from the API request);
 
-   *  resource: Target resource attributes (from the resource server);
-
-   *  environment: Contextual conditions (time, location, device).
-
 
 
 
@@ -450,15 +450,15 @@ Liu, et al.             Expires 18 September 2026               [Page 8]
 Internet-Draft            Rego Policy in OAuth                March 2026
 
 
+   *  resource: Target resource attributes (from the resource server);
+
+   *  environment: Contextual conditions (time, location, device).
+
    The specific input structure is determined by bilateral agreement
    between the client and the resource server, typically documented in
    developer integration guides.
 
 4.  Protocol Flow
-
-
-
-
 
 
 
@@ -1211,9 +1211,9 @@ Internet-Draft            Rego Policy in OAuth                March 2026
               draft-parecki-oauth-jwt-grant-interaction-response-00>.
 
    [OPA]      Cloud Native Computing Foundation, "Open Policy Agent",
-              2024, <https://www.openpolicyagent.org/>.
+              <https://www.openpolicyagent.org/>.
 
-   [Rego]     Open Policy Agent, "Rego Policy Language", 2024,
+   [Rego]     Open Policy Agent, "Rego Policy Language",
               <https://www.openpolicyagent.org/docs/latest/policy-
               language/>.
 

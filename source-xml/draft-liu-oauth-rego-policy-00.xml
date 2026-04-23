@@ -258,11 +258,24 @@
           </dl>
 
           <t>
-            The common RAR fields provide a declarative summary of the 
-            requested operations and resources. The AS MAY use these 
-            fields for quick scope filtering without parsing the Rego 
-            policy. The AS SHOULD verify that the policy does not 
-            exceed the scope declared in the common fields.
+            The common RAR fields and the Rego policy serve different 
+            consumers at different stages of the authorization flow. 
+            The common fields (<tt>actions</tt>, <tt>locations</tt>) 
+            provide a declarative upper bound on the requested 
+            operations and resources, enabling the Authorization Server 
+            to approve or reject the request without parsing Rego. 
+            The Rego policy expresses the conditional authorization 
+            logic that the Resource Server evaluates at request time 
+            with runtime context as input. This layered design allows 
+            Authorization Server implementations to function without 
+            embedding a Rego engine, while preserving the full 
+            expressiveness of policy-based authorization at the 
+            Resource Server.
+          </t>
+
+          <t>
+            The AS SHOULD verify that the policy does not exceed the 
+            scope declared in the common fields.
           </t>
 
           <t>
@@ -302,7 +315,7 @@
           </dl>
         </section>
 
-        <section title="Policy Requirements">
+        <section anchor="policy-requirements" title="Policy Requirements">
           <t>
             Rego policies used with this specification MUST adhere to the following 
             requirements:
@@ -910,7 +923,7 @@ Content-Type: application/json
             object with no <tt>result</tt> field): Deny with 
             403 Forbidden. Note that policies following the 
             RECOMMENDED <tt>default allow = false</tt> pattern 
-            (see Section 3.1.3) will always produce a defined 
+            (see <xref target="policy-requirements"/>) will always produce a defined 
             boolean result, so undefined only occurs when the 
             default declaration is omitted;</li>
           <li>If the policy engine is unreachable or encounters an internal 
@@ -1205,7 +1218,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <author>
               <organization>Cloud Native Computing Foundation</organization>
             </author>
-            <date year="2024"/>
+            <date year=""/>
           </front>
         </reference>
 
@@ -1215,7 +1228,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <author>
               <organization>Open Policy Agent</organization>
             </author>
-            <date year="2024"/>
+            <date year=""/>
           </front>
         </reference>
       </references>
