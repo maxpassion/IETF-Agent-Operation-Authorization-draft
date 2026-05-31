@@ -298,7 +298,7 @@
 +---------------------------------------------------------+
 |  +-------------+  +-------------+  +-------------+      |
 |  |  Identity   |  |  Consent    |  | Delegation  |      |
-|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |      |
+|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |       |
 |  +-------------+  +-------------+  +-------------+      |
 |                                                         |
 |  +---------------------------------------------------+  |
@@ -334,22 +334,22 @@
         |                        | interaction_required   |
         |                        |<-----------------------|
         |                        |                        |
-        |  interaction_uri  +----|                        |
-        |<------------------+    |                        |
+        |  interaction_uri       |                        |
+        |<-----------------------|                        |
         |  (user consent)        |                        |
-        |-------------------+--->|                        |
+        |----------------------->|                        |
         |                        | Poll token endpoint    |
         |                        |----------------------->|
         |                        |                        |
         |                        |   Access Token         |
         |                        |<-----------------------|
         |                        |                        |
-        |                        |                  +------------------+
-        |                        |                  | Resource Server  |
-        |                        |                  |                  |
-        |                        |   API Request   | - Token validation|
-        |                        |---------------->| - Policy engine  |
-        |                        |                  +------------------+
+        |                        |                  +-------------------+
+        |                        |                  | Resource Server   |
+        |                        |                  |                   |
+        |                        |   API Request    | - Token validation|
+        |                        |----------------->| - Policy engine   |
+        |                        |                  +-------------------+
           ]]></artwork>
         </figure>
 
@@ -467,10 +467,10 @@
 |       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
     |            |             |            |            |           |
-(1) | Authn     |             |            |            |           |
+(1) | Authn      |             |            |            |           |
     |----------->|             |            |            |           |
     |            |             |            |            |           |
-(2) |  ID Token (aud=agent)   |            |            |           |
+(2) |  ID Token (aud=agent)    |            |            |           |
     |<------------------------->            |            |           |
     |            |             |            |            |           |
 (3) |            |   Agent builds token req:|            |           |
@@ -491,19 +491,19 @@
     |            |             |  + interaction_uri      |           |
     |            |             |<-----------|            |           |
     |            |             |            |            |           |
-(7) | User interaction via browser         |            |           |
-    |<------------------------------------|            |           |
+(7) | User interaction via browser          |            |           |
+    |<--------------------------------------|            |           |
     |            |             |            |            |           |
 (8) | User confirms            |            |            |           |
-    |------------------------------------->|            |           |
+    |-------------------------------------->|            |           |
     |            |             |            |            |           |
-(9) |            |             |  Poll token endpoint   |           |
+(9) |            |             |  Poll token endpoint    |           |
     |            |             |----------->|            |           |
     |            |             |            |            |           |
-(10)|            |             |  Issue token with:     |           |
-    |            |             |  - act                 |           |
+(10)|            |             |  Issue token with:      |           |
+    |            |             |  - act                  |           |
     |            |             |  - authorization_details|           |
-    |            |             |  - evidence            |           |
+    |            |             |  - evidence             |           |
     |            |             |<-----------|            |           |
     |            |             |            |            |           |
 (11)|            |             | API Request|            |           |
@@ -631,7 +631,7 @@
      |                 |                 |                |
      | (has token)     |                 |                |
      |                 |                 |                |
-     | Token Exchange   |                 |                |
+     | Token Exchange  |                 |                |
      | - subject_token |                 |                |
      | - delegatee_wit |                 |                |
      | - authz_details |                 |                |
