@@ -249,7 +249,7 @@
 |  |  Scope (Traditional OAuth)                          |  |
 |  |  +-----------------------------------------------+  |  |
 |  |  |  Policy via RAR (Primary)                     |  |  |
-|  |  |  authorization_details: rego_policy            |  |  |
+|  |  |  authorization_details: rego_policy           |  |  |
 |  |  |  "allow if amount <= 50 AND time < 6pm"       |  |  |
 |  |  +-----------------------------------------------+  |  |
 |  +-----------------------------------------------------+  |
