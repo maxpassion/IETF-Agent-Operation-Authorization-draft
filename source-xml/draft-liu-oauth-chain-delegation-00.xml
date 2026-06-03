@@ -790,8 +790,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             parameter to receive a callback when the interaction is complete.
           </li>
           <li>
-            The AS determines that user interaction is required and responds
-            with an <tt>interaction_required</tt> error containing:
+            <t>
+              The AS determines that user interaction is required and responds
+              with an <tt>interaction_required</tt> error containing:
+            </t>
             <ul>
               <li><tt>interaction_uri</tt>: The URI where the user reviews and approves the delegation;</li>
               <li><tt>interval</tt>: The minimum polling interval in seconds (default: 5);</li>
@@ -2031,7 +2033,6 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7009.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
 
         <reference anchor="I-D.liu-oauth-rego-policy" target="https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-rego-policy-00.html">
           <front>
