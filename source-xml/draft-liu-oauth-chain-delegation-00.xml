@@ -694,36 +694,48 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </ul>
       </section>
 
-      <section anchor="delegation-interaction" title="Delegation with User Interaction">
-        <t>
-          In certain delegation scenarios, the Authorization Server may determine
-          that explicit user interaction is required before a delegation can be
-          authorized. This is particularly relevant when:
-        </t>
 
+    <section anchor="delegation-interaction" title="Delegation with User Interaction">
+      <t>
+        In certain delegation scenarios, the Authorization Server may determine
+        that explicit user interaction is required before a delegation can be
+        authorized. This section defines the user interaction mechanism for
+        delegation flows, extending the JWT Authorization Grant Interaction
+        Response (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>)
+        to OAuth 2.0 Token Exchange requests.
+      </t>
+
+      <section anchor="when-interaction-required" title="When User Interaction is Required">
+        <t>
+          The Authorization Server SHOULD require user interaction before
+          authorizing a delegation in the following scenarios:
+        </t>
         <ul>
           <li>The delegation targets a new agent not covered by a standing authorization;</li>
           <li>The delegation involves high-risk or high-value operations;</li>
           <li>The delegation crosses trust domain boundaries;</li>
           <li>Regulatory requirements mandate explicit, auditable user consent.</li>
         </ul>
-
         <t>
-          In such cases, the delegation Token Exchange request defined in
-          <xref target="step5-token-exchange"/> is combined with the interaction response mechanism
-          defined in <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
-          Instead of immediately issuing a delegated token, the AS returns an
-          <tt>interaction_required</tt> error response containing an
-          <tt>interaction_uri</tt> and a polling <tt>interval</tt>.
+          When none of the above conditions apply — for example, when the
+          delegation is covered by a standing authorization or the policy has
+          been pre-approved — the AS MAY skip user interaction and proceed
+          directly with token issuance as defined in
+          <xref target="protocol-flow"/>.
         </t>
+      </section>
 
+      <section anchor="jagir-extension" title="Interaction Response for Token Exchange">
         <t>
           <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> defines
           the interaction response mechanism for the JWT Authorization Grant
           (RFC 7523, <tt>grant_type=jwt-bearer</tt>). This specification extends
           that interaction response to apply to OAuth 2.0 Token Exchange requests
           (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>) used for
-          delegation. The same response semantics — <tt>interaction_required</tt>
+          delegation.
+        </t>
+        <t>
+          The same response semantics — <tt>interaction_required</tt>
           error with <tt>interaction_uri</tt>, <tt>interval</tt>, and
           <tt>expires_in</tt> parameters, as well as the client polling and
           redirect behavior — are applicable to Token Exchange requests. The AS
@@ -732,6 +744,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <tt>delegatee_wit</tt>, and requested delegation policy) so that upon
           user approval, the same Token Exchange request can be retried to
           obtain the delegated token.
+        </t>
+      </section>
+
+      <section anchor="interaction-flow" title="Interaction Flow">
+        <t>
+          When the AS determines that user interaction is required for a
+          delegation Token Exchange request, the flow proceeds as follows:
         </t>
 
         <figure>
@@ -778,16 +797,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           ]]></artwork>
         </figure>
 
-        <t>
-          The flow proceeds as follows:
-        </t>
-
         <ol>
           <li>
             Agent A sends a delegation Token Exchange request to the AS,
             including <tt>delegatee_wit</tt> identifying Agent B, as defined
-            in <xref target="step5-token-exchange"/>. The request MAY include an <tt>interaction_callback_uri</tt>
-            parameter to receive a callback when the interaction is complete.
+            in <xref target="step5-token-exchange"/>. The request MAY include an
+            <tt>interaction_callback_uri</tt> parameter to receive a callback
+            when the interaction is complete.
           </li>
           <li>
             <t>
@@ -810,9 +826,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             the delegation request.
           </li>
           <li>
-            If the client provided an <tt>interaction_callback_uri</tt>, the AS redirects
-            the user's browser to that URI as a signal that the interaction
-            is complete.
+            If the client provided an <tt>interaction_callback_uri</tt>, the AS
+            redirects the user's browser to that URI as a signal that the
+            interaction is complete.
           </li>
           <li>
             Agent A retries the original Token Exchange request (with the
@@ -828,7 +844,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             Agent A receives the delegated token for Agent B.
           </li>
         </ol>
+      </section>
 
+      <section anchor="interaction-polling" title="Polling Behavior">
         <t>
           While the interaction is pending, subsequent Token Exchange requests
           from Agent A with the same parameters SHOULD return an
@@ -838,6 +856,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
       </section>
     </section>
+  </section>
 
     <section anchor="chain-extension" title="Chain Extension">
       <t>
