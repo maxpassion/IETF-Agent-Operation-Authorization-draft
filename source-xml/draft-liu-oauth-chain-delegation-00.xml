@@ -139,7 +139,7 @@
           support the <tt>delegation_chain</tt> claim structure
           (<xref target="delegation-chain-claim"/>), the delegation
           Token Exchange flow (<xref target="protocol-flow"/>), and
-          the AS validation rules (<xref target="step5-token-exchange"/>).
+          the AS validation rules (<xref target="step3-delegation-request"/>).
           The Core Profile does not require cross-domain support, user
           interaction (JAG-IR), Rego policy, or authorization evidence.
           It is suitable for single-domain deployments that need
@@ -471,67 +471,100 @@
       </section>
     </section>
 
-    <section anchor="protocol-flow" title="Delegation Protocol Flow">
+    <section anchor="delegation-interaction" title="Delegation with User Interaction">
+      <t>
+        This section defines the primary delegation flow for chain delegation,
+        which includes explicit user interaction to ensure user consent and
+        awareness when agents delegate authorization. This flow extends the
+        JWT Authorization Grant Interaction Response
+        (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>)
+        to OAuth 2.0 Token Exchange requests
+        (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>).
+      </t>
+
+      <t>
+        The user interaction mechanism is a core feature of chain delegation,
+        ensuring that delegation decisions remain under user control even in
+        complex multi-agent scenarios. When the Authorization Server determines
+        that user interaction is required, the flow includes an explicit
+        consent step before token issuance.
+      </t>
+
       <figure>
-        <artwork name="Chain Delegation Flow" type="ascii-art"><![CDATA[
-+--------+       +---------+       +--------+       +---------+
-|  User  |       | Agent A |       |   AS   |       | Agent B |
-+--------+       +---------+       +--------+       +---------+
-    |                 |                 |                 |
-    | (1) Authorize   |                 |                 |
-    |---------------->|                 |                 |
-    |                 |                 |                 |
-    |                 | (2) PAR         |                 |
-    |                 |---------------->|                 |
-    |                 |                 |                 |
-    | (3) Consent     |                 |                 |
-    |<----------------|---------------->|                 |
-    |                 |                 |                 |
-    |                 | (4) Token A     |                 |
-    |                 | (no chain)      |                 |
-    |                 |<----------------|                 |
-    |                 |                 |                 |
-    |                 | (5) Token       |                 |
-    |                 |  Exchange       |                 |
-    |                 |  (delegation)   |                 |
-    |                 |---------------->|                 |
-    |                 |  - subject_token|                 |
-    |                 |  - delegatee_wit|                 |
-    |                 |  - authz_details|                 |
-    |                 |                 |                 |
-    |                 |                 | (6) Validate    |
-    |                 |                 | - Token A valid |
-    |                 |                 | - Scope subset  |
-    |                 |                 | - Agent B auth  |
-    |                 |                 |                 |
-    |                 |                 | (7) Issue Token B
-    |                 |                 |---------------->|
-    |                 |                 | with delegation_chain
-    |                 |                 |                 |
-    |                 |                 |                 | (8) API Request
-    |                 |                 |                 |------------>
-    |                 |                 |                 |
-    |                 |                 |                 | (9) Validate chain
-    |                 |                 |                 |<------------
+        <artwork name="Delegation with User Interaction Flow (Primary)" type="ascii-art"><![CDATA[
++--------+       +---------+       +--------+       +---------+       +---------+
+|  User  |       | Agent A |       |   AS   |       | Agent B |       |   RS    |
++--------+       +---------+       +--------+       +---------+       +---------+
+    |                 |                 |                 |                 |
+    | (1) Initial     |                 |                 |                 |
+    |  Authorization  |                 |                 |                 |
+    |  (OAuth flow)   |                 |                 |                 |
+    |---------------->|                 |                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (2) Token A     |                 |                 |
+    |                 |  (root, no      |                 |                 |
+    |                 |   chain)        |                 |                 |
+    |                 |<----------------|                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (3) Token Exchange (delegation)   |                 |
+    |                 |---------------->|                 |                 |
+    |                 |  - subject_token                  |                 |
+    |                 |  - delegatee_wit                  |                 |
+    |                 |  - authorization_details          |                 |
+    |                 |                 |                 |                 |
+    |                 | (4) AS determines user interaction required         |
+    |                 |     interaction_required          |                 |
+    |                 |     interaction_uri               |                 |
+    |                 |     interval=5                    |                 |
+    |                 |<----------------|                 |                 |
+    |                 |                 |                 |                 |
+    | (5) Launch      |                 |                 |                 |
+    |  interaction    |                 |                 |                 |
+    |<----------------|                 |                 |                 |
+    |                 |                 |                 |                 |
+    | (6) Review &    |                 |                 |                 |
+    |  Approve        |                 |                 |                 |
+    |  delegation     |                 |                 |                 |
+    |---------------------------------->|                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (7) Redirect    |                 |                 |
+    |                 |<----------------|                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (8) Retry Token Exchange          |                 |
+    |                 |---------------->|                 |                 |
+    |                 |                 |                 |                 |
+    |                 |                 | (9) Validate    |                 |
+    |                 |                 | - Interaction   |                 |
+    |                 |                 |   completed     |                 |
+    |                 |                 | - Token A valid |                 |
+    |                 |                 | - Scope subset  |                 |
+    |                 |                 |                 |                 |
+    |                 |                 | (10) Issue Token B               |
+    |                 |                 |---------------->|                 |
+    |                 |                 | with delegation_chain            |
+    |                 |                 |                 |                 |
+    |                 |                 |                 | (11) API Request|
+    |                 |                 |                 |---------------->|
+    |                 |                 |                 |                 |
+    |                 |                 |                 | (12) Validate   |
+    |                 |                 |                 |  chain          |
+    |                 |                 |                 |<----------------|
         ]]></artwork>
       </figure>
 
-      <section title="Step 1-4: Initial Authorization">
+      <section title="Step 1-2: Initial Authorization">
         <t>
-          Agent A obtains authorization from the user through a standard OAuth 
-          flow. The resulting token does not contain a delegation_chain (it is 
-          the root authorization).
+          Agent A obtains authorization from the user through a standard OAuth
+          flow. The resulting token does not contain a <tt>delegation_chain</tt>
+          (it is the root authorization).
         </t>
       </section>
 
-      <section anchor="step5-token-exchange" title="Step 5: Delegation via Token Exchange">
+      <section anchor="step3-delegation-request" title="Step 3: Delegation Request">
         <t>
-          Agent A initiates delegation using OAuth 2.0 Token Exchange 
-          <xref target="RFC8693"/>. This follows the identity and 
-          authorization chaining pattern defined in 
-          <xref target="I-D.ietf-oauth-identity-chaining"/>, extended 
-          with delegation-specific parameters. The request is sent to 
-          the AS token endpoint.
+          Agent A initiates delegation using OAuth 2.0 Token Exchange
+          <xref target="RFC8693"/>. The request includes delegation-specific
+          parameters to identify the delegatee and the delegated policy.
         </t>
 
         <figure>
@@ -555,7 +588,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </figure>
 
         <t>
-          This specification defines the following extension parameter 
+          This specification defines the following extension parameter
           for use with Token Exchange <xref target="RFC8693"/> requests:
         </t>
 
@@ -582,20 +615,20 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <tt>subject_token</tt>: Agent A's current access token;
           </li>
           <li>
-            <tt>subject_token_type</tt>: 
+            <tt>subject_token_type</tt>:
             <tt>urn:ietf:params:oauth:token-type:access_token</tt>;
           </li>
           <li>
-            <tt>authorization_details</tt> (OPTIONAL): Contains 
-            <tt>rego_policy</tt> type with the delegated policy, which 
+            <tt>authorization_details</tt> (OPTIONAL): Contains
+            <tt>rego_policy</tt> type with the delegated policy, which
             MUST be equal to or more restrictive than Agent A's policy;
           </li>
           <li>
-            <tt>delegatee_wit</tt>: The WIT URI of the delegatee agent 
+            <tt>delegatee_wit</tt>: The WIT URI of the delegatee agent
             (Agent B);
           </li>
           <li>
-            <tt>scope</tt> (OPTIONAL): Requested scope for the 
+            <tt>scope</tt> (OPTIONAL): Requested scope for the
             delegated token, which MUST be a subset of Agent A's scope.
           </li>
           <li>
@@ -624,64 +657,119 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             complete, as defined in
             <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
             This parameter is used in conjunction with the
-            <tt>interaction_required</tt> response (<xref target="delegation-interaction"/>) to signal
+            <tt>interaction_required</tt> response to signal
             the client that user interaction has been completed.
-          </li>
-        </ul>
-
-        <t>
-          In response to this request, the AS MAY return one of the following:
-        </t>
-
-        <ul>
-          <li>
-            <strong>Success:</strong> An access token (or JWT authorization
-            grant for cross-domain delegation) with the
-            <tt>delegation_chain</tt> claim, as described in Step 7;
-          </li>
-          <li>
-            <strong>Interaction Required:</strong> An
-            <tt>interaction_required</tt> error response when user interaction
-            is needed before the delegation can be authorized, as described in
-            <xref target="delegation-interaction"/>;
-          </li>
-          <li>
-            <strong>Error:</strong> A standard OAuth 2.0 error response when
-            the request is invalid or the delegation is denied.
           </li>
         </ul>
       </section>
 
-      <section title="Step 6: AS Validation">
+      <section anchor="when-interaction-required" title="Step 4: User Interaction Required">
+        <t>
+          The Authorization Server SHOULD require user interaction before
+          authorizing a delegation in the following scenarios:
+        </t>
+        <ul>
+          <li>The delegation targets a new agent not covered by a standing authorization;</li>
+          <li>The delegation involves high-risk or high-value operations;</li>
+          <li>The delegation crosses trust domain boundaries;</li>
+          <li>Regulatory requirements mandate explicit, auditable user consent.</li>
+        </ul>
+
+        <t>
+          When user interaction is required, the AS responds with an
+          <tt>interaction_required</tt> error containing:
+        </t>
+        <ul>
+          <li><tt>interaction_uri</tt>: The URI where the user reviews and approves the delegation;</li>
+          <li><tt>interval</tt>: The minimum polling interval in seconds (default: 5);</li>
+          <li><tt>expires_in</tt>: The number of seconds until the interaction session expires.</li>
+        </ul>
+
+        <t>
+          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> defines
+          the interaction response mechanism for the JWT Authorization Grant
+          (RFC 7523, <tt>grant_type=jwt-bearer</tt>). This specification extends
+          that interaction response to apply to OAuth 2.0 Token Exchange requests
+          (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>) used for
+          delegation. The same response semantics are applicable to Token Exchange
+          requests. The AS associates the interaction session with the Token Exchange
+          request parameters (including the <tt>subject_token</tt>,
+          <tt>delegatee_wit</tt>, and requested delegation policy) so that upon
+          user approval, the same Token Exchange request can be retried to
+          obtain the delegated token.
+        </t>
+      </section>
+
+      <section anchor="interaction-flow" title="Steps 5-7: User Review and Approval">
+        <t>
+          Agent A launches the <tt>interaction_uri</tt> in the user's browser,
+          where the AS presents the delegation details for user review:
+        </t>
+        <ul>
+          <li>Identity of the delegatee agent (Agent B)</li>
+          <li>Delegated policy and scope</li>
+          <li>Operation summary</li>
+          <li>Whether the delegation crosses trust domain boundaries</li>
+        </ul>
+
+        <t>
+          The user reviews the delegation details and approves or denies
+          the delegation request. If the client provided an
+          <tt>interaction_callback_uri</tt>, the AS redirects the user's
+          browser to that URI as a signal that the interaction is complete.
+        </t>
+      </section>
+
+      <section anchor="step8-retry" title="Step 8: Retry Token Exchange">
+        <t>
+          Agent A retries the original Token Exchange request (with the
+          same parameters). The AS recognizes the associated interaction
+          session and proceeds with validation.
+        </t>
+
+        <t>
+          While the interaction is pending, subsequent Token Exchange requests
+          from Agent A with the same parameters SHOULD return an
+          <tt>interaction_pending</tt> error. The agent MUST wait at least
+          the number of seconds specified by the <tt>interval</tt> parameter
+          between polling requests.
+        </t>
+      </section>
+
+      <section title="Step 9: AS Validation">
         <t>
           The AS MUST perform the following validations:
         </t>
 
         <ol>
           <li>
-            Token Validity: Verify Agent A's token is valid and 
+            Interaction Completion: Verify that user interaction has been
+            completed and approved for this delegation request.
+          </li>
+          <li>
+            Token Validity: Verify Agent A's token is valid and
             not revoked.
           </li>
           <li>
-            Delegation Permission: Confirm the token permits 
+            Delegation Permission: Confirm the token permits
             delegation (e.g., includes a delegation scope or flag).
           </li>
           <li>
-            Scope Subset: Verify the requested scope is a subset of 
+            Scope Subset: Verify the requested scope is a subset of
             Agent A's authorized scope (equal to or narrower).
           </li>
           <li>
-            Delegatee Authentication: Validate Agent B's 
+            Delegatee Authentication: Validate Agent B's
             workload identity token (WIT).
           </li>
           <li>
-            Chain Depth: Optionally enforce maximum delegation 
+            Chain Depth: Optionally enforce maximum delegation
             depth.
           </li>
         </ol>
       </section>
 
-      <section title="Step 7: Token Issuance">
+      <section title="Step 10: Token Issuance">
         <t>
           Upon successful validation, the AS issues a new token for Agent B with:
         </t>
@@ -694,170 +782,97 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </ul>
       </section>
 
-
-    <section anchor="delegation-interaction" title="Delegation with User Interaction">
-      <t>
-        In certain delegation scenarios, the Authorization Server may determine
-        that explicit user interaction is required before a delegation can be
-        authorized. This section defines the user interaction mechanism for
-        delegation flows, extending the JWT Authorization Grant Interaction
-        Response (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>)
-        to OAuth 2.0 Token Exchange requests.
-      </t>
-
-      <section anchor="when-interaction-required" title="When User Interaction is Required">
+      <section title="Steps 11-12: API Request and Validation">
         <t>
-          The Authorization Server SHOULD require user interaction before
-          authorizing a delegation in the following scenarios:
-        </t>
-        <ul>
-          <li>The delegation targets a new agent not covered by a standing authorization;</li>
-          <li>The delegation involves high-risk or high-value operations;</li>
-          <li>The delegation crosses trust domain boundaries;</li>
-          <li>Regulatory requirements mandate explicit, auditable user consent.</li>
-        </ul>
-        <t>
-          When none of the above conditions apply — for example, when the
-          delegation is covered by a standing authorization or the policy has
-          been pre-approved — the AS MAY skip user interaction and proceed
-          directly with token issuance as defined in
-          <xref target="protocol-flow"/>.
-        </t>
-      </section>
-
-      <section anchor="jagir-extension" title="Interaction Response for Token Exchange">
-        <t>
-          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> defines
-          the interaction response mechanism for the JWT Authorization Grant
-          (RFC 7523, <tt>grant_type=jwt-bearer</tt>). This specification extends
-          that interaction response to apply to OAuth 2.0 Token Exchange requests
-          (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>) used for
-          delegation.
-        </t>
-        <t>
-          The same response semantics — <tt>interaction_required</tt>
-          error with <tt>interaction_uri</tt>, <tt>interval</tt>, and
-          <tt>expires_in</tt> parameters, as well as the client polling and
-          redirect behavior — are applicable to Token Exchange requests. The AS
-          associates the interaction session with the Token Exchange request
-          parameters (including the <tt>subject_token</tt>,
-          <tt>delegatee_wit</tt>, and requested delegation policy) so that upon
-          user approval, the same Token Exchange request can be retried to
-          obtain the delegated token.
-        </t>
-      </section>
-
-      <section anchor="interaction-flow" title="Interaction Flow">
-        <t>
-          When the AS determines that user interaction is required for a
-          delegation Token Exchange request, the flow proceeds as follows:
-        </t>
-
-        <figure>
-          <artwork name="Delegation with User Interaction Flow" type="ascii-art"><![CDATA[
-+--------+       +---------+       +--------+       +---------+
-|  User  |       | Agent A |       |   AS   |       | Agent B |
-+--------+       +---------+       +--------+       +---------+
-    |                 |                 |                 |
-    |                 | (1) Token       |                 |
-    |                 |  Exchange       |                 |
-    |                 |  (delegation)   |                 |
-    |                 |---------------->|                 |
-    |                 |                 |                 |
-    |                 | (2) interaction_required          |
-    |                 |     interaction_uri               |
-    |                 |     interval=5                    |
-    |                 |<----------------|                 |
-    |                 |                 |                 |
-    | (3) Launch      |                 |                 |
-    |  interaction    |                 |                 |
-    |<----------------|                 |                 |
-    |                 |                 |                 |
-    | (4) Review &    |                 |                 |
-    |  Approve        |                 |                 |
-    |  delegation     |                 |                 |
-    |---------------------------------->|                 |
-    |                 |                 |                 |
-    |                 | (5) Redirect    |                 |
-    |                 |<----------------|                 |
-    |                 |                 |                 |
-    |                 | (6) Retry Token |                 |
-    |                 |  Exchange       |                 |
-    |                 |---------------->|                 |
-    |                 |                 |                 |
-    |                 |                 | (7) Validate    |
-    |                 |                 | - Interaction   |
-    |                 |                 |   completed     |
-    |                 |                 | - Issue Token B |
-    |                 |                 |                 |
-    |                 | (8) Token B     |                 |
-    |                 | (with delegation_chain)           |
-    |                 |<----------------|                 |
-    |                 |                 |                 |
-          ]]></artwork>
-        </figure>
-
-        <ol>
-          <li>
-            Agent A sends a delegation Token Exchange request to the AS,
-            including <tt>delegatee_wit</tt> identifying Agent B, as defined
-            in <xref target="step5-token-exchange"/>. The request MAY include an
-            <tt>interaction_callback_uri</tt> parameter to receive a callback
-            when the interaction is complete.
-          </li>
-          <li>
-            <t>
-              The AS determines that user interaction is required and responds
-              with an <tt>interaction_required</tt> error containing:
-            </t>
-            <ul>
-              <li><tt>interaction_uri</tt>: The URI where the user reviews and approves the delegation;</li>
-              <li><tt>interval</tt>: The minimum polling interval in seconds (default: 5);</li>
-              <li><tt>expires_in</tt>: The number of seconds until the interaction session expires.</li>
-            </ul>
-          </li>
-          <li>
-            Agent A launches the <tt>interaction_uri</tt> in the user's browser,
-            where the AS presents the delegation details (delegatee identity,
-            delegated policy, operation summary) for user review.
-          </li>
-          <li>
-            The user reviews the delegation details and approves or denies
-            the delegation request.
-          </li>
-          <li>
-            If the client provided an <tt>interaction_callback_uri</tt>, the AS
-            redirects the user's browser to that URI as a signal that the
-            interaction is complete.
-          </li>
-          <li>
-            Agent A retries the original Token Exchange request (with the
-            same parameters). The AS recognizes the associated interaction
-            session and proceeds with validation.
-          </li>
-          <li>
-            The AS validates the delegation request, confirms that user
-            interaction has been completed, and issues Token B with the
-            <tt>delegation_chain</tt> claim.
-          </li>
-          <li>
-            Agent A receives the delegated token for Agent B.
-          </li>
-        </ol>
-      </section>
-
-      <section anchor="interaction-polling" title="Polling Behavior">
-        <t>
-          While the interaction is pending, subsequent Token Exchange requests
-          from Agent A with the same parameters SHOULD return an
-          <tt>interaction_pending</tt> error. The agent MUST wait at least
-          the number of seconds specified by the <tt>interval</tt> parameter
-          between polling requests.
+          Agent B uses the delegated token to access resources at the Resource
+          Server (RS). The RS validates the token and verifies the
+          <tt>delegation_chain</tt> as defined in
+          <xref target="rs-validation"/>.
         </t>
       </section>
     </section>
-  </section>
 
+    <section anchor="protocol-flow" title="Simplified Delegation via Token Exchange">
+      <t>
+        In scenarios where user interaction is not required — for example, when
+        the delegation is covered by a standing authorization or the policy has
+        been pre-approved — the AS MAY skip the user interaction step and proceed
+        directly with token issuance. This simplified flow reduces latency and
+        user friction for routine delegation scenarios.
+      </t>
+
+      <t>
+        When none of the conditions listed in
+        <xref target="when-interaction-required"/> apply, the AS responds to the
+        Token Exchange request with a success response containing the delegated
+        token, bypassing the <tt>interaction_required</tt> step.
+      </t>
+
+      <figure>
+        <artwork name="Simplified Delegation Flow (No User Interaction)" type="ascii-art"><![CDATA[
++--------+       +---------+       +--------+       +---------+       +---------+
+|  User  |       | Agent A |       |   AS   |       | Agent B |       |   RS    |
++--------+       +---------+       +--------+       +---------+       +---------+
+    |                 |                 |                 |                 |
+    | (1) Initial     |                 |                 |                 |
+    |  Authorization  |                 |                 |                 |
+    |  (OAuth flow)   |                 |                 |                 |
+    |---------------->|                 |                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (2) Token A     |                 |                 |
+    |                 |  (root, no      |                 |                 |
+    |                 |   chain)        |                 |                 |
+    |                 |<----------------|                 |                 |
+    |                 |                 |                 |                 |
+    |                 | (3) Token Exchange (delegation)   |                 |
+    |                 |---------------->|                 |                 |
+    |                 |  - subject_token                  |                 |
+    |                 |  - delegatee_wit                  |                 |
+    |                 |  - authorization_details          |                 |
+    |                 |                 |                 |                 |
+    |                 |                 | (4) Validate    |                 |
+    |                 |                 | - Token A valid |                 |
+    |                 |                 | - Scope subset  |                 |
+    |                 |                 | - Standing auth |                 |
+    |                 |                 |   or pre-approved                 |
+    |                 |                 |                 |                 |
+    |                 |                 | (5) Issue Token B               |
+    |                 |                 |---------------->|                 |
+    |                 |                 | with delegation_chain            |
+    |                 |                 |                 |                 |
+    |                 |                 |                 | (6) API Request|
+    |                 |                 |                 |---------------->|
+    |                 |                 |                 |                 |
+    |                 |                 |                 | (7) Validate   |
+    |                 |                 |                 |  chain          |
+    |                 |                 |                 |<----------------|
+        ]]></artwork>
+      </figure>
+
+      <t>
+        The Token Exchange request format, parameters, and validation rules are
+        identical to those defined in <xref target="delegation-interaction"/>.
+        The only difference is that the AS does not require user interaction
+        before issuing the delegated token.
+      </t>
+
+      <t>
+        This simplified flow is appropriate when:
+      </t>
+      <ul>
+        <li>The delegation is covered by a standing authorization previously granted by the user;</li>
+        <li>The delegated policy is equal to or more restrictive than a previously user-approved policy;</li>
+        <li>The delegation does not cross trust domain boundaries;</li>
+        <li>The delegation does not involve high-risk operations;</li>
+        <li>No regulatory requirements mandate explicit user consent.</li>
+      </ul>
+
+      <t>
+        Authorization Servers SHOULD log all decisions to skip user interaction
+        as part of the audit trail defined in
+        <xref target="I-D.liu-oauth-authorization-evidence"/>.
+      </t>
+    </section>
     <section anchor="chain-extension" title="Chain Extension">
       <t>
         When the AS issues a delegated token, it extends the delegation_chain:
@@ -1965,7 +1980,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd>IETF</dd>
 
           <dt>Reference:</dt>
-          <dd><xref target="step5-token-exchange"/> of this document</dd>
+          <dd><xref target="step3-delegation-request"/> of this document</dd>
         </dl>
 
         <dl>
@@ -1979,7 +1994,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd>IETF</dd>
 
           <dt>Reference:</dt>
-          <dd><xref target="step5-token-exchange"/> of this document. This
+          <dd><xref target="step3-delegation-request"/> of this document. This
           parameter is used in the token request context to receive a
           redirect callback upon completion of user interaction, as
           extended from
