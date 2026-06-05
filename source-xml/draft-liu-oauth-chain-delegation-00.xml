@@ -67,11 +67,12 @@
         constructed unilaterally by the Authorization Server without
         cryptographic confirmation from the delegating agent.  This
         specification defines the <tt>delegation_chain</tt> JWT claim as a
-        structured audit companion to <tt>act</tt>: an ordered array of
+        structured delegation record companion to <tt>act</tt>: an ordered array of
         delegation records, each capturing the delegated policy, and
         the Authorization Server's attestation, and MAY additionally
         carry the delegator's cryptographic confirmation.  Together, <tt>act</tt> and <tt>delegation_chain</tt>
-        provide both runtime authorization and post-hoc auditability for
+        provide both runtime authorization and verifiable delegation
+        lineage for
         multi-hop agent delegation.  The specification supports cross-domain
         delegation by composing with the identity chaining transport pattern,
         and integrates a user interaction mechanism for explicit consent when
@@ -209,7 +210,7 @@
       <t>
         This section describes how the <tt>delegation_chain</tt> claim
         relates to existing OAuth 2.0 mechanisms, establishing the precise
-        boundary between runtime delegation semantics and audit-time
+        boundary between runtime delegation semantics and structured
         delegation records.
       </t>
 
@@ -225,90 +226,52 @@
         </t>
 
         <t>
-          The <tt>act</tt> claim is designed for <strong>runtime
-          authorization</strong>: it tells a Resource Server who is currently
-          acting, enabling the server to apply access control policies based
-          on the current actor's identity.  However, it does not address the
-          <strong>audit dimension</strong> of delegation:
+          The <tt>act</tt> claim is constructed by the Authorization Server
+          alone: the AS assembles the nested actor chain without requiring
+          independent proof from each delegating agent.  This is sufficient
+          for runtime authorization decisions but does not capture per-hop
+          policy constraints or delegator consent.
+        </t>
+
+        <t>
+          The <tt>delegation_chain</tt> claim complements <tt>act</tt> by
+          recording the delegation lineage as a structured array of signed
+          records.  Each record captures the delegated policy at that hop
+          (<tt>scope</tt>, and optionally <tt>delegated_policy</tt>), the
+          AS's attestation (<tt>as_signature</tt>), and — when present —
+          the delegator's own cryptographic proof
+          (<tt>delegator_signature</tt>).  This enables:
         </t>
 
         <ul>
           <li>
-            The <tt>act</tt> claim records <em>who</em> is at each hop but
-            not <em>what authorization constraints</em> were applied at each
-            delegation step.  A token's <tt>scope</tt> reflects the final
-            authorization but does not show how it was narrowed along the
-            chain.
+            <strong>Per-hop policy constraints:</strong> Each delegation
+            record carries the policy that was applied at that hop, not
+            just the final scope.  This preserves the full delegation
+            lineage and enables policy narrowing verification.
           </li>
           <li>
-            The <tt>act</tt> claim is assembled by the Authorization Server
-            alone.  The delegating agent at each hop does not independently
-            sign or confirm the delegation record, which limits
-            non-repudiation.
+            <strong>Delegator proof:</strong> The optional
+            <tt>delegator_signature</tt> on each record provides
+            independent evidence of each delegator's consent, enabling
+            non-repudiation that the AS alone cannot provide.
+          </li>
+          <li>
+            <strong>User interaction:</strong> The delegation flow
+            supports optional user consent interaction
+            (<xref target="delegation-interaction"/>) at each hop,
+            which is outside the scope of <tt>act</tt>.
           </li>
         </ul>
 
         <t>
-          The <tt>delegation_chain</tt> claim complements <tt>act</tt> by
-          providing the structured audit record that <tt>act</tt> does not
-          carry.  The following table summarizes the relationship:
-        </t>
-
-        <table>
-          <name>Comparison: act vs. delegation_chain</name>
-          <thead>
-            <tr>
-              <th>Dimension</th>
-              <th>act (RFC 8693)</th>
-              <th>delegation_chain (this spec)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Purpose</td>
-              <td>Runtime authorization</td>
-              <td>Post-hoc audit and compliance</td>
-            </tr>
-            <tr>
-              <td>Primary consumer</td>
-              <td>Resource Server</td>
-              <td>Auditor, compliance system</td>
-            </tr>
-            <tr>
-              <td>Multi-hop support</td>
-              <td>Yes (nested act object)</td>
-              <td>Yes (ordered array of records)</td>
-            </tr>
-            <tr>
-              <td>Per-hop policy</td>
-              <td>No (only final scope)</td>
-              <td>Conditional (delegated_policy per record when present; scope per token otherwise)</td>
-            </tr>
-            <tr>
-              <td>Delegator proof</td>
-              <td>No (AS-constructed)</td>
-              <td>Conditional (delegator_signature; RECOMMENDED)</td>
-            </tr>
-            <tr>
-              <td>User interaction</td>
-              <td>No</td>
-              <td>Yes (optional, via JAG-IR)</td>
-            </tr>
-            <tr>
-              <td>Coexistence</td>
-              <td colspan="2">Both SHOULD coexist in the same token</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <t>
           In a token carrying both claims, <tt>act</tt> identifies the
           current actor for the Resource Server's authorization decision,
-          while <tt>delegation_chain</tt> provides the verifiable audit trail
-          from the current actor back to the original human principal.  The
-          <tt>delegatee_id</tt> of the most recent delegation record (index
-          0) MUST match the <tt>act.sub</tt> value, ensuring continuity
-          between the runtime and audit views.
+          while <tt>delegation_chain</tt> provides the structured delegation
+          record from the current actor back to the original human principal.
+          The <tt>delegatee_id</tt> of the most recent delegation record
+          (index 0) MUST match the <tt>act.sub</tt> value, ensuring
+          continuity between the two claims.
         </t>
       </section>
 
@@ -333,7 +296,7 @@
         <ul>
           <li>
             <strong>delegation_chain claim:</strong> An explicit,
-            cryptographically signed audit trail of all delegation hops,
+            cryptographically signed delegation record of all delegation hops,
             which identity chaining does not define;
           </li>
           <li>
@@ -361,7 +324,7 @@
           chaining addresses general cross-domain identity propagation
           (human users, CI/CD pipelines, SSO extension), while this
           specification profiles that transport specifically for
-          agent-to-agent delegation with audit trail requirements.
+          agent-to-agent delegation with delegation lineage requirements.
         </t>
       </section>
 
