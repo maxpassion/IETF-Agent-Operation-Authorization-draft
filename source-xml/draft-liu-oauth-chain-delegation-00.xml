@@ -938,7 +938,7 @@
     | (1) Initial     |                 |                |                 | 
     |  Authorization  |                 |                |                 | 
     |  (OAuth flow)   |                 |                |                 |
-    |--------------->|                 |                |                 |
+    |---------------> |                 |                |                 |
     |                 |                 |                |                 |
     |                 | (2) Token A     |                |                 |
     |                 |  (root, no      |                |                 | 
@@ -948,7 +948,7 @@
     |                 | (3) Token Exchange (delegation)  |                 | 
     |                 |---------------->|                |                 | 
     |                 |  - subject_token                 |                 | 
-    |                 |  - delegatee_id                 |                 | 
+    |                 |  - delegatee_id                  |                 | 
     |                 |  - authorization_details         |                 | 
     |                 |                 |                |                 | 
     |                 | (4) AS determines user interaction required        | 
@@ -979,7 +979,7 @@
     |                 |                 | - Scope subset |                 | 
     |                 |                 |                |                 | 
     |                 |                 | (10) Issue Token B               |
-    |                 |                 |---------------->|                 |
+    |                 |                 |--------------->|                 |
     |                 |                 | with delegation_chain            |
     |                 |                 |                |                 | 
     |                 |                 |                | (11) API Request| 
@@ -1296,7 +1296,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     | (1) Initial     |                 |                |                 | 
     |  Authorization  |                 |                |                 | 
     |  (OAuth flow)   |                 |                |                 | 
-    |--------------->|                 |                |                 |
+    |---------------->|                 |                |                 |
     |                 |                 |                |                 |
     |                 | (2) Token A     |                |                 |
     |                 |  (root, no      |                |                 |
@@ -1306,7 +1306,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     |                 | (3) Token Exchange (delegation)  |                 |
     |                 |---------------->|                |                 |
     |                 |  - subject_token                 |                 |
-    |                 |  - delegatee_id                 |                 |
+    |                 |  - delegatee_id                  |                 |
     |                 |  - authorization_details         |                 |
     |                 |                 |                |                 |
     |                 |                 | (4) Validate   |                 |
@@ -1316,7 +1316,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     |                 |                 |   or pre-approved                |
     |                 |                 |                |                 |
     |                 |                 | (5) Issue Token B                |
-    |                 |                 |---------------->|                 |
+    |                 |                 |--------------->|                 |
     |                 |                 | with delegation_chain            |
     |                 |                 |                |                 | 
     |                 |                 |                |  (6) API Request|
