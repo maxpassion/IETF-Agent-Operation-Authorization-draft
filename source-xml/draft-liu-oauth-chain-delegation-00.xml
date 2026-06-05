@@ -65,14 +65,12 @@
         However, <tt>act</tt> captures only the identity of each actor in the
         chain, not the authorization constraints applied at each hop, and is
         constructed unilaterally by the Authorization Server without
-        cryptographic confirmation from the delegating agent (when the
-        Full Profile is used).  This
+        cryptographic confirmation from the delegating agent.  This
         specification defines the <tt>delegation_chain</tt> JWT claim as a
         structured audit companion to <tt>act</tt>: an ordered array of
         delegation records, each capturing the delegated policy, and
-        the Authorization Server's attestation; in the Full Profile,
-        each record additionally carries the delegator's cryptographic
-        confirmation.  Together, <tt>act</tt> and <tt>delegation_chain</tt>
+        the Authorization Server's attestation, and MAY additionally
+        carry the delegator's cryptographic confirmation.  Together, <tt>act</tt> and <tt>delegation_chain</tt>
         provide both runtime authorization and post-hoc auditability for
         multi-hop agent delegation.  The specification supports cross-domain
         delegation by composing with the identity chaining transport pattern,
@@ -90,9 +88,7 @@
         (Agent B), which may in turn delegate further to Agent C.  Each
         delegation hop must preserve the original user's authorization
         intent while constraining what each downstream agent is permitted
-        to do.  For regulated deployments, it must also be possible to
-        reconstruct the complete delegation history after the fact —
-        proving who authorized what, at each step.
+        to do.
       </t>
 
       <t>
@@ -141,50 +137,27 @@
 
       <t>
         This specification introduces the <tt>delegation_chain</tt> claim as
-        a structured audit companion to <tt>act</tt>.  While <tt>act</tt>
+        a structured companion to <tt>act</tt>.  While <tt>act</tt>
         provides runtime actor identification for authorization decisions,
         <tt>delegation_chain</tt> records the full delegation history as an
         ordered array of delegation records.  Each record captures the
-        delegated policy at that hop and the AS's attestation; in the
-        Full Profile, each record additionally carries the delegator's
-        cryptographic confirmation, ensuring that neither the AS nor
-        any delegating agent can unilaterally construct or deny a
-        delegation record.  The two claims coexist in the same token:
+        delegated policy at that hop and the AS's attestation, and MAY
+        additionally carry the delegator's cryptographic confirmation,
+        ensuring that neither the AS nor any delegating agent can
+        unilaterally construct or deny a delegation record.  The two claims coexist in the same token:
         <tt>act</tt> answers "who is acting now" for the Resource Server,
         while <tt>delegation_chain</tt> answers "how was this authorization
         delegated, step by step" for auditors and compliance systems.
       </t>
 
       <t>
-        This work directly addresses the "Complex Delegation" work item
-        identified in the OAuth Working Group charter: "Developing new
-        mechanisms or/and extensions for authorization of automated agents
-        working on behalf of users, including addressing scenarios where
-        automated agents act across multiple administrative domains."  The
-        <tt>delegation_chain</tt> claim addresses the audit and verification
+        The<tt>delegation_chain</tt> claim addresses the audit and verification
         dimension of complex delegation, complementing the runtime semantics
         provided by existing OAuth mechanisms.  Cross-domain delegation
-        (<xref target="cross-domain"/>) addresses the multi-domain aspect
-        called out in the charter.  This specification focuses on linear
-        delegation chains (A→B→C→…); other complex topologies such as
+        (<xref target="cross-domain"/>) addresses the multi-domain scenario.  This version of the specification focuses on linear
+        delegation chains;other complex topologies such as
         diamond-shaped delegation, where multiple paths converge on the same
-        agent, are out of scope for this version and may be addressed by
-        future extensions.
-      </t>
-
-      <t>
-        This specification can be deployed in two modes.  In
-        <strong>standalone mode</strong>, it operates as an independent
-        OAuth 2.0 extension defining the <tt>delegation_chain</tt> claim and
-        a delegation Token Exchange profile for use within a single trust
-        domain.  In <strong>composed mode</strong>, it operates as a profile
-        of <xref target="I-D.ietf-oauth-identity-chaining"/>, where the
-        <tt>delegation_chain</tt> claim serves as a structured Claims
-        Transcription format (<xref target="I-D.ietf-oauth-identity-chaining"/>
-        Section 2.5) in the cross-domain flow — carrying not just transcribed
-        claims but cryptographic evidence of who authorized each
-        transcription.  Both modes are interoperable and can coexist within
-        the same deployment.
+        agent, may be addressed by future extensions.
       </t>
 
       <t>
@@ -207,36 +180,19 @@
       </t>
 
       <t>
-        <strong>Conformance Profiles:</strong> This specification supports
-        two conformance profiles to accommodate different deployment
-        scenarios:
+        <strong>Deployment Options:</strong> A minimal deployment
+        requires only the <tt>delegation_chain</tt> claim structure
+        (<xref target="delegation-chain-claim"/>), the delegation
+        Token Exchange flow (<xref target="protocol-flow"/>), and
+        the AS validation rules
+        (<xref target="step3-delegation-request"/>).
+        Implementations MAY additionally support structured policy
+        (<tt>delegated_policy</tt>), user interaction
+        (<xref target="delegation-interaction"/>), cross-domain
+        delegation (<xref target="cross-domain"/>),
+        <tt>delegator_signature</tt>, and authorization evidence
+        propagation, depending on deployment requirements.
       </t>
-      <ul>
-        <li>
-          <strong>Core Profile:</strong> Implementations need only
-          support the <tt>delegation_chain</tt> claim structure
-          (<xref target="delegation-chain-claim"/>), the delegation
-          Token Exchange flow (<xref target="protocol-flow"/>), and
-          the AS validation rules (<xref target="step3-delegation-request"/>).
-          The Core Profile does not require cross-domain support, user
-          interaction (JAG-IR), structured policy, or authorization
-          evidence.
-          It is suitable for single-domain deployments that need
-          multi-hop delegation audit trails with standard OAuth scope
-          constraints.
-        </li>
-        <li>
-          <strong>Full Profile:</strong> Implementations additionally
-          support cross-domain delegation
-          (<xref target="cross-domain"/>), user interaction during
-          delegation (<xref target="delegation-interaction"/>),
-          machine-enforceable structured policy via the
-          <tt>delegated_policy</tt> field, and optional authorization
-          evidence propagation.  The Full Profile is intended for
-          multi-domain, regulated environments where fine-grained
-          policy enforcement and auditable user consent are required.
-        </li>
-      </ul>
 
       <section title="Requirements Language">
         <t>
@@ -326,12 +282,12 @@
             <tr>
               <td>Per-hop policy</td>
               <td>No (only final scope)</td>
-              <td>Conditional (delegated_policy per record, Full Profile; scope per token, Core Profile)</td>
+              <td>Conditional (delegated_policy per record when present; scope per token otherwise)</td>
             </tr>
             <tr>
               <td>Delegator proof</td>
               <td>No (AS-constructed)</td>
-              <td>Conditional (delegator_signature; RECOMMENDED in Full Profile, OPTIONAL in Core Profile)</td>
+              <td>Conditional (delegator_signature; RECOMMENDED)</td>
             </tr>
             <tr>
               <td>User interaction</td>
@@ -383,15 +339,15 @@
           <li>
             <strong>Policy narrowing enforcement:</strong> Each delegation
             hop MUST carry a <tt>scope</tt> equal to or narrower than its
-            predecessor; in the Full Profile, structured policy
+            predecessor; structured policy
             (<tt>delegated_policy</tt>) is additionally enforced when
             present;
           </li>
           <li>
-            <strong>Conditional dual-signature security (Full Profile):</strong>
-            Both the AS and the delegating agent sign each delegation
-            record, preventing unilateral forgery; Core Profile relies on
-            AS signature alone;
+            <strong>Optional dual-signature security:</strong>
+            Both the AS and the delegating agent can sign each delegation
+            record, preventing unilateral forgery; deployments that omit
+            <tt>delegator_signature</tt> rely on AS signature alone;
           </li>
           <li>
             <strong>Agent Identifier URIs:</strong> Resolvable URI-based
@@ -485,12 +441,8 @@
           A URI used to identify a delegating or delegatee agent in a
           delegation record.  The Agent Identifier is a generalization
           of the WIT URI: implementations MAY use WIT URIs when
-          workload identity attestation infrastructure (such as
-          SPIFFE/SPIRE) is available, or alternative URI schemes
-          including <tt>did:</tt> (Decentralized Identifiers),
-          <tt>https:</tt> (HTTPS URLs resolvable to a public key or
-          agent metadata document), or <tt>spiffe://</tt> (SPIFFE IDs)
-          when such schemes are more appropriate for the deployment.
+          workload identity infrastructure (such as
+          SPIFFE/SPIRE) is available.
           The identifier MUST be resolvable to a verifiable public key
           for signature verification when
           <tt>delegator_signature</tt> is present.
@@ -522,13 +474,13 @@
         </t>
 
         <t>
-          The following example shows a <strong>Core Profile</strong>
+          The following example shows a minimal
           delegation record using standard OAuth scope and HTTPS agent
-          identifiers, with no structured policy and no WIT infrastructure:
+          identifiers:
         </t>
 
         <figure>
-          <artwork name="Core Profile delegation record (minimal)" type="json"><![CDATA[
+          <artwork name="Minimal delegation record" type="json"><![CDATA[
 {
   "delegation_chain": [
     {
@@ -544,14 +496,14 @@
         </figure>
 
         <t>
-          The following example shows a <strong>Full Profile</strong>
+          The following example shows an extended
           delegation record with WIT-based agent identifiers, a
           machine-enforceable structured policy, a root evidence reference,
           and dual signatures:
         </t>
 
         <figure>
-          <artwork name="Full Profile delegation record" type="json"><![CDATA[
+          <artwork name="Extended delegation record" type="json"><![CDATA[
 {
   "delegation_chain": [
     {
@@ -583,12 +535,12 @@
           <li>
             <strong>Delegation Proposal Phase:</strong> The delegating agent
             creates a delegation proposal that includes the delegatee
-            identity, the delegated scope, and — when the Full Profile is
+            identity, the delegated scope, and — when structured policy is
             used — the delegated policy and operation context.
           </li>
 
           <li>
-            <strong>Delegation Interaction Phase (CONDITIONAL, Full Profile):</strong>
+            <strong>Delegation Interaction Phase (CONDITIONAL):</strong>
             When the Authorization Server determines that user interaction is
             required before the delegation can be authorized — for example,
             when delegating to a new agent for the first time, when the
@@ -601,8 +553,8 @@
             retries the delegation request.  This phase is skipped when the AS
             determines that no additional user interaction is needed (e.g., the
             delegation is covered by a standing authorization or the policy has
-            been pre-approved).  Core Profile implementations MAY omit this
-            phase entirely.
+            been pre-approved).  Implementations that do not require
+            user interaction MAY omit this phase entirely.
           </li>
 
           <li>
@@ -703,7 +655,8 @@
                 event — the original consent granted by the human
                 principal from which all delegations in the chain
                 derive.  This field MUST be present for the first
-                delegation (User to Agent A) in the Full Profile and
+                delegation (User to Agent A) when structured evidence
+                is used and
                 SHOULD be propagated through the chain.  The format of
                 the identifier and the mechanism for resolving it are
                 deployment-specific: implementations using a structured
@@ -720,18 +673,18 @@
             <tr>
               <td>delegator_signature</td>
               <td>string</td>
-              <td>RECOMMENDED (Full Profile); OPTIONAL (Core Profile)</td>
+              <td>RECOMMENDED</td>
               <td>
                 Cryptographic signature from the delegating agent's
                 private key over this delegation record.  This provides
                 dual-signature security alongside
                 <tt>as_signature</tt>, preventing a malicious AS from
                 forging unauthorized delegations and ensuring
-                non-repudiation.  Full Profile implementations SHOULD
-                include this field on every delegation record.  Core
-                Profile implementations MAY omit it when the AS is the
-                sole trust anchor and the deployment does not require
-                independent delegator non-repudiation.
+                non-repudiation.  Implementations SHOULD
+                include this field on every delegation record.  It MAY be
+                omitted when the AS is the sole trust anchor and the
+                deployment does not require independent delegator
+                non-repudiation.
               </td>
             </tr>
             <tr>
@@ -749,14 +702,14 @@
         </t>
         <ul>
           <li>
-            <strong>Core Profile:</strong> This field is typically
+            <strong>Scope-based (typical):</strong> This field is typically
             absent.  The delegation is governed solely by the OAuth
             <tt>scope</tt> parameter, and the Resource Server applies
             scope-based authorization.  When this field is absent, the
             Resource Server MUST apply scope-based authorization only.
           </li>
           <li>
-            <strong>Full Profile:</strong> This field carries a
+            <strong>Structured policy:</strong> This field carries a
             machine-enforceable policy.  The policy language and
             comparison mechanism are implementation-specific:
             implementations MAY use a Rego policy structure (with
@@ -826,8 +779,8 @@
         </t>
 
         <t>
-          When the <tt>delegator_signature</tt> is present (RECOMMENDED in
-          Full Profile), it uses the delegating agent's agent-identifier-bound
+          When the <tt>delegator_signature</tt> is present (RECOMMENDED),
+          it uses the delegating agent's agent-identifier-bound
           private key, while <tt>as_signature</tt> uses the Authorization Server's
           signing key. This dual-signature approach, when both signatures are
           present, ensures:
@@ -868,12 +821,6 @@
             <strong>spiffe://</strong>: The SPIFFE ID is resolved via
             the SPIFFE Bundle Endpoint protocol, which provides the
             agent's X.509-SVID or JWT-SVID containing the public key;
-          </li>
-          <li>
-            <strong>did:</strong>: The DID is resolved via the
-            applicable DID method's resolution algorithm, which returns
-            a DID Document containing one or more verification methods
-            (public keys);
           </li>
           <li>
             <strong>https://</strong>: The HTTPS URL is resolved by
@@ -922,9 +869,8 @@
       </t>
 
       <t>
-        The user interaction mechanism is a key feature of the Full Profile,
-        ensuring that delegation decisions remain under user control even in
-        complex multi-agent scenarios. When the Authorization Server determines
+        The user interaction mechanism ensures that delegation decisions
+        remain under user control even in complex multi-agent scenarios. When the Authorization Server determines
         that user interaction is required, the flow includes an explicit
         consent step before token issuance.
       </t>
@@ -1007,13 +953,13 @@
         </t>
 
         <t>
-          The following example shows a <strong>Core Profile</strong>
+          The following example shows a minimal
           delegation request using standard OAuth scope and an HTTPS
           agent identifier:
         </t>
 
         <figure>
-          <artwork name="Core Profile Delegation Request (scope-only)" type="http"><![CDATA[
+          <artwork name="Minimal Delegation Request (scope-only)" type="http"><![CDATA[
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
@@ -1028,14 +974,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </figure>
 
         <t>
-          The following example shows a <strong>Full Profile</strong>
+          The following example shows an extended
           delegation request with WIT-based agent identity, client
           attestation, and a structured policy carried via
           <tt>authorization_details</tt>:
         </t>
 
         <figure>
-          <artwork name="Full Profile Delegation Request (with structured policy)" type="http"><![CDATA[
+          <artwork name="Extended Delegation Request (with structured policy)" type="http"><![CDATA[
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
@@ -1086,8 +1032,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <tt>urn:ietf:params:oauth:token-type:access_token</tt>;
           </li>
           <li>
-            <tt>authorization_details</tt> (OPTIONAL, Full Profile): Contains
-            a structured policy (e.g., <tt>rego_policy</tt> type) with the delegated policy, which
+            <tt>authorization_details</tt> (OPTIONAL): Carries the delegated
+            policy in a structured format (e.g., type "rego_policy"), which
             MUST be equal to or more restrictive than Agent A's policy;
           </li>
           <li>
@@ -1348,8 +1294,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <t>
         Authorization Servers SHOULD log all decisions to skip user
-        interaction as part of their audit trail.  Full Profile
-        implementations using structured authorization evidence (as
+        interaction as part of their audit trail.  Implementations
+        using structured authorization evidence (as
         described in <xref target="I-D.liu-oauth-authorization-evidence"/>
         or a deployment-specific model) SHOULD
         record the skip decision in the <tt>audit_trail</tt> claim;
@@ -1362,13 +1308,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         When the AS issues a delegated token, it extends the delegation_chain:
       </t>
 
-      <section title="Evidence Propagation (Full Profile)">
+      <section title="Evidence Propagation">
         <t>
-          In the Full Profile, when the AS issues a delegated token
-          within the same trust domain, it SHOULD propagate the
-          <tt>evidence</tt> and <tt>audit_trail</tt> claims from the
-          subject token (or root token) into the newly issued delegated
-          token.  This ensures that Resource Servers can verify the
+          When the AS issues a delegated token within the same trust
+          domain and structured authorization evidence is used, it
+          SHOULD propagate the <tt>evidence</tt> and
+          <tt>audit_trail</tt> claims from the subject token (or root
+          token) into the newly issued delegated token.  This ensures that Resource Servers can verify the
           original user consent without needing to retrieve the root
           token separately.  When evidence is propagated, the
           <tt>root_evidence_ref</tt> field in each delegation record
@@ -1378,8 +1324,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <t>
-          Core Profile implementations are not required to carry
-          <tt>evidence</tt> or <tt>audit_trail</tt> claims.  In
+          Implementations not using structured authorization evidence
+          are not required to carry <tt>evidence</tt> or
+          <tt>audit_trail</tt> claims.  In
           deployments that do not use structured authorization evidence,
           the <tt>root_evidence_ref</tt> field (when present) serves as
           an opaque reference to the original authorization event,
@@ -1392,11 +1339,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <t>
           If Agent A's token has no delegation_chain (root authorization), the
           AS creates a new chain with one entry.  The following shows a
-          <strong>Full Profile</strong> first delegation record:
+          <strong>extended</strong> first delegation record:
         </t>
 
         <figure>
-          <artwork name="First delegation (Full Profile)" type="json"><![CDATA[
+          <artwork name="First delegation (extended)" type="json"><![CDATA[
 {
   "delegation_chain": [
     {
@@ -1419,7 +1366,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </figure>
 
         <t>
-          A <strong>Core Profile</strong> equivalent would carry only
+          A minimal equivalent would carry only
           <tt>delegator_id</tt>, <tt>delegatee_id</tt>,
           <tt>delegation_timestamp</tt>, <tt>operation_summary</tt>,
           and <tt>as_signature</tt>, with the delegated scope expressed
@@ -1431,12 +1378,12 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       <section title="For Subsequent Delegations">
         <t>
           If Agent B further delegates to Agent C, the AS prepends a new
-          record.  The following shows a <strong>Full Profile</strong>
+          record.  The following shows an <strong>extended</strong>
           two-hop chain:
         </t>
 
         <figure>
-          <artwork name="Multi-hop delegation (Full Profile)" type="json"><![CDATA[
+          <artwork name="Multi-hop delegation (extended)" type="json"><![CDATA[
 {
   "delegation_chain": [
     {
@@ -1473,7 +1420,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </figure>
 
         <t>
-          In the <strong>Core Profile</strong>, the same two-hop chain
+          With scope-based delegation, the same two-hop chain
           would omit <tt>delegated_policy</tt>,
           <tt>delegator_signature</tt>, and
           <tt>root_evidence_ref</tt> from each record.  The scope
@@ -1721,13 +1668,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </ul>
 
         <t>
-          In the Full Profile, the Resource Server SHOULD additionally
+          In deployments using structured authorization evidence,
+          the Resource Server SHOULD additionally
           verify that the root token contains valid <tt>evidence</tt>
           and <tt>audit_trail</tt> claims (as described in
           <xref target="I-D.liu-oauth-authorization-evidence"/> or an
           equivalent structured evidence model), providing cryptographic
-          proof of user consent.  Core Profile deployments that do not
-          carry structured evidence MAY rely on the
+          proof of user consent.  Deployments that do not carry
+          structured evidence MAY rely on the
           <tt>root_evidence_ref</tt> field as an opaque pointer to the
           original authorization event, resolvable through
           deployment-specific mechanisms.
@@ -1780,7 +1728,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </ul>
 
         <t>
-          Core Profile deployments that rely solely on
+          Deployments that rely solely on
           <tt>as_signature</tt> accept the AS as the single trust
           anchor for delegation records.  This is appropriate when the
           AS is operated by a trusted authority and the deployment does
@@ -1861,7 +1809,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             at any hop invalidates the chain.
           </li>
           <li>
-            <strong>Policy (CONDITIONAL, Full Profile):</strong> When
+            <strong>Policy (CONDITIONAL):</strong> When
             the <tt>delegated_policy</tt> field is present, the
             Resource Server SHOULD verify that each hop's policy is
             equal to or more restrictive than its predecessor's policy.
@@ -1918,12 +1866,12 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </li>
           <li>
             A <strong>compromised AS</strong> may attempt to forge
-            delegation records without the delegator's consent. In the
-            Full Profile, the dual-signature mechanism (delegator + AS)
-            mitigates this threat; Core Profile deployments that rely
-            solely on <tt>as_signature</tt> accept the AS as the sole
-            trust anchor and must ensure AS compromise detection through
-            other operational controls.
+            delegation records without the delegator's consent.  When
+            the dual-signature mechanism (delegator + AS) is used, it
+            mitigates this threat; deployments that rely solely on
+            <tt>as_signature</tt> accept the AS as the sole trust anchor
+            and must ensure AS compromise detection through other
+            operational controls.
           </li>
           <li>
             A <strong>network attacker</strong> may attempt to intercept or
@@ -1956,14 +1904,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <strong>Non-repudiation (CONDITIONAL):</strong> When the
             <tt>delegator_signature</tt> is present, it provides
             independent evidence that the delegation was explicitly
-            authorized.  Core Profile deployments without delegator
             signatures rely on AS audit logs for non-repudiation.
           </li>
           <li>
             <strong>Scope compliance:</strong> Mandatory scope
             narrowing at each hop prevents privilege escalation through
             the chain.  When the <tt>delegated_policy</tt> field is
-            present (Full Profile), policy narrowing provides
+            present, policy narrowing provides
             additional fine-grained enforcement.
           </li>
           <li>
@@ -2201,7 +2148,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           on token size. Each delegation record typically adds 500 to 1000
           bytes to the token payload, including one or two detached JWS
           signatures (approximately 200 bytes each for ES256) and — in
-          the Full Profile — the structured policy
+          the structured policy
           content. A 5-hop delegation chain may therefore add 2.5 to 5 KB
           to the access token. This can cause issues with:
         </t>
@@ -2341,13 +2288,12 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <t>
           Authorization Servers SHOULD log all interaction decisions
           (whether interaction was required or skipped) as part of
-          their audit trail.  Full Profile implementations using
-          structured authorization evidence (as described in
+          their audit trail.  Implementations using structured
+          authorization evidence (as described in
           <xref target="I-D.liu-oauth-authorization-evidence"/>
-          or a deployment-specific model)
-          SHOULD record the decision in the <tt>audit_trail</tt>
-          claim; other deployments MAY record it in an
-          application-specific audit log.
+          or a deployment-specific model) SHOULD record the decision
+          in the <tt>audit_trail</tt> claim; other deployments MAY
+          record it in an application-specific audit log.
         </t>
       </section>
 
@@ -2685,7 +2631,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
     <section title="Complete Multi-Hop Example">
       <t>
-        The following shows a <strong>Full Profile</strong> token held
+        The following shows an <strong>extended</strong> token held
         by Agent C after two delegation hops
         (User → Agent A → Agent B → Agent C), using WIT-based
         identifiers, structured policies, and authorization
@@ -2772,7 +2718,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       </ul>
 
       <t>
-        A <strong>Core Profile</strong> equivalent of the same scenario
+        A scope-based equivalent of the same scenario
         would omit the <tt>delegated_policy</tt>,
         <tt>delegator_signature</tt>, <tt>root_evidence_ref</tt>,
         <tt>evidence</tt>, and <tt>audit_trail</tt> fields.  Each
@@ -2792,7 +2738,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         issued and signed by the Authorization Server. The delegating agent
         MAY additionally provide a <tt>delegator_signature</tt> within the
         <tt>delegation_chain</tt> record for dual-signature non-repudiation
-        (RECOMMENDED in the Full Profile, OPTIONAL in the Core Profile).
+        (RECOMMENDED).
       </t>
 
       <section title="Token Structure">
@@ -2826,7 +2772,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <ol>
           <li>The final token's signature matches the claimed issuer</li>
           <li>Each hop in the delegation_chain has valid timestamps</li>
-          <li>Policy constraints (scope MUST; structured policy CONDITIONAL, Full Profile) are maintained or narrowed (never expanded)</li>
+          <li>Policy constraints (scope MUST; structured policy CONDITIONAL) are maintained or narrowed (never expanded)</li>
           <li>The chain is continuous: for each record at index <tt>i</tt> (where <tt>i &gt; 0</tt>), <tt>record[i].delegator_id</tt> equals <tt>record[i-1].delegatee_id</tt></li>
           <li>The initial delegator matches the original authorization subject</li>
         </ol>
@@ -2873,7 +2819,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           the <tt>delegation_chain</tt> claim and the <tt>act</tt>
           claim, enabling the Resource Server to perform full chain
           validation without requiring direct access to the token's JWT
-          payload.  Full Profile implementations SHOULD additionally
+          payload.  Implementations SHOULD additionally
           include the <tt>evidence</tt> claim when structured
           authorization evidence is used.
         </t>
@@ -2945,7 +2891,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             Rego as described in
             <xref target="I-D.liu-oauth-rego-policy"/>), embed a
             suitable policy evaluator into the Resource Server.
-            For the Core Profile, standard scope-based authorization
+            For scope-based deployments, standard scope-based authorization
             is sufficient and no
             policy engine is required.
           </li>
@@ -3126,6 +3072,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
                 delegator non-repudiation, and delegation consent
                 are outside the design scope of Token Exchange and
                 Identity Chaining</li>
+            <li>Removed Core Profile / Full Profile conformance
+                distinction entirely; replaced with field-level
+                conditional semantics (MUST / SHOULD / OPTIONAL /
+                CONDITIONAL) so that each feature stands on its own
+                without requiring a profile label</li>
           </ul>
         </dd>
       </dl>
