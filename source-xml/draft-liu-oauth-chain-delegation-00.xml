@@ -48,7 +48,7 @@
       </address>
     </author>
 
-    <date year="2026" month="June" day="4"/>
+    <date year="2026" month="June" day="5"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -156,7 +156,7 @@
         dimension of complex delegation, complementing the runtime semantics
         provided by existing OAuth mechanisms.  Cross-domain delegation
         (<xref target="cross-domain"/>) addresses the multi-domain scenario.  This version of the specification focuses on linear
-        delegation chains;other complex topologies such as
+        delegation chains; other complex topologies such as
         diamond-shaped delegation, where multiple paths converge on the same
         agent, may be addressed by future extensions.
       </t>
@@ -629,8 +629,7 @@
                 the root token; other deployments MAY use any stable,
                 unique identifier (e.g., a consent record ID or an
                 audit log entry reference) that enables post-hoc
-                retrieval of the original authorization context.  Core
-                Profile implementations MAY omit this field.
+                retrieval of the original authorization context.  Implementations not using structured authorization evidence MAY omit this field.
               </td>
             </tr>
             <tr>
@@ -1867,7 +1866,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <strong>Non-repudiation (CONDITIONAL):</strong> When the
             <tt>delegator_signature</tt> is present, it provides
             independent evidence that the delegation was explicitly
-            signatures rely on AS audit logs for non-repudiation.
+            authorized by the delegator.  When omitted, deployments
+            rely on AS audit logs for non-repudiation.
           </li>
           <li>
             <strong>Scope compliance:</strong> Mandatory scope
