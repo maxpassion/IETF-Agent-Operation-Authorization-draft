@@ -148,11 +148,11 @@
         unilaterally construct or deny a delegation record.  The two claims coexist in the same token:
         <tt>act</tt> answers "who is acting now" for the Resource Server,
         while <tt>delegation_chain</tt> answers "how was this authorization
-        delegated, step by step" for auditors and compliance systems.
+        delegated, step by step" for verification and compliance systems.
       </t>
 
       <t>
-        The<tt>delegation_chain</tt> claim addresses the audit and verification
+        The <tt>delegation_chain</tt> claim addresses the delegation lineage and verification
         dimension of complex delegation, complementing the runtime semantics
         provided by existing OAuth mechanisms.  Cross-domain delegation
         (<xref target="cross-domain"/>) addresses the multi-domain scenario.  This version of the specification focuses on linear
@@ -171,12 +171,12 @@
         Chaining defines how to transport identity across trust domains
         but intentionally leaves Claims Transcription representation
         undefined.  The three problems solved by this specification —
-        multi-hop delegation audit, delegator non-repudiation, and
+        multi-hop delegation lineage, delegator non-repudiation, and
         delegation consent interaction — are orthogonal to both token
         conversion and cross-domain transport.  Absorbing this
         mechanism into either existing specification would broaden
         their scope beyond their original design intent and impose
-        delegation audit complexity on deployments that do not
+        delegation lineage complexity on deployments that do not
         need it.
       </t>
 
@@ -3040,6 +3040,17 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
                 conditional semantics (MUST / SHOULD / OPTIONAL /
                 CONDITIONAL) so that each feature stands on its own
                 without requiring a profile label</li>
+            <li>Removed Comparison table (act vs. delegation_chain);
+                replaced with prose description of complementary
+                relationship and three structural extensions (per-hop
+                policy, delegator proof, user interaction)</li>
+            <li>Reduced audit-centric framing throughout: replaced
+                "audit companion" with "delegation record companion",
+                "post-hoc auditability" with "verifiable delegation
+                lineage", "audit trail requirements" with "delegation
+                lineage requirements"; broadened consumer description
+                from "auditors and compliance systems" to "verification
+                and compliance systems"</li>
           </ul>
         </dd>
       </dl>
