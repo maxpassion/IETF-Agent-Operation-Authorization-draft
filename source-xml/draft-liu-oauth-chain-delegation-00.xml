@@ -600,7 +600,7 @@
                 constraints that apply to this delegation hop.  The
                 delegated policy MUST be equal to or more restrictive
                 than the delegator's policy; policy or scope expansion is NOT
-                allowed.  See below for profile-specific structure.
+                allowed.  See below for deployment-specific structure.
               </td>
             </tr>
             <tr>
@@ -1300,7 +1300,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       <section title="For First Delegation">
         <t>
           If Agent A's token has no delegation_chain (root authorization), the
-          AS creates a new chain with one entry.  The following shows a
+          AS creates a new chain with one entry.  The following shows an
           <strong>extended</strong> first delegation record:
         </t>
 
@@ -1397,7 +1397,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       <t>
         When delegation hops span multiple trust domains — each with its own
         Authorization Server — this specification combines the
-        <tt>delegation_chain</tt> audit model with the cross-domain transport
+        <tt>delegation_chain</tt> mechanism with the cross-domain transport
         pattern defined in <xref target="I-D.ietf-oauth-identity-chaining"/>.
       </t>
 
@@ -2110,8 +2110,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           Implementers should consider the impact of delegation chain depth
           on token size. Each delegation record typically adds 500 to 1000
           bytes to the token payload, including one or two detached JWS
-          signatures (approximately 200 bytes each for ES256) and — in
-          the structured policy
+          signatures (approximately 200 bytes each for ES256) and,
+          when present, the structured policy
           content. A 5-hop delegation chain may therefore add 2.5 to 5 KB
           to the access token. This can cause issues with:
         </t>
