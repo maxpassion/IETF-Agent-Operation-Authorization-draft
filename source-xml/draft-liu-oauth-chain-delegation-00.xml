@@ -68,9 +68,9 @@
         cryptographic confirmation from the delegating agent.  This
         specification defines the <tt>delegation_chain</tt> JWT claim as a
         structured delegation record companion to <tt>act</tt>: an ordered array of
-        delegation records, each capturing the delegated policy, and
-        the Authorization Server's attestation, and MAY additionally
-        carry the delegator's cryptographic confirmation.  Together, <tt>act</tt> and <tt>delegation_chain</tt>
+        delegation records, each capturing the Authorization Server's
+        attestation and, when present, the delegated policy constraints,
+        and optionally carrying the delegator's cryptographic confirmation.  Together, <tt>act</tt> and <tt>delegation_chain</tt>
         provide both runtime authorization and verifiable delegation
         lineage for
         multi-hop agent delegation.  The specification supports cross-domain
@@ -142,8 +142,9 @@
         provides runtime actor identification for authorization decisions,
         <tt>delegation_chain</tt> records the full delegation history as an
         ordered array of delegation records.  Each record captures the
-        delegated policy at that hop and the AS's attestation, and MAY
-        additionally carry the delegator's cryptographic confirmation,
+        AS's attestation and, when present, the delegated policy at that
+        hop, and MAY additionally carry the delegator's cryptographic
+        confirmation,
         ensuring that neither the AS nor any delegating agent can
         unilaterally construct or deny a delegation record.  The two claims coexist in the same token:
         <tt>act</tt> answers "who is acting now" for the Resource Server,
@@ -236,9 +237,10 @@
         <t>
           The <tt>delegation_chain</tt> claim complements <tt>act</tt> by
           recording the delegation lineage as a structured array of signed
-          records.  Each record captures the delegated policy at that hop
-          (<tt>scope</tt>, and optionally <tt>delegated_policy</tt>), the
-          AS's attestation (<tt>as_signature</tt>), and — when present —
+          records.  Each record captures the AS's attestation
+          (<tt>as_signature</tt>), the policy constraints applied at
+          that hop (<tt>scope</tt>, and — when present —
+          <tt>delegated_policy</tt>), and — when present —
           the delegator's own cryptographic proof
           (<tt>delegator_signature</tt>).  This enables:
         </t>
@@ -343,7 +345,7 @@
           The <tt>delegation_chain</tt> claim provides one such
           representation.  When delegation crosses a trust domain boundary,
           each delegation record captures the transcribed policy
-          (<tt>delegated_policy</tt>) and the cryptographic evidence of the
+          (when present, <tt>delegated_policy</tt>) and the cryptographic evidence of the
           transcribing party (the AS via <tt>as_signature</tt>, and — when
           present — the delegator via <tt>delegator_signature</tt>).  This enables the receiving
           domain to verify not just <em>what</em> was transcribed but
@@ -1409,38 +1411,41 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
         <figure>
           <artwork name="Cross-Domain Delegation Flow" type="ascii-art"><![CDATA[
-+-------+  +-------+  +-------+  +-------+  +-------+  +-------+
-| User  |  |Agent A|  | AS-A  |  |Agent B|  | AS-B  |  | RS-B  |
-+-------+  +-------+  +-------+  +-------+  +-------+  +-------+
-     |          |          |          |          |          |   
-     | (1) Auth |          |          |          |          |   
-     |--------->|          |          |          |          |   
-     |          |          |          |          |          |   
-     |          | (2) Token Exchange  |          |          |   
-     |          |  (delegation +      |          |          |   
-     |          |   resource=AS-B)    |          |          |   
-     |          |--------->|          |          |          |   
-     |          |          |          |          |          |   
-     |          | (3) JWT  |          |          |          |   
-     |          | Authoriz |          |          |          |   
-     |          | Grant    |          |          |          |   
-     |          |<---------|          |          |          |   
-     |          |          |          |          |          |   
-     |          | (4) Present JWT Grant to AS-B  |          |   
-     |          |------------------------------->|          |   
-     |          |          |          |          |          |   
-     |          |          |          |          |(5) Validate  
-     |          |          |          |          |- JWT signatur
-     |          |          |          |          |- delegation  
-     |          |          |          |          |- policy      
-     |          |          |          |          |          |   
-     |          |          |          |          |(6) Access|   
-     |          |          |          |          |  Token   |   
-     |          |          |          |<---------|          |   
-     |          |          |          |          |          |   
-     |          |          |          |(7) API Req          |   
-     |          |          |          |-------------------->|   
-     |          |          |          |          |          |   
++-------+  +-------+  +-------+  +-------+  +-------+       +-------+
+| User  |  |Agent A|  | AS-A  |  |Agent B|  | AS-B  |       | RS-B  |
++-------+  +-------+  +-------+  +-------+  +-------+       +-------+
+     |          |          |          |          |              |   
+     | (1) Auth |          |          |          |              |   
+     |--------->|          |          |          |              |   
+     |          |          |          |          |              |   
+     |          | (2) Token Exchange  |          |              |   
+     |          |  (delegation +      |          |              |   
+     |          |   resource=AS-B)    |          |              |   
+     |          |--------->|          |          |              |   
+     |          |          |          |          |              |   
+     |          | (3) JWT  |          |          |              |   
+     |          | Authoriz |          |          |              |   
+     |          | Grant    |          |          |              |   
+     |          |<---------|          |          |              |    
+     |          |          |          |          |              |   
+     |          | (3.5) Agent A transfers JWT Grant to Agent B  |
+     |          |------------------------------->|              | 
+     |          |          |          |          |              |
+     |          |          |          |          |(4) Present JWT Grant
+     |          |          |          |          |------------->|
+     |          |          |          |          |              |
+     |          |          |          |          |(5) Validate  | 
+     |          |          |          |          |- JWT signatur|
+     |          |          |          |          |- delegation  |
+     |          |          |          |          |- policy      |
+     |          |          |          |          |              |   
+     |          |          |          |          |(6) Access    |   
+     |          |          |          |          |  Token       |   
+     |          |          |          |<---------|              |   
+     |          |          |          |          |              |   
+     |          |          |          |(7) API Req              |   
+     |          |          |          |------------------------>|   
+     |          |          |          |          |              |   
           ]]></artwork>
         </figure>
 
@@ -1464,9 +1469,12 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             used before this step.
           </li>
           <li>
-            Agent A presents the JWT authorization grant to AS-B using
-            the JWT Bearer grant type (<xref target="RFC7523"/>), as
-            defined in <xref target="I-D.ietf-oauth-identity-chaining"/>.
+            Agent A transfers the JWT authorization grant to Agent B
+            through an out-of-band mechanism (e.g., a secure internal
+            channel).  Agent B presents the JWT authorization grant to
+            AS-B using the JWT Bearer grant type
+            (<xref target="RFC7523"/>), as defined in
+            <xref target="I-D.ietf-oauth-identity-chaining"/>.
           </li>
           <li>
             AS-B validates the JWT grant signature, verifies the
@@ -1572,7 +1580,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           undefined.  The <tt>delegation_chain</tt> claim provides one such
           representation: when delegation crosses a trust domain boundary,
           each delegation record captures the transcribed policy
-          (<tt>delegated_policy</tt>), the identity mapping (delegator and
+          (when present, <tt>delegated_policy</tt>), the identity mapping (delegator and
           delegatee identifiers), and the cryptographic evidence of both the
           transcribing AS (<tt>as_signature</tt>) and — when present — the
           delegating agent (<tt>delegator_signature</tt>).
@@ -1616,16 +1624,28 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <t>
-          The Resource Server MUST verify that:
+          The Resource Server SHOULD verify the root authorization
+          anchor.  Since the RS typically observes only the delegated
+          token (which carries the <tt>delegation_chain</tt>), it does
+          not have direct access to the root token.  Verification can
+          be performed through one or more of the following means:
         </t>
 
         <ul>
           <li>
-            The earliest delegator (last record) holds a root token —
-            a token without a <tt>delegation_chain</tt> claim;
+            Using token introspection
+            (<xref target="RFC7662"/>) to confirm that the earliest
+            delegator (identified by the <tt>delegator_id</tt> of
+            the last chain record) holds a valid, non-revoked root
+            token issued by a trusted AS;
           </li>
           <li>
-            This root token was issued by a trusted AS and has not been revoked.
+            Relying on the structural integrity of the
+            <tt>delegation_chain</tt> itself — the AS that issued the
+            delegated token has already verified the root token's
+            validity at issuance time, and the
+            <tt>as_signature</tt> on each record attests to that
+            verification.
           </li>
         </ul>
 
@@ -1644,8 +1664,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <t>
-          If the RS cannot verify the root authorization anchor, it MUST reject
-          the request.
+          If the RS cannot establish confidence in the root authorization
+          anchor through any available mechanism, it SHOULD reject the
+          request.
         </t>
       </section>
 
@@ -2476,26 +2497,19 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd><xref target="step3-delegation-request"/> of this document</dd>
         </dl>
 
-        <dl>
-          <dt>Parameter Name:</dt>
-          <dd>interaction_callback_uri</dd>
-
-          <dt>Parameter Usage Location:</dt>
-          <dd>token request (Token Exchange for delegation)</dd>
-
-          <dt>Change Controller:</dt>
-          <dd>IETF</dd>
-
-          <dt>Reference:</dt>
-          <dd><xref target="step3-delegation-request"/> of this document. This
-          parameter is used in the token request context to receive a
-          redirect callback upon completion of user interaction, as
-          extended from
-          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
-          This is a distinct parameter from the <tt>redirect_uri</tt>
-          defined in <xref target="RFC6749"/> Section 3.1.2, which is
-          used in authorization requests.</dd>
-        </dl>
+        <t>
+          The <tt>interaction_callback_uri</tt> parameter is used in
+          the delegation Token Exchange request context
+          (<xref target="step3-delegation-request"/>) to receive a
+          redirect callback upon completion of user interaction.  The
+          parameter is defined and registered by
+          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
+          this specification extends its usage from the JWT
+          Authorization Grant (<tt>grant_type=jwt-bearer</tt>) to the
+          Token Exchange grant type
+          (<tt>grant_type=token-exchange</tt>).  No additional IANA
+          registration is required.
+        </t>
       </section>
 
       <section title="OAuth Error Registration">
@@ -2898,162 +2912,6 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           key lookups.
         </t>
       </section>
-    </section>
-
-    <section title="Document History">
-      <t>
-        [[ To be removed from the final specification ]]
-      </t>
-
-      <dl>
-        <dt>-00</dt>
-        <dd>
-          <ul>
-            <li>Initial version</li>
-            <li>Defined delegation_chain claim structure with dual-signature model</li>
-            <li>Added cross-domain delegation support composing with identity-chaining</li>
-            <li>Integrated JAG-IR user interaction mechanism for delegation consent</li>
-            <li>Added Core Profile and Full Profile conformance levels</li>
-            <li>Defined delegation revocation semantics and detection mechanisms</li>
-            <li>Added implementation guidance and performance considerations</li>
-            <li>Rewrote Abstract and Introduction to precisely position
-                delegation_chain as a structured audit companion to the
-                RFC 8693 act claim, acknowledging act's multi-hop nesting
-                capability and identifying three structural gaps</li>
-            <li>Added new Section "Relationship to Existing Mechanisms" with
-                subsections on act (with comparison table), Identity Chaining,
-                and Claims Transcription</li>
-            <li>Removed consolidated "Relationship to Related Specifications"
-                section; content redistributed to Introduction and new
-                Relationship section</li>
-            <li>Enhanced Cross-Domain section with Claims Transcription
-                linkage subsection</li>
-            <li>Added linear topology scope note and two deployment modes
-                (standalone / composed)</li>
-            <li>Made Core Profile truly independent: added Core Profile
-                minimal examples (structure, delegation request,
-                multi-hop), separated scope (MUST) from policy
-                (CONDITIONAL) validation throughout, and removed hard
-                dependencies on personal drafts (rego-policy,
-                authorization-evidence) for Core Profile
-                implementations</li>
-            <li>Generalized agent identifiers from WIT-only to any
-                resolvable URI scheme (wit://, spiffe://, did:,
-                https:); added Agent Identifier terminology and Key
-                Resolution section</li>
-            <li>Made dual-signature (delegator_signature) explicitly
-                conditional: RECOMMENDED for Full Profile, OPTIONAL for
-                Core Profile; updated Threat Model, RS Validation, and
-                Validation Mechanism accordingly</li>
-            <li>Fixed policy narrowing undecidability: changed
-                cross-domain policy enforcement from MUST to SHOULD,
-                with guidance to rely on AS attestation for expressive
-                policy languages where automated subset checking is
-                intractable</li>
-            <li>Generalized root_evidence_ref from evidence-draft-
-                specific to deployment-agnostic opaque identifier</li>
-            <li>Added "chain by reference" token size mitigation
-                strategy (delegation_chain_ref URI)</li>
-            <li>Broadened WIT Status Validation to Agent Identifier
-                Status Validation covering all supported URI schemes</li>
-            <li>Added Replay Attack Prevention and Token Theft
-                Mitigation sections to Security Considerations, with
-                guidance on DPoP (RFC 9449), sender-constrained tokens,
-                and short-lived delegated tokens</li>
-            <li>Added timestamp freshness window (RECOMMENDED 5-minute
-                skew) to delegation_timestamp constraints and AS
-                validation rules to prevent delegation request
-                replay</li>
-            <li>Added "token thief" to the Adversary Capabilities in
-                the Threat Model</li>
-            <li>Renamed Section 6 from "Simplified Delegation via Token
-                Exchange" to "Delegation without User Interaction" for
-                clarity</li>
-            <li>Added Core Profile annotations to Chain Extension
-                examples (first delegation and multi-hop)</li>
-            <li>Fixed Introduction overstatement: clarified that
-                delegator cryptographic confirmation is Full Profile
-                only</li>
-            <li>Renamed delegator_wit/delegatee_wit fields to
-                delegator_id/delegatee_id to reflect generalized
-                Agent Identifier URI schemes (not limited to WIT)</li>
-            <li>Fixed Abstract to note delegator cryptographic
-                confirmation applies to Full Profile</li>
-            <li>Updated comparison table Delegator proof row to show
-                conditional (RECOMMENDED Full, OPTIONAL Core)</li>
-            <li>Fixed Relationship to Identity Chaining bullets:
-                scope MUST vs policy CONDITIONAL, conditional
-                dual-signature, generalized Agent Identifier URIs</li>
-            <li>Removed "primary" language from Section 5 title and
-                figure caption; changed "core feature" to "key
-                feature of the Full Profile"</li>
-            <li>Fixed signature computation paragraph: "WIT-bound"
-                to "agent-identifier-bound", added conditional
-                language for dual-signature</li>
-            <li>Made Step 9 Interaction Completion validation
-                conditional (only when user interaction was required)</li>
-            <li>Fixed delegated_policy description to say "policy or
-                scope expansion is NOT allowed"</li>
-            <li>Fixed delegatee parameter description to say "agent
-                identifier URI" instead of "WIT URI"</li>
-            <li>Fixed Verification Requirements to distinguish scope
-                (MUST) from structured policy (CONDITIONAL)</li>
-            <li>Fixed Performance Considerations to reference
-                agent-identifier-bound keys instead of WIT-bound keys</li>
-            <li>Fixed Abstract to clarify that delegator's cryptographic
-                confirmation is Full Profile only (not in every record)</li>
-            <li>Added "(when present)" qualifier to delegator_signature
-                in Claims Transcription sections (Relationship and
-                Cross-Domain)</li>
-            <li>Fixed Key Resolution did: format inconsistency</li>
-            <li>Fixed comparison table "Per-hop policy" row to be
-                conditional (delegated_policy for Full Profile, scope
-                for Core Profile)</li>
-            <li>Fixed XML rendering of "did::" by moving colon inside
-                strong tag</li>
-            <li>Removed redundant "or equivalent URI" from Step 9
-                Delegatee Authentication</li>
-            <li>Fixed Delegation Depth Limits to say "one or two"
-                signatures instead of always "two"</li>
-            <li>Fixed ASCII art alignment in Figure 1 and Figure 2:
-                User to Agent A arrow had one extra dash</li>
-            <li>Removed normative dependencies on personal drafts
-                (rego-policy, authorization-evidence) from Full Profile:
-                references changed to informative; policy language
-                generalized to support Rego, ALFA, XACML, or
-                deployment-specific representations</li>
-            <li>Full Profile now only normatively depends on JAG-IR
-                for user interaction; rego-policy and
-                authorization-evidence retained as informative
-                references only</li>
-            <li>Added "(Full Profile)" qualifier to
-                authorization_details parameter description</li>
-            <li>Fixed Figure 1 and Figure 2 AS-to-Agent-B arrow
-                alignment (15 to 16 dashes)</li>
-            <li>Added explicit scope boundary declaration in
-                Introduction to clarify that delegation audit,
-                delegator non-repudiation, and delegation consent
-                are outside the design scope of Token Exchange and
-                Identity Chaining</li>
-            <li>Removed Core Profile / Full Profile conformance
-                distinction entirely; replaced with field-level
-                conditional semantics (MUST / SHOULD / OPTIONAL /
-                CONDITIONAL) so that each feature stands on its own
-                without requiring a profile label</li>
-            <li>Removed Comparison table (act vs. delegation_chain);
-                replaced with prose description of complementary
-                relationship and three structural extensions (per-hop
-                policy, delegator proof, user interaction)</li>
-            <li>Reduced audit-centric framing throughout: replaced
-                "audit companion" with "delegation record companion",
-                "post-hoc auditability" with "verifiable delegation
-                lineage", "audit trail requirements" with "delegation
-                lineage requirements"; broadened consumer description
-                from "auditors and compliance systems" to "verification
-                and compliance systems"</li>
-          </ul>
-        </dd>
-      </dl>
     </section>
 
   </back>
