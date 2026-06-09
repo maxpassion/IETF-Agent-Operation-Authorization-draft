@@ -91,11 +91,11 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 ## 4. OAuth Chain Delegation
 
-**Draft**: [draft-liu-oauth-chain-delegation-00](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-00.html)
+**Draft**: [draft-liu-oauth-chain-delegation-01](https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-01.html)
 
-- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-00.html
+- **HTML**: https://maxpassion.github.io/IETF-Agent-Operation-Authorization-draft/draft-liu-oauth-chain-delegation-01.html
 
-- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-chain-delegation-00.xml
+- **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-chain-delegation-01.xml
 
 **Purpose**: Enables secure multi-hop delegation chains with cryptographic binding between each hop. Extends OAuth 2.0 to support transitive authorization relationships in agent ecosystems.
 
