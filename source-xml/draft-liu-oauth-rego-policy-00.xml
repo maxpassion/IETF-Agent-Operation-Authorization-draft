@@ -55,7 +55,7 @@
       </address>
     </author>
 
-    <date year="2026" month="March" day="17"/>
+    <date year="2026" month="June" day="9"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -64,14 +64,25 @@
     <keyword>OPA</keyword>
     <keyword>Policy</keyword>
     <keyword>Authorization</keyword>
+    <keyword>AI Agent</keyword>
+    <keyword>Behavioral Authorization</keyword>
 
     <abstract>
       <t>
-        This specification defines how to use the Rego policy language in OAuth 2.0 
-        authorization flows using Rich Authorization Requests (RAR). It defines 
-        the rego_policy authorization data type for carrying policy proposals 
-        in authorization_details, enabling fine-grained, dynamic authorization 
-        decisions that go beyond traditional scope-based access control.
+        AI agents exhibit dynamic, unpredictable behavior that cannot be
+        fully described by traditional OAuth 2.0 scopes. This
+        specification defines a behavioral authorization framework that
+        enables clients, particularly AI agents, to propose Rego
+        policy-based behavioral constraint contracts in OAuth 2.0
+        authorization flows using Rich Authorization Requests (RAR).
+        It defines the rego_policy authorization data type for carrying
+        behavioral constraint contracts in authorization_details, shifting the
+        authorization model from static permission sets to runtime
+        behavioral verification. It also defines a reverse-guided
+        authorization mechanism allowing resource servers to return
+        structured policy constraints in error responses, enabling
+        agents to dynamically adapt their behavior and construct
+        appropriate authorization requests.
       </t>
     </abstract>
   </front>
@@ -79,26 +90,90 @@
   <middle>
     <section anchor="introduction" title="Introduction">
       <t>
-        Traditional OAuth 2.0 authorization relies on static scopes to define access 
-        permissions. While scopes work well for coarse-grained access control, they 
-        are insufficient for scenarios requiring dynamic, context-aware authorization 
-        decisions—particularly in AI agent systems where the permitted operations may 
-        depend on runtime conditions such as transaction amounts, time windows, or 
-        resource attributes.
+        AI agents differ fundamentally from traditional OAuth clients in
+        that their behavior space is dynamic and often unpredictable at
+        authorization time. When a human delegates a task such as
+        "help me find and buy a laptop" to an AI agent, the specific
+        sequence of operations (product comparison, price checking,
+        coupon search, cart management, payment, shipping selection)
+        emerges at runtime based on available products, pricing,
+        user preferences, and agent reasoning. The agent's behavior
+        cannot be fully enumerated in advance, which creates a
+        tension between two competing requirements: granting the
+        agent sufficient behavioral freedom to accomplish its task,
+        and constraining the agent to the principle of least privilege.
       </t>
 
       <t>
-        This specification extends OAuth 2.0 <xref target="RFC6749"/> to support the Rego policy language, 
-        as used by Open Policy Agent (OPA) <xref target="OPA"/>. Rego <xref target="Rego"/> enables expressive, declarative 
-        policies that can encode complex authorization rules. By integrating Rego 
-        into OAuth flows, this specification enables:
+        Traditional OAuth 2.0 authorization relies on scopes,
+        pre-defined static permission sets, to express what a client
+        is allowed to do. This model assumes that the client's behavior
+        space is known and enumerable at design time. For AI agents,
+        this assumption does not hold: an overly broad scope grants
+        unchecked power (violating least privilege), while an overly
+        narrow scope causes frequent authorization failures that
+        interrupt the agent's task execution. Existing policy engine
+        deployments (e.g., Open Policy Agent (OPA)
+        <xref target="OPA"/> sidecar patterns) address policy
+        evaluation within a single administrative domain where policies
+        are centrally managed, but do not solve the cross-organizational
+        authorization problem where an agent must carry its behavioral
+        constraints across multiple resource servers.
+      </t>
+
+      <t>
+        This specification builds on OAuth 2.0 <xref target="RFC6749"/>
+        and Rich Authorization Requests (RAR) <xref target="RFC9396"/>
+        by introducing a <strong>behavioral authorization</strong>
+        framework: instead of requesting a fixed set of permissions, the
+        client (agent) proposes a Rego <xref target="Rego"/> policy that
+        serves as a <strong>behavioral constraint contract</strong>.
+        The Authorization Server validates and approves this contract,
+        and the Resource Server evaluates each of the agent's runtime
+        behaviors against it. This shifts the authorization model from
+        "what resources can the client access" to "within what
+        behavioral boundaries can the client operate," enabling the
+        agent to act freely within approved constraints while every
+        individual behavior is verified at execution time.
+      </t>
+
+      <t>
+        The Rego policy also serves as a formal expression of human
+        intent: when a human delegates a task to an agent, the policy
+        encodes the boundaries of that delegation in a machine-verifiable
+        form. The agent retains behavioral autonomy: it decides
+        <em>what</em> to do and <em>when</em>, but every action is
+        constrained by the policy approved by the Authorization Server.
+        This enables a balance between agent autonomy and human oversight
+        that is not achievable with static scope-based authorization.
+      </t>
+
+      <t>
+        This specification enables:
       </t>
 
       <ul>
-        <li>Clients to propose fine-grained operation policies in authorization requests;</li>
-        <li>Authorization Servers to validate, register, and reference policies;</li>
-        <li>Resource Servers to enforce policies at runtime using a Rego-compatible policy engine.</li>
+        <li>Clients (agents) to propose behavioral constraint contracts
+          as Rego policies in authorization requests;</li>
+        <li>Authorization Servers to validate, register, and bind
+          policies to access tokens;</li>
+        <li>Resource Servers to evaluate each agent behavior against
+          the policy at runtime using a Rego-compatible policy engine;</li>
+        <li>Resource Servers to guide agents toward appropriate
+          authorization via structured error responses when behaviors
+          exceed approved constraints.</li>
       </ul>
+
+      <t>
+        The <tt>rego_policy</tt> authorization data type can be used in
+        conjunction with the <tt>delegation_chain</tt> claim
+        (<xref target="I-D.liu-oauth-chain-delegation"/>).  When a
+        delegation hop carries a structured policy, the Rego behavioral
+        constraint contract defines the fine-grained authorization
+        constraints that were approved at that hop, complementing the
+        delegation lineage and attestation provided by
+        <tt>delegation_chain</tt>.
+      </t>
 
       <section title="Requirements Language">
         <t>
@@ -113,7 +188,7 @@
         <t>
           This specification defines the <tt>rego_policy</tt> 
           authorization data type for use with Rich Authorization Requests (RAR) 
-          <xref target="RFC9396"/>. The policy proposal is carried within the 
+          <xref target="RFC9396"/>. The behavioral constraint contract is carried within the 
           <tt>authorization_details</tt> parameter as the primary mechanism.
         </t>
 
@@ -123,18 +198,19 @@
 
         <ul>
           <li>
-            <strong>Authorization Data Type</strong>: The 
-            <tt>rego_policy</tt> type is defined for use with the 
-            <tt>authorization_details</tt> parameter per RFC 9396. 
-            It contains the policy content, entry point, and optional context.
+            <strong>Authorization Data Type</strong>: The
+            <tt>rego_policy</tt> type is defined for use with the
+            <tt>authorization_details</tt> parameter per RFC 9396.
+            It contains the behavioral constraint contract (Rego
+            policy), entry point, and optional context.
           </li>
           <li>
-            <strong>Token Response</strong>: Per RFC 9396 Section 7.1, 
-            the access token includes enriched 
-            <tt>authorization_details</tt> as the primary mechanism for 
-            carrying policy information. The <tt>policy_ref</tt> claim 
-            MAY be included as a lightweight alternative 
-            (see <xref target="policy-ref-claim"/>).
+            <strong>Token Response</strong>: Per RFC 9396 Section 7.1,
+            the access token includes enriched
+            <tt>authorization_details</tt> as the primary mechanism for
+            carrying the behavioral constraint contract. The
+            <tt>policy_ref</tt> claim MAY be included as a lightweight
+            alternative (see <xref target="policy-ref-claim"/>).
           </li>
           <li>
             <strong>Complementary Use</strong>: RAR enables structured 
@@ -145,10 +221,22 @@
         </ul>
 
         <t>
-          Implementations SHOULD ensure consistency between 
-          <tt>authorization_details</tt> requirements and Rego policy evaluations. 
-          The Authorization Server MAY use RAR types to determine applicable 
+          Implementations SHOULD ensure consistency between
+          <tt>authorization_details</tt> requirements and Rego policy evaluations.
+          The Authorization Server MAY use RAR types to determine applicable
           policy templates or validation rules.
+        </t>
+
+        <t>
+          Resource Servers MAY advertise supported authorization details
+          types via the <tt>authorization_details_types_supported</tt>
+          attribute in Protected Resource Metadata
+          (<xref target="RFC9728"/>), enabling clients to discover which
+          authorization details types are accepted before constructing
+          <tt>rego_policy</tt> authorization requests. This discovery
+          mechanism is particularly valuable in multi-tenant or federated
+          environments where different resource servers may require
+          different policy structures.
         </t>
       </section>
     </section>
@@ -170,21 +258,26 @@
 
         <dt>Rich Authorization Requests (RAR):</dt>
         <dd>
-          A framework defined in RFC 9396 for expressing fine-grained authorization 
+          A framework defined in <xref target="RFC9396"/> for expressing fine-grained authorization
           requirements through the <tt>authorization_details</tt> parameter.
         </dd>
 
         <dt>rego_policy:</dt>
         <dd>
-          An authorization data type for RAR that carries a Rego policy proposal 
-          within the <tt>authorization_details</tt> parameter.
+          An authorization data type for RAR that carries a Rego
+          behavioral constraint contract within the
+          <tt>authorization_details</tt> parameter. The policy defines
+          the behavioral boundaries within which the client (agent)
+          is permitted to operate, evaluated by the Resource Server
+          against each runtime behavior.
         </dd>
 
         <dt>Policy Reference:</dt>
         <dd>
-          An identifier for a policy that has been validated and registered by the 
-          Authorization Server, included in JWT <xref target="RFC7519"/> access 
-          tokens via the <tt>policy_ref</tt> claim defined in this specification.
+          An identifier for a behavioral constraint contract that has
+          been validated and registered by the Authorization Server,
+          included in JWT <xref target="RFC7519"/> access tokens via
+          the <tt>policy_ref</tt> claim defined in this specification.
         </dd>
       </dl>
     </section>
@@ -197,10 +290,11 @@
 
       <section anchor="rego-policy" title="rego_policy">
         <t>
-          The <tt>rego_policy</tt> authorization data type carries a Rego 
-          policy within the <tt>authorization_details</tt> parameter. It enables 
-          clients to propose fine-grained authorization policies as part of the 
-          authorization request.
+          The <tt>rego_policy</tt> authorization data type carries a
+          Rego behavioral constraint contract within the
+          <tt>authorization_details</tt> parameter. It enables clients
+          (particularly AI agents) to propose behavioral constraints
+          as part of the authorization request.
         </t>
 
         <section title="Type Definition">
@@ -217,6 +311,10 @@
         </section>
 
         <section title="Structure">
+          <t>
+            The following example shows the <tt>authorization_details</tt>
+            request parameter containing a <tt>rego_policy</tt> object:
+          </t>
           <figure>
             <artwork name="rego_policy in authorization_details" type="json"><![CDATA[
 {
@@ -225,11 +323,11 @@
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.user.tier == \"premium\"\n  input.action in {\"manage_portfolio\", \"view_reports\"}\n}",
+        "content": "package agent\n\ndefault allow = false\n\nallow if {\n  input.user.tier == \"premium\"\n  input.action in {\"search_products\", \"add_to_cart\"}\n}",
         "entry_point": "allow"
       },
-      "actions": ["manage_portfolio", "view_reports"],
-      "locations": ["https://api.example.com/portfolios"]
+      "actions": ["search_products", "add_to_cart"],
+      "locations": ["https://api.example.com/products"]
     }
   ]
 }
@@ -252,30 +350,35 @@
 
             <dt>context:</dt>
             <dd>
-              OPTIONAL. An object providing additional structured data 
-              for policy evaluation at authorization time.
+              OPTIONAL. An object providing additional structured data
+              for behavior verification at resource access time.
             </dd>
           </dl>
 
           <t>
-            The common RAR fields and the Rego policy serve different 
-            consumers at different stages of the authorization flow. 
-            The common fields (<tt>actions</tt>, <tt>locations</tt>) 
-            provide a declarative upper bound on the requested 
-            operations and resources, enabling the Authorization Server 
-            to approve or reject the request without parsing Rego. 
-            The Rego policy expresses the conditional authorization 
-            logic that the Resource Server evaluates at request time 
-            with runtime context as input. This layered design allows 
-            Authorization Server implementations to function without 
-            embedding a Rego engine, while preserving the full 
-            expressiveness of policy-based authorization at the 
-            Resource Server.
+            The common RAR fields and the Rego policy serve different
+            consumers at different stages of the authorization flow.
+            The common fields (<tt>actions</tt>, <tt>locations</tt>)
+            provide a declarative upper bound on the requested
+            operations and resources, enabling the Authorization Server
+            to approve or reject the request without parsing Rego.
+            The Rego policy defines the behavioral constraints that the
+            Resource Server evaluates against each agent behavior at
+            runtime with contextual input. This layered design allows
+            Authorization Server implementations to function without
+            embedding a Rego engine, while the Resource Server performs
+            per-behavior verification using the full expressiveness
+            of the policy.
           </t>
 
           <t>
-            The AS SHOULD verify that the policy does not exceed the 
-            scope declared in the common fields.
+            The AS SHOULD verify that the policy does not exceed the
+            scope declared in the common fields. Since this verification
+            is based on declarative RAR fields rather than full Rego AST
+            analysis, it provides an approximate upper-bound check; the
+            Resource Server, as the policy execution point, bears
+            responsibility for ensuring the evaluated policy behavior
+            is consistent with the approved authorization scope.
           </t>
 
           <t>
@@ -323,8 +426,10 @@
 
           <ol>
             <li>
-              Entry Point: The policy MUST define an <tt>allow</tt> 
-              rule as the entry point. This rule MUST evaluate to a boolean value.
+              Entry Point: The policy MUST define a rule matching the
+              <tt>entry_point</tt> field (defaulting to <tt>allow</tt>).
+              For authorization decisions, this rule MUST evaluate to a
+              boolean value.
             </li>
             <li>
               Package Declaration: The policy MUST include a package 
@@ -332,8 +437,10 @@
               namespace.
             </li>
             <li>
-              Default Deny: The policy SHOULD include 
+              Default Deny (best practice): Policies are recommended to include
               <tt>default allow = false</tt> to ensure deny-by-default behavior.
+              This is not enforced by AS validation but is considered
+              a security best practice for policy authors.
             </li>
             <li>
               Input Reference: The policy accesses data via the 
@@ -346,13 +453,23 @@
             </li>
           </ol>
 
+          <t>
+            The policy syntax used in this specification follows Rego v1
+            as defined in the OPA documentation <xref target="Rego"/>.
+            Implementations of this specification MUST use a policy
+            engine that accepts Rego v1 syntax.  Policy engines MAY
+            additionally support Rego v0 syntax through backward
+            compatibility mode to facilitate migration from existing
+            v0 policy deployments.
+          </t>
+
           <figure>
             <artwork name="Minimal Rego policy" type="rego"><![CDATA[
 package agent
 
 default allow = false
 
-allow {
+allow if {
   # Authorization rules here
   input.action == "read"
   input.resource.owner == input.user.id
@@ -364,12 +481,13 @@ allow {
 
       <section anchor="policy-ref-claim" title="policy_ref Claim">
         <t>
-          The <tt>policy_ref</tt> claim is an OPTIONAL shorthand mechanism for 
-          referencing a policy in access tokens. When the AS uses Rich Authorization 
-          Requests (RAR), the enriched <tt>authorization_details</tt> array in the 
-          access token (per RFC 9396 Section 7.1) is the primary mechanism for 
-          carrying policy information. The <tt>policy_ref</tt> claim MAY be used 
-          as a lightweight alternative when:
+          The <tt>policy_ref</tt> claim is an OPTIONAL shorthand mechanism for
+          referencing a behavioral constraint contract in access tokens. When the
+          AS uses Rich Authorization Requests (RAR), the enriched
+          <tt>authorization_details</tt> array in the access token (per RFC 9396
+          Section 7.1) is the primary mechanism for carrying the behavioral
+          constraint contract. The <tt>policy_ref</tt> claim MAY be used as a
+          lightweight alternative when:
         </t>
 
         <ul>
@@ -377,8 +495,8 @@ allow {
             practical size limits (see <xref target="security"/>);</li>
           <li>The Resource Server already has a cached copy of the policy 
             and only needs an identifier to look it up;</li>
-          <li>The deployment uses opaque (non-JWT) access tokens where 
-            token introspection provides the policy content.</li>
+          <li>The deployment uses opaque (non-JWT) access tokens where
+            token introspection <xref target="RFC7662"/> provides the policy content.</li>
         </ul>
 
         <t>
@@ -395,7 +513,9 @@ allow {
             <dd>Object</dd>
 
             <dt>Usage:</dt>
-            <dd>Access tokens</dd>
+            <dd>JWT access tokens (the claim may also appear in
+              introspection responses for opaque tokens per
+              <xref target="RFC7662"/>)</dd>
           </dl>
         </section>
 
@@ -406,7 +526,7 @@ allow {
   "policy_ref": {
     "id": "policy-abc123",
     "version": "1",
-    "hash": "sha256-2jmj7l5rSw0yVb_vlWAYkK_YBwk=",
+    "hash": "sha256-uU0NUZ5dVHk9qF3bT8aY1cP0nR7wE2xG4mK6iS8jH9oQ",
     "endpoint": "https://as.example.com/policies/policy-abc123"
   }
 }
@@ -427,10 +547,12 @@ allow {
 
             <dt>hash:</dt>
             <dd>
-              OPTIONAL. A cryptographic hash of the policy content using the format 
-              <tt>algorithm-base64value</tt> (e.g., "sha256-..."). When present, 
-              the Resource Server MUST verify that the fetched policy content matches 
-              this hash before evaluating the policy. This prevents tampering with 
+              OPTIONAL. A cryptographic hash of the policy content using the format
+              <tt>algorithm-base64value</tt> (e.g., "sha256-..."). SHA-256 MUST
+              be supported by all implementations. The hash algorithm identifier
+              enables hash agility for future migration. When present,
+              the Resource Server MUST verify that the fetched policy content matches
+              this hash before evaluating the policy. This prevents tampering with
               policy content during transmission.
             </dd>
 
@@ -445,16 +567,20 @@ allow {
 
       <section anchor="policy-context" title="Policy Context">
         <t>
-          The <tt>context</tt> field within <tt>rego_policy</tt> provides 
-          additional structured data that the client wishes to include 
-          at authorization request time. This data MAY be merged into 
-          the <tt>input</tt> object during policy evaluation.
+          The <tt>context</tt> field within <tt>rego_policy</tt> provides
+          additional structured data that the client wishes to include
+          at authorization request time.
         </t>
 
         <t>
-          The <tt>input</tt> object used for policy evaluation is 
-          constructed by the evaluating party and is not limited to 
-          the <tt>context</tt> field. Common input categories include:
+          The <tt>input</tt> object used for policy evaluation is
+          constructed by the Resource Server (the evaluating party)
+          and is not limited to the <tt>context</tt> field.
+          When the RS constructs the <tt>input</tt> object, it
+          SHOULD merge the <tt>context</tt> data under a
+          <tt>context</tt> key within <tt>input</tt>
+          (e.g., <tt>input.context</tt>) to avoid key collisions
+          with other input categories. Common input categories include:
         </t>
 
         <ul>
@@ -471,6 +597,18 @@ allow {
           server, typically documented in developer integration guides.
         </t>
       </section>
+
+      <section title="Extensibility">
+        <t>
+          This specification focuses on Rego as a concrete
+          and widely deployed policy language. The <tt>policy.type</tt> field
+          (see <xref target="rego-policy"/>) is designed for extensibility:
+          future specifications MAY define additional policy language types
+          that follow the same integration pattern within the
+          <tt>rego_policy</tt> authorization data type or define new
+          authorization data types with analogous structures.
+        </t>
+      </section>
     </section>
 
     <section anchor="protocol-flow" title="Protocol Flow">
@@ -483,8 +621,9 @@ allow {
     |                |                |                |
     | (1) AuthZ Req  |                |                |
     | with           |                |                |
-    | authorization_ |                |                |
-    | details        |                |                |
+    | behavioral     |                |                |
+    | constraint     |                |                |
+    | contract       |                |                |
     | (type=rego_    |                |                |
     |  policy)       |                |                |
     |--------------->|                |                |
@@ -492,28 +631,33 @@ allow {
     |                | (2) Validate   |                |
     |                | policy syntax  |                |
     |                |                |                |
-    |                | (3) Scope      |                |
-    |                | check          |                |
+    |                | (3) Policy     |                |
+    |                | approval       |                |
     |                |                |                |
-    | (4) Enriched   |                |                |
-    |    Access Token|                |                |
-    |    with authz_ |                |                |
-    |    details     |                |                |
+    |                |                |                |
+    | (4) Access     |                |                |
+    |    Token with  |                |                |
+    |    behavioral  |                |                |
+    |    constraint  |                |                |
+    |    contract    |                |                |
     |<---------------|                |                |
     |                |                |                |
-    | (5) API Request|                |                |
-    | with token     |                |                |
+    | (5) Agent      |                |                |
+    |    Behavior    |                |                |
+    |    with token  |                |                |
     |-------------------------------->|                |
     |                |                |                |
     |                |                | (6) Extract    |
-    |                |                | policy from    |
-    |                |                | authz_details  |
+    |                |                | behavioral     |
+    |                |                | constraint     |
+    |                |                | contract       |
     |                |                |                |
-    |                |                | (7) Evaluate   |
-    |                |                | policy         |
+    |                |                | (7) Verify     |
+    |                |                | behavior       |
+    |                |                | against policy |
     |                |                |--------------->|
     |                |                |                |
-    |                |                | (8) Result     |
+    |                |                | (8) Allow/Deny |
     |                |                |<---------------|
     |                |                |                |
     |                |                | (9) Enforce    |
@@ -527,47 +671,63 @@ allow {
       <section title="Step Details">
         <ol>
           <li>
-            Authorization Request: Client sends authorization request with 
-            <tt>authorization_details</tt> containing an object of type 
-            <tt>rego_policy</tt>, with <tt>policy</tt> and optional 
-            <tt>context</tt> fields. This leverages RAR (RFC 9396) for structured 
-            authorization requests.
+            Behavioral Constraint Proposal: Client (agent) sends an
+            authorization request with <tt>authorization_details</tt>
+            containing a <tt>rego_policy</tt> object, a proposed
+            behavioral constraint contract, with <tt>policy</tt>
+            and optional <tt>context</tt> fields. This leverages
+            RAR (RFC 9396) for structured authorization requests.
           </li>
           <li>
-            Syntax Validation: AS validates that the Rego policy 
-            is syntactically correct and safe to evaluate.
+            Policy Validation: AS validates that the Rego policy
+            is syntactically correct and safe to evaluate
+            (see <xref target="as-processing"/>).
           </li>
           <li>
-            Policy Scope Check: AS verifies the policy does not 
-            exceed the client's registered permissions and checks 
-            user consent requirements. The AS does not perform 
-            full runtime policy evaluation (which occurs at the RS).
+            Policy Approval: AS determines whether the proposed
+            behavioral boundaries are appropriate for the specific
+            client and resource owner, based on client registration
+            metadata, organizational authorization policies, resource
+            owner consent, and token binding context
+            (see <xref target="as-processing"/>). The AS does not
+            perform full runtime policy evaluation (which occurs at
+            the RS on a per-behavior basis).
           </li>
           <li>
-            Token Response: AS issues access token with enriched 
-            <tt>authorization_details</tt> array per RFC 9396 
-            Section 7.1, containing the validated policy.
+            Token Binding: AS issues an access token with enriched
+            <tt>authorization_details</tt> array per RFC 9396
+            Section 7.1, binding the approved behavioral constraint
+            contract to the token.
+            The AS MAY include additional metadata in the
+            <tt>authorization_details</tt> object (e.g., server-assigned
+            identifiers or normalized policy content) but MUST NOT
+            alter the semantic meaning of the policy without client
+            consent.
           </li>
           <li>
-            API Request: Client presents token to Resource Server.
+            Behavior Execution: Client (agent) presents the token
+            to the Resource Server when performing a behavior.
           </li>
           <li>
-            Policy Extraction: RS extracts the Rego policy from 
-            the enriched <tt>authorization_details</tt> in the 
-            access token.
+            Policy Extraction: RS extracts the behavioral constraint
+            contract from the enriched <tt>authorization_details</tt>
+            in the access token.
           </li>
           <li>
-            Policy Evaluation: RS sends the policy and request 
-            input to a Rego-compatible policy engine for evaluation.
+            Behavior Verification: RS evaluates the agent's current
+            behavior (action, target resource, context) against the
+            policy using a Rego-compatible policy engine.
           </li>
           <li>
-            Result: The policy engine returns an allow/deny decision.
+            Decision: The policy engine returns an allow/deny
+            decision for the specific behavior.
           </li>
           <li>
-            Enforcement: RS enforces the policy engine's decision.
+            Enforcement: RS enforces the per-behavior decision,
+            allowing or denying the agent's action.
           </li>
           <li>
-            Response: RS returns result to client.
+            Response: RS returns the result to the client.
           </li>
         </ol>
       </section>
@@ -575,53 +735,105 @@ allow {
 
     <section anchor="reverse-guided" title="Reverse-Guided Authorization">
       <t>
-        Traditional OAuth error responses indicate authorization failure without 
-        providing guidance on how to obtain valid authorization. In AI agent 
-        scenarios, where agents may need to autonomously navigate authorization 
-        requirements, resource servers can provide structured guidance that enables 
-        agents to construct appropriate authorization requests.
+        Traditional OAuth error responses indicate authorization failure without
+        providing guidance on how to obtain valid authorization. In behavioral
+        authorization, this is particularly important: when an agent encounters
+        <strong>behavioral drift</strong> (its next planned behavior falls
+        outside the approved constraint contract), the agent needs structured
+        guidance to recover autonomously. Resource servers can provide this
+        guidance through structured error responses that enable agents to
+        construct appropriate authorization requests with updated behavioral
+        constraints.
       </t>
 
       <section title="Error Response Format">
         <t>
-          When an agent's request lacks sufficient authorization, the resource 
-          server returns an HTTP 403 Forbidden response with a JSON body containing 
-          a <tt>rego_profile</tt> object. This object provides machine-readable 
+          When an agent's request lacks sufficient authorization, the resource
+          server returns an HTTP 403 Forbidden response with a
+          <tt>WWW-Authenticate</tt> header containing the
+          <tt>insufficient_authorization</tt> error code and a
+          <tt>rego_profile</tt> parameter. This parameter provides machine-readable
           guidance on the required authorization conditions.
         </t>
 
         <figure>
           <name>Reverse-Guided Authorization Error Response</name>
-          <artwork type="json"><![CDATA[
+          <artwork type="message/http"><![CDATA[
 HTTP/1.1 403 Forbidden
 Content-Type: application/json
+WWW-Authenticate: Bearer error="insufficient_authorization",
+  rego_profile="eyJwcm9maWxlX3VyaSI6Imh0dHBzOi8vcmVzb3VyY2UuZXhhbXBsZS9..."
 
 {
   "error": "insufficient_authorization",
-  "error_description": "Additional authorization required",
-  "rego_profile": {
-    "profile_uri": "https://resource.example/policies/purchase",
-    "required_scope": ["purchase.create"],
-    "required_claims": ["agent_id", "user_id"],
-    "constraints": {
-      "max_amount": {
-        "type": "number",
-        "description": "Maximum transaction amount in USD",
-        "required": true
-      },
-      "trigger_source": {
-        "type": "string",
-        "enum": ["user_initiated", "scheduled"],
-        "description": "Source of the operation trigger"
-      }
-    },
-    "confirmation_required": true,
-    "evidence_required": true,
-    "auth_server": "https://as.example.com"
-  }
+  "error_description": "Additional authorization required"
 }
           ]]></artwork>
         </figure>
+
+        <t>
+          Per RFC 6750 <xref target="RFC6750"/> Section 3 and
+          RFC 6749 <xref target="RFC6749"/> Section 5.2, the error
+          response includes both the <tt>WWW-Authenticate</tt> header
+          with the <tt>insufficient_authorization</tt> error code and a
+          JSON error body. The <tt>rego_profile</tt> parameter in the
+          <tt>WWW-Authenticate</tt> header provides machine-readable
+          guidance on the required authorization conditions.
+        </t>
+
+        <t>
+          The <tt>rego_profile</tt> parameter value is a base64url-encoded
+          JSON object. Implementations SHOULD use base64url encoding
+          without padding (no trailing <tt>=</tt> characters) per
+          RFC 4648 <xref target="RFC4648"/> Section 5 to avoid
+          quoting issues in the <tt>WWW-Authenticate</tt> header.
+          The decoded object has the following structure:
+        </t>
+
+        <figure>
+          <name>Decoded rego_profile</name>
+          <artwork type="json"><![CDATA[
+{
+  "profile_uri": "https://resource.example/policies/purchase",
+  "required_scope": ["purchase.create"],
+  "required_claims": ["agent_id", "user_id"],
+  "constraints": {
+    "max_amount": {
+      "type": "number",
+      "description": "Maximum transaction amount in USD",
+      "required": true
+    },
+    "trigger_source": {
+      "type": "string",
+      "enum": ["user_initiated", "scheduled"],
+      "description": "Source of the operation trigger"
+    }
+  },
+  "confirmation_required": true,
+  "auth_server": "https://as.example.com"
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Relationship to insufficient_scope">
+        <t>
+          RFC 6750 <xref target="RFC6750"/> defines the
+          <tt>insufficient_scope</tt> error for cases where the access
+          token lacks the scopes required by the resource server.
+          The <tt>insufficient_authorization</tt> error defined in this
+          specification addresses a broader condition: the token may
+          include adequate scopes but lack the policy-based authorization
+          structure (e.g., Rego constraints or user
+          confirmation) required by the resource server.
+        </t>
+
+        <t>
+          Resource servers SHOULD use <tt>insufficient_scope</tt> when
+          the deficiency is purely scope-based and
+          <tt>insufficient_authorization</tt> when the deficiency involves
+          policy constraints that cannot be expressed as additional scopes.
+        </t>
       </section>
 
       <section title="Rego Profile Structure">
@@ -632,10 +844,12 @@ Content-Type: application/json
         <dl>
           <dt>profile_uri:</dt>
           <dd>
-            REQUIRED. URI identifying the authorization profile for this 
-            resource. This URI serves as an opaque identifier; the 
-            document at this URI is intended for developer documentation 
-            and is not machine-parsed by the agent.
+            OPTIONAL. URI identifying the authorization profile for this
+            resource. This URI serves as an opaque identifier and MAY
+            be used as a cache key, audit reference, or pointer to
+            developer documentation. The document at this URI is
+            intended for human consumption and is not machine-parsed
+            by the agent.
           </dd>
 
           <dt>required_scope:</dt>
@@ -645,7 +859,9 @@ Content-Type: application/json
 
           <dt>required_claims:</dt>
           <dd>
-            OPTIONAL. Array of claim names that MUST be present in the token.
+            OPTIONAL. Array of access token claim names (e.g.,
+            <tt>agent_id</tt>, <tt>user_id</tt>) that MUST be present
+            in the access token issued by the AS.
           </dd>
 
           <dt>constraints:</dt>
@@ -660,27 +876,29 @@ Content-Type: application/json
 
           <dt>confirmation_required:</dt>
           <dd>
-            OPTIONAL. Boolean indicating whether user consent is required. 
-            If true, the agent MUST obtain explicit user approval. When 
-            used with JWT Grant Interaction Response 
-            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>, 
-            this corresponds to the <tt>interaction_required</tt> error code 
-            and interaction flow.
-          </dd>
-
-          <dt>evidence_required:</dt>
-          <dd>
-            OPTIONAL. Boolean indicating whether authorization evidence 
-            recording is required.
+            OPTIONAL. Boolean indicating whether explicit user authorization
+            is required for the requested behavioral boundaries. If true,
+            the agent MUST initiate an OAuth authorization flow to obtain
+            the resource owner's explicit consent for the proposed
+            behavioral constraint contract. This does not mean local
+            user confirmation (e.g., a modal dialog) is sufficient;
+            the authorization must be obtained through the AS to produce
+            a token with appropriate grants. The specific interaction
+            mechanism depends on the OAuth flow in use (e.g., the
+            <tt>interaction_required</tt> error with JWT Grant Interaction
+            Response
+            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>,
+            or the <tt>prompt</tt> parameter in the authorization code flow).
           </dd>
 
           <dt>auth_server:</dt>
           <dd>
-            REQUIRED. Identifier of the authorization server capable of 
-            issuing tokens that satisfy these requirements. The agent 
-            can discover the token endpoint and other metadata via 
-            OAuth 2.0 Authorization Server Metadata (RFC 8414) using 
-            this identifier.
+            REQUIRED. Identifier of the authorization server capable of
+            issuing tokens that satisfy these requirements. The agent
+            can discover the token endpoint and other metadata via
+            OAuth 2.0 Authorization Server Metadata (<xref target="RFC8414"/>)
+            or OAuth 2.0 Protected Resource Metadata (<xref target="RFC9728"/>)
+            using this identifier.
           </dd>
         </dl>
       </section>
@@ -700,8 +918,9 @@ Content-Type: application/json
             proceeding.
           </li>
           <li>
-            Construct a new authorization request including required scopes, 
-            policy proposal satisfying constraints, and any additional 
+            Construct a new authorization request including required scopes,
+            a behavioral constraint contract that satisfies the constraints
+            specified in the <tt>rego_profile</tt>, and any additional
             parameters required by the resource server.
           </li>
           <li>
@@ -715,9 +934,29 @@ Content-Type: application/json
         </ol>
 
         <t>
-          This adaptive approach enables agents to "learn" authorization 
-          requirements dynamically, reducing the need for pre-programmed 
+          This adaptive approach enables agents to "learn" authorization
+          requirements dynamically, reducing the need for pre-programmed
           knowledge of each resource server's policies.
+        </t>
+
+        <t>
+          During multi-step task execution, an agent may encounter
+          <strong>behavioral drift</strong>: situations where the next
+          behavior in its plan falls outside the approved policy
+          constraints. When this occurs, the agent has three options:
+          (1) request a new authorization with an updated policy that
+          accommodates the new behavior (using the reverse-guided
+          authorization mechanism described above); (2) degrade its
+          behavior to stay within the approved constraints (e.g.,
+          selecting an alternative, less privileged action); or
+          (3) request human confirmation to approve an expanded
+          behavioral boundary. The choice among these options depends
+          on the agent's task context and the
+          <tt>confirmation_required</tt> signal from the resource
+          server. Implementations SHOULD prefer degradation over
+          re-authorization for minor boundary violations to avoid
+          excessive authorization round-trips in long-running agent
+          workflows.
         </t>
       </section>
 
@@ -771,8 +1010,9 @@ Content-Type: application/json
             syntactically valid.
           </li>
           <li>
-            Entry Point Check: Verify the policy defines an 
-            <tt>allow</tt> rule.
+            Entry Point Check: Verify the policy defines the rule
+            specified by the <tt>entry_point</tt> field (defaulting
+            to <tt>allow</tt> if not specified).
           </li>
           <li>
             Safety Check: Ensure the policy does not contain 
@@ -780,11 +1020,15 @@ Content-Type: application/json
             <tt>http.send</tt>, excessive resource consumption).
           </li>
           <li>
-            Scope Check: Verify the policy does not exceed the 
-            client's registered permissions. The AS SHOULD use the 
-            common RAR fields (<tt>actions</tt>, <tt>locations</tt>) 
-            for scope checking rather than analyzing the Rego policy 
-            AST (see <xref target="rego-policy"/>).
+            Behavioral Boundary Check: Verify that the RAR common fields
+            (<tt>actions</tt>, <tt>locations</tt>) do not exceed the
+            client's registered permissions. This check provides an
+            approximate upper-bound enforcement based on declarative
+            fields rather than full Rego AST analysis. The AS MAY
+            perform lightweight static analysis of the Rego
+            policy (e.g., extracting referenced <tt>input.action</tt>
+            values) to detect obvious inconsistencies between the
+            policy content and the declared RAR fields.
           </li>
         </ol>
       </section>
@@ -804,10 +1048,35 @@ Content-Type: application/json
         </ol>
 
         <t>
-          When the AS embeds the validated policy directly in the 
-          enriched <tt>authorization_details</tt> (the primary path), 
-          explicit registration is not required — the policy travels 
+          When the AS embeds the validated policy directly in the
+          enriched <tt>authorization_details</tt> (the primary path),
+          explicit registration is not required; the policy travels
           with the token.
+        </t>
+
+        <t>
+          Policy registration in this specification is dynamic and
+          on-demand. The Authorization Server does not need to maintain
+          a pre-configured catalog of policies. When an agent proposes
+          a behavioral constraint contract, the AS evaluates it against
+          pre-established approval principles
+          (see <xref target="as-processing"/>) and registers it only
+          if approved. This eliminates the operational burden of
+          pre-deploying policies for every anticipated agent behavior,
+          which is impractical given the dynamic and unpredictable
+          nature of AI agent workflows.
+        </t>
+
+        <t>
+          Deployments MAY also pre-register policies for well-known
+          agent workflows (e.g., automated reconciliation, scheduled
+          reporting) where the behavioral boundaries are stable and
+          known in advance. In such cases, the agent can reference
+          the pre-registered policy by identifier rather than
+          submitting the full policy content in each authorization
+          request. Both modes are supported: dynamic registration
+          is the default for exploratory agent tasks, while
+          pre-registration is an optimization for predictable workflows.
         </t>
       </section>
 
@@ -824,16 +1093,110 @@ Content-Type: application/json
 }
           ]]></artwork>
         </figure>
+
+        <t>
+          The following error conditions MUST be handled:
+        </t>
+
+        <ul>
+          <li>If neither <tt>content</tt> nor <tt>uri</tt> is present in
+            the <tt>policy</tt> object, the AS MUST return
+            <tt>invalid_request</tt> with a description indicating the
+            missing policy source.</li>
+          <li>If only <tt>uri</tt> is present and the AS fails to fetch
+            the policy content (e.g., network timeout, HTTP error, or
+            invalid response), the AS MUST return
+            <tt>invalid_request</tt> with a description indicating the
+            fetch failure.</li>
+          <li>If only <tt>uri</tt> is present and the AS policy prohibits
+            external URI fetching, the AS MUST return
+            <tt>invalid_request</tt> with a description suggesting the
+            client use inline <tt>content</tt> instead.</li>
+        </ul>
+      </section>
+
+      <section title="Policy Approval Basis">
+        <t>
+          The Authorization Server's approval of a behavioral constraint
+          contract is not limited to syntactic validation. The AS
+          determines whether the proposed behavioral boundaries are
+          appropriate for the specific client and resource owner based
+          on the following factors:
+        </t>
+
+        <ul>
+          <li>
+            <strong>Client registration metadata</strong>: Pre-registered
+            client capabilities, allowed scopes, and trust level established
+            during OAuth 2.0 Dynamic Client Registration
+            <xref target="RFC7591"/> or out-of-band provisioning.
+          </li>
+          <li>
+            <strong>Organizational authorization policies</strong>:
+            Administrative rules defining which behavioral patterns are
+            permitted for specific client types, user roles, or resource
+            classes within the deployment.
+          </li>
+          <li>
+            <strong>Resource owner consent</strong>: Explicit authorization
+            from the resource owner approving the agent's proposed
+            behavioral boundaries, obtained through the OAuth 2.0
+            authorization interaction (e.g., the consent screen in the
+            authorization code flow, or the
+            <tt>interaction_uri</tt> mechanism in JWT Grant Interaction
+            Response).
+          </li>
+          <li>
+            <strong>Token binding context</strong>: The authorization
+            grant type, requested scopes, and other token request
+            parameters that establish the context in which the
+            behavioral constraint contract is evaluated.
+          </li>
+        </ul>
+
+        <t>
+          For example, the AS MAY maintain a per-client allowlist of
+          approved behavioral patterns (e.g., permitted actions, maximum
+          transaction limits, allowed resource classes). When a client
+          proposes a new behavioral constraint contract, the AS verifies
+          that the declared RAR common fields
+          (<tt>actions</tt>, <tt>locations</tt>) fall within the client's
+          pre-approved boundaries. If the proposed contract exceeds these
+          boundaries, the AS SHOULD return <tt>invalid_scope</tt> when
+          the behavioral boundaries exceed the client's registered
+          permissions, or <tt>invalid_request</tt> for other policy
+          violations. Alternatively, the AS MAY escalate to the resource
+          owner for explicit consent before issuing the token.
+        </t>
+
+        <t>
+          This layered approval model ensures that the behavioral
+          constraint contract carried in the access token is trusted
+          not only for its syntactic correctness but also for its
+          alignment with the authorization policies governing the
+          client-resource owner relationship. The Resource Server can
+          rely on this trust when evaluating each agent behavior against
+          the approved contract at runtime.
+        </t>
       </section>
     </section>
 
     <section anchor="rs-enforcement" title="Resource Server Enforcement">
       <section title="Policy Retrieval">
         <t>
-          The RS obtains the Rego policy from the access token. The 
-          primary mechanism is to extract the policy from the enriched 
-          <tt>authorization_details</tt> array included in the token 
+          The RS obtains the Rego policy from the access token. The
+          primary mechanism is to extract the policy from the enriched
+          <tt>authorization_details</tt> array included in the token
           per RFC 9396 Section 7.1.
+        </t>
+
+        <t>
+          The binding between the policy and the access token depends
+          on the token type. For JWT access tokens, the policy content
+          or <tt>policy_ref</tt> claim is integrity-protected by the
+          token signature. For opaque tokens, the binding is established
+          through token introspection <xref target="RFC7662"/> or a
+          shared back-channel between the AS and RS.
         </t>
 
         <t>
@@ -852,8 +1215,8 @@ Content-Type: application/json
             expired.
           </li>
           <li>
-            Introspection: Include policy content in token 
-            introspection response.
+            Introspection: Include policy content in token
+            introspection <xref target="RFC7662"/> response.
           </li>
         </ul>
       </section>
@@ -891,10 +1254,10 @@ Content-Type: application/json
       "id": "user_12345",
       "tier": "premium"
     },
-    "action": "manage_portfolio",
+    "action": "search_products",
     "resource": {
-      "type": "portfolio",
-      "id": "portfolio_001"
+      "type": "product",
+      "id": "product_001"
     }
   }
 }
@@ -916,8 +1279,8 @@ Content-Type: application/json
         </t>
 
         <ul>
-          <li>If <tt>result</tt> is <tt>true</tt>: Allow the operation;</li>
-          <li>If <tt>result</tt> is <tt>false</tt>: Deny with 
+          <li>If <tt>result</tt> is <tt>true</tt>: Allow the agent's behavior;</li>
+          <li>If <tt>result</tt> is <tt>false</tt>: Deny the behavior with
             403 Forbidden;</li>
           <li>If <tt>result</tt> is undefined (OPA returns an empty 
             object with no <tt>result</tt> field): Deny with 
@@ -957,9 +1320,9 @@ Content-Type: application/json
           When combined with Rego Policy, the agent includes 
           <tt>authorization_details</tt> containing the 
           <tt>rego_policy</tt> type in the JWT grant request. The AS 
-          validates the policy proposal, performs scope checks, and 
-          determines whether user consent is needed before issuing 
-          the token.
+          validates the behavioral constraint contract, performs
+          behavioral boundary checks, and determines whether user
+          consent is needed before issuing the token.
         </t>
 
         <figure>
@@ -975,7 +1338,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
   %22policy%22%3A%7B%22type%22%3A%22rego%22%2C
   %22content%22%3A%22package%20agent%5Cn...
   %22entry_point%22%3A%22allow%22%7D%2C
-  %22actions%22%3A%5B%22manage_portfolio%22%2C%22view_reports%22%5D%7D%5D
+  %22actions%22%3A%5B%22search_products%22%2C%22add_to_cart%22%5D%7D%5D
           ]]></artwork>
         </figure>
 
@@ -1005,7 +1368,7 @@ Content-Type: application/json
       <section title="Client Credentials Grant">
         <t>
           In machine-to-machine scenarios using client credentials, 
-          the policy proposal can be included in the token request:
+          the behavioral constraint contract can be included in the token request:
         </t>
 
         <figure>
@@ -1016,7 +1379,8 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials
 &client_id=spiffe%3A%2F%2Fagent.example%2Fagent
-&client_secret=...
+&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer
+&client_assertion=eyJhbGciOiJSUzI1NiIs...
 &authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C
   %22policy%22%3A%7B%22type%22%3A%22rego%22%2C%22content%22%3A%22...%22%2C
   %22entry_point%22%3A%22allow%22%7D%7D%5D
@@ -1026,8 +1390,9 @@ grant_type=client_credentials
 
       <section title="Token Exchange (RFC 8693)">
         <t>
-          When exchanging tokens <xref target="RFC8693"/>, a new policy proposal can be 
-          provided to refine or restrict the authorized operations:
+          When exchanging tokens <xref target="RFC8693"/>, a new behavioral constraint
+          contract can be provided to refine or restrict the approved
+          behavioral boundaries:
         </t>
 
         <figure>
@@ -1046,9 +1411,27 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </figure>
 
         <t>
-          The resulting access token will include the new, more 
-          restrictive policy constraints that MUST be a subset of the 
-          original token's permissions.
+          The resulting access token MUST include the new behavioral
+          constraint contract. The AS SHOULD verify that the new policy does
+          not appear to grant permissions exceeding those of the
+          original token. The AS MAY use the RAR common fields
+          (<tt>actions</tt>, <tt>locations</tt>) as an approximation,
+          since comparing two Rego policies for semantic subset
+          containment is undecidable in the general case.
+        </t>
+
+        <t>
+          Token Exchange is a common trigger for <strong>behavioral
+          drift</strong>: when an agent's next planned behavior falls
+          outside the approved policy constraints, the Resource Server
+          can return an <tt>insufficient_authorization</tt> error with
+          a <tt>rego_profile</tt> (as defined in
+          <xref target="reverse-guided"/>), guiding the agent toward
+          constructing an appropriate Token Exchange request with an
+          updated behavioral constraint contract.  This enables
+          multi-hop delegation scenarios where each hop progressively
+          refines the behavioral boundaries to match the delegatee's
+          specific task requirements.
         </t>
       </section>
 
@@ -1058,44 +1441,89 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     <section anchor="security" title="Security Considerations">
       <section title="Policy Injection">
         <t>
-          Rego policies submitted by clients are evaluable policy 
-          definitions. Although Rego is declarative and guarantees 
-          termination, the AS MUST:
+          Rego policies submitted by clients are evaluable policy
+          definitions. Although Rego is a declarative language, it
+          supports recursive rules, regular expressions, and built-in
+          functions that may lead to non-terminating or resource-intensive
+          evaluations. Maliciously crafted policies can exploit
+          catastrophic backtracking in regular expressions (e.g.,
+          <tt>regex.match("^(a+)+$", "aaa...!")</tt>) or trigger
+          combinatorial explosion in set operations, leading to
+          denial of service at the Resource Server's policy engine.
+          The AS and RS MUST:
         </t>
 
         <ul>
           <li>Validate policy syntax before registration;</li>
           <li>Evaluate policies in sandboxed environments;</li>
           <li>Limit policy evaluation time and resource usage;</li>
-          <li>Restrict dangerous built-in functions (e.g., http.send).</li>
+          <li>Restrict dangerous built-in functions (e.g., http.send);</li>
+          <li>Restrict or sanitize regular expressions in policies to
+            prevent catastrophic backtracking (ReDoS);</li>
+          <li>Enforce recursion depth limits and set size bounds.</li>
         </ul>
       </section>
 
-      <section title="Policy Scope Escalation">
+      <section title="Behavioral Boundary Evasion">
         <t>
-          Clients MUST NOT be able to propose policies that exceed their registered 
-          permissions. The AS SHOULD maintain policy templates or scope hierarchies 
-          to enforce this.
+          In a behavioral authorization framework, the client (agent)
+          proposes the behavioral constraint policy. A malicious agent
+          could craft a policy that appears restrictive in its Rego
+          structure but contains subtle permissiveness. For example,
+          using negation-by-failure to create unintended allow paths,
+          or embedding wildcard conditions that match broader behavior
+          sets than the RAR common fields suggest. The AS SHOULD
+          perform lightweight static analysis (e.g., extracting
+          referenced <tt>input.action</tt> values, detecting
+          unbounded wildcards) to detect obvious inconsistencies.
+          The Resource Server, as the policy execution point, bears
+          final responsibility for ensuring each agent behavior is
+          verified against the approved constraints.
         </t>
       </section>
 
       <section title="Policy Integrity">
         <t>
-          The policy_ref in access tokens MUST reference policies stored securely 
+          The policy_ref in access tokens MUST reference policies stored securely
           by the AS. Resource Servers MUST fetch policies only from trusted sources.
+        </t>
+
+        <t>
+          When retrieving policy content from the <tt>policy_ref.endpoint</tt>
+          URL, the Resource Server SHOULD authenticate to the AS policy
+          endpoint using mutually authenticated TLS (mTLS) or a
+          pre-shared service token. Anonymous retrieval of policy
+          content SHOULD NOT be performed, as it allows any party that
+          discovers the endpoint URL to obtain the policy content.
+          The <tt>hash</tt> field in <tt>policy_ref</tt> provides
+          integrity verification of the retrieved content but does
+          not authenticate the retrieval channel itself.
+        </t>
+
+        <t>
+          Resource Servers SHOULD invalidate cached policy content
+          when the associated access token expires. If the AS revokes
+          a registered policy before the token expires, the RS MUST
+          treat subsequent policy evaluations as failed (deny-by-default).
+          The AS MAY signal policy revocation via token introspection
+          <xref target="RFC7662"/>
+          (indicating the token is no longer active) or through a
+          deployment-specific notification mechanism.
         </t>
       </section>
 
       <section title="Policy URI Fetching">
         <t>
-          When the <tt>policy.uri</tt> field is present, the AS fetches 
+          When the <tt>uri</tt> field within the <tt>policy</tt> object
+          is present, the AS fetches
           policy content from a client-provided URI. This introduces 
           Server-Side Request Forgery (SSRF) risks. The AS MUST:
         </t>
 
         <ul>
-          <li>Reject URIs pointing to private/internal network addresses 
-            (e.g., 10.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, ::1);</li>
+          <li>Reject URIs pointing to private/internal network addresses
+            (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16,
+            127.0.0.0/8, ::1, and link-local addresses);</li>
           <li>Enforce HTTPS for all policy URIs;</li>
           <li>Set strict timeouts and size limits on fetched content;</li>
           <li>Validate that the fetched content is syntactically valid Rego 
@@ -1125,6 +1553,96 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           rather than inline policy content.
         </t>
       </section>
+
+      <section title="Error Response Header Size">
+        <t>
+          The <tt>rego_profile</tt> parameter carried in the
+          <tt>WWW-Authenticate</tt> header (see <xref target="reverse-guided"/>)
+          is a base64url-encoded JSON object that can include
+          multiple constraint definitions, required claims, and scope
+          arrays. Implementations MUST enforce size limits on the
+          <tt>rego_profile</tt> value to avoid exceeding HTTP header
+          size limits imposed by intermediaries. A RECOMMENDED limit
+          is 2 KB for the base64url-encoded <tt>rego_profile</tt> value.
+          Resource servers that require larger profiles SHOULD consider
+          returning only a <tt>profile_uri</tt> reference and having
+          clients fetch the full profile separately.
+        </t>
+      </section>
+
+      <section title="Behavioral Audit">
+        <t>
+          In behavioral authorization, the policy defines <em>what
+          behaviors are permitted</em>, but compliance requires evidence
+          of <em>what behaviors were actually performed</em>. This is
+          especially critical in AI agent scenarios where the agent
+          operates autonomously and may execute long sequences of
+          behaviors without direct human oversight.
+        </t>
+
+        <t>
+          Resource Servers SHOULD log each policy evaluation event
+          including: the policy identifier (<tt>policy_ref.id</tt>),
+          a hash or summary of the evaluated input, the allow/deny
+          result, and the evaluation timestamp. These audit logs
+          enable post-incident analysis of agent behavior, detection
+          of behavioral drift patterns, and compliance reporting.
+          Audit logs SHOULD be protected against tampering and
+          retained according to the deployment's data retention
+          policy. Authorization Servers MAY also log behavioral constraint proposals
+          received from clients to detect repeated boundary-testing
+          behavior by malicious agents.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="privacy" title="Privacy Considerations">
+      <t>
+        Implementations of this specification MUST consider the following
+        privacy aspects per BCP 188 <xref target="RFC6973"/>:
+      </t>
+
+      <ul>
+        <li>
+          <strong>Policy Content Privacy</strong>: Rego policies embedded
+          in <tt>authorization_details</tt> may reference user attributes
+          (e.g., <tt>input.user.tier</tt>, <tt>input.user.role</tt>).
+          When policies are carried in JWT access tokens, these attribute
+          references are visible to any party that can decode the token.
+          Implementations SHOULD avoid embedding personally identifiable
+          information (PII) directly in policy content and instead
+          reference abstract attribute names that the Resource Server
+          resolves at evaluation time.
+        </li>
+        <li>
+          <strong>Constraint Disclosure</strong>: The
+          <tt>rego_profile</tt> returned in error responses reveals
+          authorization policy constraints to the requesting client.
+          While this disclosure is necessary for the reverse-guided
+          authorization flow, resource servers SHOULD limit the
+          information to what is strictly needed for the client to
+          construct a valid authorization request, and MUST NOT include
+          internal implementation details, database schemas, or
+          infrastructure information.
+        </li>
+        <li>
+          <strong>Policy Endpoint Exposure</strong>: The
+          <tt>policy_ref.endpoint</tt> field and the
+          <tt>auth_server</tt> field in <tt>rego_profile</tt> reveal
+          internal URLs of the Authorization Server. Deployments SHOULD
+          use well-known or abstract endpoint identifiers rather than
+          exposing internal service URLs.
+        </li>
+        <li>
+          <strong>Behavioral Profiling</strong>: The sequence of
+          <tt>rego_policy</tt> behavioral constraint proposals submitted by a client may
+          reveal the client's intent, capabilities, or decision-making
+          patterns. Authorization Servers SHOULD treat behavioral constraint proposals
+          with the same confidentiality as other authorization request
+          parameters and MUST NOT use them for purposes beyond
+          authorization decision-making without explicit consent.
+        </li>
+      </ul>
     </section>
 
     <section anchor="iana" title="IANA Considerations">
@@ -1140,20 +1658,24 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd>rego_policy</dd>
           <dt>Description:</dt>
           <dd>
-            A Rego policy for fine-grained authorization decisions, including 
-            policy content, entry point, and optional evaluation context.
+            A Rego behavioral constraint contract for per-behavior
+            authorization verification, including policy content,
+            entry point, and optional evaluation context.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd>Section 3 of this document</dd>
+          <dd>
+            <xref target="authorization-data-type"/> of this document
+          </dd>
         </dl>
       </section>
 
-      <section title="JWT Claims Registration">
+      <section title="JWT Access Token Claims Registration">
         <t>
-          This specification registers the following claims in the 
-          "JSON Web Token Claims" registry:
+          This specification registers the following claim in the
+          "JWT Access Token JWT Claims" registry established
+          by <xref target="RFC9068"/>:
         </t>
 
         <dl>
@@ -1161,36 +1683,84 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd>policy_ref</dd>
           <dt>Claim Description:</dt>
           <dd>
-            A reference to a registered Rego policy in access tokens.
+            A reference to a registered Rego behavioral constraint
+            contract in JWT access tokens.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd>Section 3.2 of this document</dd>
+          <dd>
+            <xref target="policy-ref-claim"/> of this document
+          </dd>
         </dl>
       </section>
 
-      <section title="OAuth Extensions Error Registration">
+      <section title="OAuth 2.0 Bearer Token Error Values Registration">
         <t>
-          This specification registers the following error code in the 
-          "OAuth Extensions Error" registry established by RFC 6749:
+          This specification registers the following error code in the
+          "OAuth 2.0 Bearer Token Error Values" registry established
+          by <xref target="RFC6750"/>:
         </t>
 
         <dl>
-          <dt>Error Name:</dt>
+          <dt>Name:</dt>
           <dd>insufficient_authorization</dd>
-          <dt>Error Description:</dt>
+          <dt>Error Usage Location:</dt>
+          <dd>Resource server error response using the
+            <tt>WWW-Authenticate</tt> header per <xref target="RFC6750"/>.
+          </dd>
+          <dt>Related Error Codes:</dt>
+          <dd>The existing <tt>insufficient_scope</tt> error defined in
+            <xref target="RFC6750"/> addresses scope insufficiency.
+            <tt>insufficient_authorization</tt> (this specification) addresses the case where the
+            resource server returns structured policy constraints
+            (<tt>rego_profile</tt>) for clients capable of constructing
+            policy-based authorization requests.
+          </dd>
+          <dt>Reference:</dt>
           <dd>
-            The request requires higher authorization privileges than 
-            provided by the access token. The resource server MAY include 
-            a <tt>rego_profile</tt> object in the response body to guide 
-            the client toward obtaining sufficient authorization.
+            <xref target="reverse-guided"/> of this document
+          </dd>
+        </dl>
+      </section>
+
+      <section title="WWW-Authenticate Parameter Definition">
+        <t>
+          This specification defines a new parameter for use in the
+          <tt>WWW-Authenticate</tt> header field with the Bearer
+          authentication scheme, as defined in <xref target="RFC6750"/>.
+        </t>
+
+        <dl>
+          <dt>Parameter Name:</dt>
+          <dd>rego_profile</dd>
+          <dt>Parameter Usage Location:</dt>
+          <dd>
+            <tt>WWW-Authenticate</tt> response header field, used in
+            resource server error responses per <xref target="RFC6750"/>
+            Section 3.
+          </dd>
+          <dt>Parameter Description:</dt>
+          <dd>
+            A base64url-encoded JSON object containing structured
+            policy constraints and authorization requirements that
+            guide the client toward obtaining sufficient authorization.
+            The structure is defined in <xref target="reverse-guided"/>
+            of this document.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd>Section 5.1 of this document</dd>
+          <dd>
+            <xref target="reverse-guided"/> of this document
+          </dd>
         </dl>
+
+        <t>
+          RFC 6750 does not establish an IANA sub-registry for Bearer
+          authentication scheme parameters. This section serves as the
+          specification reference for the <tt>rego_profile</tt> parameter.
+        </t>
       </section>
     </section>
   </middle>
@@ -1202,15 +1772,22 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <name>Normative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.4648.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6750.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6973.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8414.xml"/>
       </references>
 
       <references>
         <name>Informative References</name>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8414.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9728.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7591.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.parecki-oauth-jwt-grant-interaction-response.xml"/>
         <reference anchor="OPA" target="https://www.openpolicyagent.org/">
           <front>
@@ -1218,7 +1795,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <author>
               <organization>Cloud Native Computing Foundation</organization>
             </author>
-            <date year=""/>
+            <date year="2024"/>
           </front>
         </reference>
 
@@ -1228,8 +1805,20 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             <author>
               <organization>Open Policy Agent</organization>
             </author>
-            <date year=""/>
+            <date year="2024"/>
           </front>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-chain-delegation" target="https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation">
+          <front>
+            <title>Delegation Chain for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <author initials="H." surname="Zhu"/>
+            <author initials="S." surname="Krishnan"/>
+            <author initials="A." surname="Parecki"/>
+            <date year="2026" month="June"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation"/>
         </reference>
       </references>
     </references>
@@ -1243,13 +1832,13 @@ package agent
 default allow = false
 
 # Allow transactions up to $50
-allow {
+allow if {
   input.action == "purchase"
   input.amount <= 50.0
 }
 
 # Allow cart modifications without amount limit
-allow {
+allow if {
   input.action == "add_to_cart"
 }
           ]]></artwork>
@@ -1264,10 +1853,11 @@ package agent
 default allow = false
 
 # Allow during business hours
-allow {
+allow if {
   input.action == "submit_order"
-  time.clock(time.now_ns())[0] >= 9
-  time.clock(time.now_ns())[0] < 18
+  hour := time.clock(time.now_ns())[0]
+  hour >= 9
+  hour < 18
 }
           ]]></artwork>
         </figure>
@@ -1281,12 +1871,12 @@ package agent
 default allow = false
 
 # Premium users can access all features
-allow {
+allow if {
   input.user.tier == "premium"
 }
 
 # Standard users limited to basic actions
-allow {
+allow if {
   input.user.tier == "standard"
   input.action == "read"
 }
