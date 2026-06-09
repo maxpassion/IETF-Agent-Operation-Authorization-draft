@@ -15,7 +15,7 @@
         AI agents exhibit dynamic, unpredictable behavior that cannot be
         fully described by traditional OAuth 2.0 scopes. This
         specification defines a behavioral authorization framework that
-        enables clients — particularly AI agents — to propose Rego
+        enables clients, particularly AI agents, to propose Rego
         policy-based behavioral constraint contracts in OAuth 2.0
         authorization flows using Rich Authorization Requests (RAR).
         It defines the rego_policy authorization data type for carrying
@@ -1246,7 +1246,7 @@ li > p:last-of-type:only-child {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Liu, et al.</td>
-<td class="center">Expires 10 December 2026</td>
+<td class="center">Expires 11 December 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1259,12 +1259,12 @@ li > p:last-of-type:only-child {
 <dd class="internet-draft">draft-liu-oauth-rego-policy-00</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-06-08" class="published">8 June 2026</time>
+<time datetime="2026-06-09" class="published">9 June 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-10">10 December 2026</time></dd>
+<dd class="expires"><time datetime="2026-12-11">11 December 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1297,7 +1297,7 @@ li > p:last-of-type:only-child {
         AI agents exhibit dynamic, unpredictable behavior that cannot be
         fully described by traditional OAuth 2.0 scopes. This
         specification defines a behavioral authorization framework that
-        enables clients — particularly AI agents — to propose Rego
+        enables clients, particularly AI agents, to propose Rego
         policy-based behavioral constraint contracts in OAuth 2.0
         authorization flows using Rich Authorization Requests (RAR).
         It defines the rego_policy authorization data type for carrying
@@ -1328,7 +1328,7 @@ li > p:last-of-type:only-child {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 10 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1422,19 +1422,16 @@ li > p:last-of-type:only-child {
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-error-response-format" class="internal xref">Error Response Format</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
-                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-relationship-to-insufficien" class="internal xref">Relationship to insufficient_authorization_details</a></p>
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-relationship-to-insufficien" class="internal xref">Relationship to insufficient_scope</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-relationship-to-insufficient" class="internal xref">Relationship to insufficient_scope</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-rego-profile-structure" class="internal xref">Rego Profile Structure</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
-                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-rego-profile-structure" class="internal xref">Rego Profile Structure</a></p>
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-agent-adaptive-behavior" class="internal xref">Agent Adaptive Behavior</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
-                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-agent-adaptive-behavior" class="internal xref">Agent Adaptive Behavior</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
-                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 </li>
             </ul>
 </li>
@@ -1573,18 +1570,18 @@ li > p:last-of-type:only-child {
         AI agents differ fundamentally from traditional OAuth clients in
         that their behavior space is dynamic and often unpredictable at
         authorization time. When a human delegates a task such as
-        "manage my investment portfolio" to an AI agent, the specific
-        sequence of operations — market analysis, position sizing,
-        trade execution, risk hedging, notification delivery — emerges
-        at runtime based on market conditions, portfolio state, and
-        agent reasoning. The agent's behavior cannot be fully
-        enumerated in advance, which creates a tension between two
-        competing requirements: granting the agent sufficient
-        behavioral freedom to accomplish its task, and constraining the
-        agent to the principle of least privilege.<a href="#section-1-1" class="pilcrow">¶</a></p>
+        "help me find and buy a laptop" to an AI agent, the specific
+        sequence of operations (product comparison, price checking,
+        coupon search, cart management, payment, shipping selection)
+        emerges at runtime based on available products, pricing,
+        user preferences, and agent reasoning. The agent's behavior
+        cannot be fully enumerated in advance, which creates a
+        tension between two competing requirements: granting the
+        agent sufficient behavioral freedom to accomplish its task,
+        and constraining the agent to the principle of least privilege.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">
-        Traditional OAuth 2.0 authorization relies on scopes —
-        pre-defined, static permission sets — to express what a client
+        Traditional OAuth 2.0 authorization relies on scopes,
+        pre-defined static permission sets, to express what a client
         is allowed to do. This model assumes that the client's behavior
         space is known and enumerable at design time. For AI agents,
         this assumption does not hold: an overly broad scope grants
@@ -1615,8 +1612,8 @@ li > p:last-of-type:only-child {
         The Rego policy also serves as a formal expression of human
         intent: when a human delegates a task to an agent, the policy
         encodes the boundaries of that delegation in a machine-verifiable
-        form. The agent retains behavioral autonomy — it decides
-        <em>what</em> to do and <em>when</em> — but every action is
+        form. The agent retains behavioral autonomy: it decides
+        <em>what</em> to do and <em>when</em>, but every action is
         constrained by the policy approved by the Authorization Server.
         This enables a balance between agent autonomy and human oversight
         that is not achievable with static scope-based authorization.<a href="#section-1-4" class="pilcrow">¶</a></p>
@@ -1637,6 +1634,15 @@ li > p:last-of-type:only-child {
           exceed approved constraints.<a href="#section-1-6.4" class="pilcrow">¶</a>
 </li>
       </ul>
+<p id="section-1-7">
+        The <code>rego_policy</code> authorization data type can be used in
+        conjunction with the <code>delegation_chain</code> claim
+        (<span>[<a href="#I-D.liu-oauth-chain-delegation" class="cite xref">I-D.liu-oauth-chain-delegation</a>]</span>).  When a
+        delegation hop carries a structured policy, the Rego behavioral
+        constraint contract defines the fine-grained authorization
+        constraints that were approved at that hop, complementing the
+        delegation lineage and attestation provided by
+        <code>delegation_chain</code>.<a href="#section-1-7" class="pilcrow">¶</a></p>
 <section id="section-1.1">
         <h3 id="name-requirements-language">
 <a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-requirements-language" class="section-name selfRef">Requirements Language</a>
@@ -1687,15 +1693,15 @@ li > p:last-of-type:only-child {
           The Authorization Server MAY use RAR types to determine applicable
           policy templates or validation rules.<a href="#section-1.2-4" class="pilcrow">¶</a></p>
 <p id="section-1.2-5">
-          Authorization Servers and Resource Servers MAY advertise the
-          <code>rego_policy</code> type metadata via the
-          <code>authorization_details_types_metadata</code> attribute defined
-          in <span>[<a href="#I-D.zehavi-oauth-rar-metadata" class="cite xref">I-D.zehavi-oauth-rar-metadata</a>]</span>, enabling clients
-          to dynamically discover the JSON Schema, documentation, and
-          examples for constructing valid <code>rego_policy</code> authorization
-          details objects. This discovery mechanism is particularly valuable
-          in multi-tenant or federated environments where different resource
-          servers may require different policy structures.<a href="#section-1.2-5" class="pilcrow">¶</a></p>
+          Resource Servers MAY advertise supported authorization details
+          types via the <code>authorization_details_types_supported</code>
+          attribute in Protected Resource Metadata
+          (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>), enabling clients to discover which
+          authorization details types are accepted before constructing
+          <code>rego_policy</code> authorization requests. This discovery
+          mechanism is particularly valuable in multi-tenant or federated
+          environments where different resource servers may require
+          different policy structures.<a href="#section-1.2-5" class="pilcrow">¶</a></p>
 </section>
 </section>
 </div>
@@ -1799,11 +1805,11 @@ li > p:last-of-type:only-child {
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.user.tier == \"premium\"\n  input.action in {\"manage_portfolio\", \"view_reports\"}\n}",
+        "content": "package agent\n\ndefault allow = false\n\nallow if {\n  input.user.tier == \"premium\"\n  input.action in {\"search_products\", \"add_to_cart\"}\n}",
         "entry_point": "allow"
       },
-      "actions": ["manage_portfolio", "view_reports"],
-      "locations": ["https://api.example.com/portfolios"]
+      "actions": ["search_products", "add_to_cart"],
+      "locations": ["https://api.example.com/products"]
     }
   ]
 }
@@ -1923,11 +1929,13 @@ li > p:last-of-type:only-child {
 </li>
           </ol>
 <p id="section-3.1.3-3">
-            The policy syntax used in this specification follows Rego v0
+            The policy syntax used in this specification follows Rego v1
             as defined in the OPA documentation <span>[<a href="#Rego" class="cite xref">Rego</a>]</span>.
             Implementations of this specification MUST use a policy
-            engine that accepts Rego v0 syntax, either through v0
-            compatibility mode or through automatic version detection.<a href="#section-3.1.3-3" class="pilcrow">¶</a></p>
+            engine that accepts Rego v1 syntax.  Policy engines MAY
+            additionally support Rego v0 syntax through backward
+            compatibility mode to facilitate migration from existing
+            v0 policy deployments.<a href="#section-3.1.3-3" class="pilcrow">¶</a></p>
 <figure id="figure-2">
             <div class="alignLeft art-rego art-text artwork" id="section-3.1.3-4.1">
 <pre>
@@ -1935,7 +1943,7 @@ package agent
 
 default allow = false
 
-allow {
+allow if {
   # Authorization rules here
   input.action == "read"
   input.resource.owner == input.user.id
@@ -2167,8 +2175,8 @@ allow {
           <li id="section-4.1-1.1">
             Behavioral Constraint Proposal: Client (agent) sends an
             authorization request with <code>authorization_details</code>
-            containing a <code>rego_policy</code> object — a proposed
-            behavioral constraint contract — with <code>policy</code>
+            containing a <code>rego_policy</code> object, a proposed
+            behavioral constraint contract, with <code>policy</code>
             and optional <code>context</code> fields. This leverages
             RAR (RFC 9396) for structured authorization requests.<a href="#section-4.1-1.1" class="pilcrow">¶</a>
 </li>
@@ -2217,7 +2225,7 @@ allow {
             decision for the specific behavior.<a href="#section-4.1-1.8" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.9">
-            Enforcement: RS enforces the per-behavior decision —
+            Enforcement: RS enforces the per-behavior decision,
             allowing or denying the agent's action.<a href="#section-4.1-1.9" class="pilcrow">¶</a>
 </li>
           <li id="section-4.1-1.10">
@@ -2236,8 +2244,8 @@ allow {
         Traditional OAuth error responses indicate authorization failure without
         providing guidance on how to obtain valid authorization. In behavioral
         authorization, this is particularly important: when an agent encounters
-        <strong>behavioral drift</strong> — its next planned behavior falls
-        outside the approved constraint contract — the agent needs structured
+        <strong>behavioral drift</strong> (its next planned behavior falls
+        outside the approved constraint contract), the agent needs structured
         guidance to recover autonomously. Resource servers can provide this
         guidance through structured error responses that enable agents to
         construct appropriate authorization requests with updated behavioral
@@ -2315,37 +2323,9 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 </section>
 <section id="section-5.2">
         <h3 id="name-relationship-to-insufficien">
-<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-relationship-to-insufficien" class="section-name selfRef">Relationship to insufficient_authorization_details</a>
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-relationship-to-insufficien" class="section-name selfRef">Relationship to insufficient_scope</a>
         </h3>
 <p id="section-5.2-1">
-          The <code>insufficient_authorization_details</code> error defined in
-          <span>[<a href="#I-D.zehavi-oauth-rar-metadata" class="cite xref">I-D.zehavi-oauth-rar-metadata</a>]</span> addresses the case
-          where an RS requires a more complete
-          <code>authorization_details</code> object — the RS returns a ready-to-use
-          <code>authorization_details</code> value that the client can forward
-          directly in its next OAuth request.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.2-2">
-          In contrast, <code>insufficient_authorization</code> with
-          <code>rego_profile</code> returns a structured description of
-          authorization constraints rather than a ready-to-use object.
-          This enables clients — particularly AI agents — to understand
-          the authorization policy boundaries and construct appropriate
-          Rego policies and authorization requests. The
-          <code>rego_profile</code> is intended for scenarios where the client
-          must actively generate policy content (e.g., Rego rules) rather
-          than simply relay an authorization details object.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
-<p id="section-5.2-3">
-          Resource servers MAY support both error codes to serve different
-          client capabilities: <code>insufficient_authorization_details</code>
-          for clients that prefer turnkey authorization objects, and
-          <code>insufficient_authorization</code> for clients capable of
-          constructing policy-based authorization requests.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
-</section>
-<section id="section-5.3">
-        <h3 id="name-relationship-to-insufficient">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-relationship-to-insufficient" class="section-name selfRef">Relationship to insufficient_scope</a>
-        </h3>
-<p id="section-5.3-1">
           RFC 6750 <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span> defines the
           <code>insufficient_scope</code> error for cases where the access
           token lacks the scopes required by the resource server.
@@ -2353,118 +2333,118 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           specification addresses a broader condition: the token may
           include adequate scopes but lack the policy-based authorization
           structure (e.g., Rego constraints or user
-          confirmation) required by the resource server.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2">
+          confirmation) required by the resource server.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">
           Resource servers SHOULD use <code>insufficient_scope</code> when
           the deficiency is purely scope-based and
           <code>insufficient_authorization</code> when the deficiency involves
-          policy constraints that cannot be expressed as additional scopes.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+          policy constraints that cannot be expressed as additional scopes.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
 </section>
-<section id="section-5.4">
+<section id="section-5.3">
         <h3 id="name-rego-profile-structure">
-<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-rego-profile-structure" class="section-name selfRef">Rego Profile Structure</a>
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-rego-profile-structure" class="section-name selfRef">Rego Profile Structure</a>
         </h3>
-<p id="section-5.4-1">
-          The <code>rego_profile</code> object contains the following fields:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5.4-2">
-          <dt id="section-5.4-2.1">profile_uri:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.2">
+<p id="section-5.3-1">
+          The <code>rego_profile</code> object contains the following fields:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.3-2">
+          <dt id="section-5.3-2.1">profile_uri:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.2">
             OPTIONAL. URI identifying the authorization profile for this
             resource. This URI serves as an opaque identifier and MAY
             be used as a cache key, audit reference, or pointer to
             developer documentation. The document at this URI is
             intended for human consumption and is not machine-parsed
-            by the agent.<a href="#section-5.4-2.2" class="pilcrow">¶</a>
+            by the agent.<a href="#section-5.3-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.4-2.3">required_scope:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.4">
-            OPTIONAL. Array of scope values that the access token MUST include.<a href="#section-5.4-2.4" class="pilcrow">¶</a>
+<dt id="section-5.3-2.3">required_scope:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.4">
+            OPTIONAL. Array of scope values that the access token MUST include.<a href="#section-5.3-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.4-2.5">required_claims:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.6">
+<dt id="section-5.3-2.5">required_claims:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.6">
             OPTIONAL. Array of access token claim names (e.g.,
             <code>agent_id</code>, <code>user_id</code>) that MUST be present
-            in the access token issued by the AS.<a href="#section-5.4-2.6" class="pilcrow">¶</a>
+            in the access token issued by the AS.<a href="#section-5.3-2.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.4-2.7">constraints:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.8">
+<dt id="section-5.3-2.7">constraints:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.8">
             OPTIONAL. Object defining policy constraints that MUST be satisfied. 
             Each key is a constraint name; the value is an object with the 
             following descriptors: <code>type</code> (data type), 
             <code>description</code> (human-readable explanation), 
             <code>enum</code> (allowed values), and <code>required</code> 
-            (boolean, whether the constraint must be provided).<a href="#section-5.4-2.8" class="pilcrow">¶</a>
+            (boolean, whether the constraint must be provided).<a href="#section-5.3-2.8" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.4-2.9">confirmation_required:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.10">
+<dt id="section-5.3-2.9">confirmation_required:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.10">
             OPTIONAL. Boolean indicating whether explicit user authorization
             is required for the requested behavioral boundaries. If true,
             the agent MUST initiate an OAuth authorization flow to obtain
             the resource owner's explicit consent for the proposed
             behavioral constraint contract. This does not mean local
-            user confirmation (e.g., a modal dialog) is sufficient —
+            user confirmation (e.g., a modal dialog) is sufficient;
             the authorization must be obtained through the AS to produce
             a token with appropriate grants. The specific interaction
             mechanism depends on the OAuth flow in use (e.g., the
             <code>interaction_required</code> error with JWT Grant Interaction
             Response
             <span>[<a href="#I-D.parecki-oauth-jwt-grant-interaction-response" class="cite xref">I-D.parecki-oauth-jwt-grant-interaction-response</a>]</span>,
-            or the <code>prompt</code> parameter in the authorization code flow).<a href="#section-5.4-2.10" class="pilcrow">¶</a>
+            or the <code>prompt</code> parameter in the authorization code flow).<a href="#section-5.3-2.10" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.4-2.11">auth_server:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.4-2.12">
+<dt id="section-5.3-2.11">auth_server:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.3-2.12">
             REQUIRED. Identifier of the authorization server capable of
             issuing tokens that satisfy these requirements. The agent
             can discover the token endpoint and other metadata via
             OAuth 2.0 Authorization Server Metadata (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>)
             or OAuth 2.0 Protected Resource Metadata (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>)
-            using this identifier.<a href="#section-5.4-2.12" class="pilcrow">¶</a>
+            using this identifier.<a href="#section-5.3-2.12" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
 </section>
-<section id="section-5.5">
+<section id="section-5.4">
         <h3 id="name-agent-adaptive-behavior">
-<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-agent-adaptive-behavior" class="section-name selfRef">Agent Adaptive Behavior</a>
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-agent-adaptive-behavior" class="section-name selfRef">Agent Adaptive Behavior</a>
         </h3>
-<p id="section-5.5-1">
+<p id="section-5.4-1">
           Upon receiving a reverse-guided authorization response, the AI agent 
-          SHOULD:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.5-2">
-          <li id="section-5.5-2.1">
-            Parse the <code>rego_profile</code> to understand authorization requirements.<a href="#section-5.5-2.1" class="pilcrow">¶</a>
+          SHOULD:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.4-2">
+          <li id="section-5.4-2.1">
+            Parse the <code>rego_profile</code> to understand authorization requirements.<a href="#section-5.4-2.1" class="pilcrow">¶</a>
 </li>
-          <li id="section-5.5-2.2">
+          <li id="section-5.4-2.2">
             Verify that the specified <code>auth_server</code> is trusted before 
-            proceeding.<a href="#section-5.5-2.2" class="pilcrow">¶</a>
+            proceeding.<a href="#section-5.4-2.2" class="pilcrow">¶</a>
 </li>
-          <li id="section-5.5-2.3">
+          <li id="section-5.4-2.3">
             Construct a new authorization request including required scopes,
             a behavioral constraint contract that satisfies the constraints
             specified in the <code>rego_profile</code>, and any additional
-            parameters required by the resource server.<a href="#section-5.5-2.3" class="pilcrow">¶</a>
+            parameters required by the resource server.<a href="#section-5.4-2.3" class="pilcrow">¶</a>
 </li>
-          <li id="section-5.5-2.4">
-            If <code>confirmation_required</code> is true, initiate user consent flow.<a href="#section-5.5-2.4" class="pilcrow">¶</a>
+          <li id="section-5.4-2.4">
+            If <code>confirmation_required</code> is true, initiate user consent flow.<a href="#section-5.4-2.4" class="pilcrow">¶</a>
 </li>
-          <li id="section-5.5-2.5">
+          <li id="section-5.4-2.5">
             Discover the token endpoint via the 
             <code>auth_server</code>'s metadata (RFC 8414) and 
-            submit the authorization request.<a href="#section-5.5-2.5" class="pilcrow">¶</a>
+            submit the authorization request.<a href="#section-5.4-2.5" class="pilcrow">¶</a>
 </li>
         </ol>
-<p id="section-5.5-3">
+<p id="section-5.4-3">
           This adaptive approach enables agents to "learn" authorization
           requirements dynamically, reducing the need for pre-programmed
-          knowledge of each resource server's policies.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
-<p id="section-5.5-4">
+          knowledge of each resource server's policies.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+<p id="section-5.4-4">
           During multi-step task execution, an agent may encounter
-          <strong>behavioral drift</strong> — situations where the next
+          <strong>behavioral drift</strong>: situations where the next
           behavior in its plan falls outside the approved policy
           constraints. When this occurs, the agent has three options:
           (1) request a new authorization with an updated policy that
@@ -2479,40 +2459,40 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           server. Implementations SHOULD prefer degradation over
           re-authorization for minor boundary violations to avoid
           excessive authorization round-trips in long-running agent
-          workflows.<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+          workflows.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
 </section>
-<section id="section-5.6">
+<section id="section-5.5">
         <h3 id="name-security-considerations">
-<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
         </h3>
-<p id="section-5.6-1">
+<p id="section-5.5-1">
           Implementations of reverse-guided authorization MUST consider the 
-          following security aspects:<a href="#section-5.6-1" class="pilcrow">¶</a></p>
+          following security aspects:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.6-2.1">
+<li class="normal" id="section-5.5-2.1">
             <strong>Auth Server Verification</strong>: Agents MUST verify that 
             the <code>auth_server</code> specified in the rego_profile is trusted 
             before submitting authorization requests. Agents MUST 
             use only the token endpoint discovered from the 
             <code>auth_server</code>'s Authorization Server Metadata 
             (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>). Blindly following 
-            redirects could lead to credential theft.<a href="#section-5.6-2.1" class="pilcrow">¶</a>
+            redirects could lead to credential theft.<a href="#section-5.5-2.1" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-5.6-2.2">
+          <li class="normal" id="section-5.5-2.2">
             <strong>Constraint Validation</strong>: Agents SHOULD validate that 
             constraint values are reasonable before including them in 
             authorization requests. Malicious resource servers might attempt 
-            to induce agents to request excessive permissions.<a href="#section-5.6-2.2" class="pilcrow">¶</a>
+            to induce agents to request excessive permissions.<a href="#section-5.5-2.2" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-5.6-2.3">
+          <li class="normal" id="section-5.5-2.3">
             <strong>Information Disclosure</strong>: The rego_profile reveals 
             authorization requirements, which is acceptable as it only exposes 
             "what is needed" not "why it is needed." This is analogous to 
-            OAuth scope definitions.<a href="#section-5.6-2.3" class="pilcrow">¶</a>
+            OAuth scope definitions.<a href="#section-5.5-2.3" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-5.6-2.4">
+          <li class="normal" id="section-5.5-2.4">
             <strong>TLS Protection</strong>: All communications MUST use TLS 
-            to prevent man-in-the-middle attacks on the error response.<a href="#section-5.6-2.4" class="pilcrow">¶</a>
+            to prevent man-in-the-middle attacks on the error response.<a href="#section-5.5-2.4" class="pilcrow">¶</a>
 </li>
         </ul>
 </section>
@@ -2578,10 +2558,31 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 </li>
         </ol>
 <p id="section-6.2-3">
-          When the AS embeds the validated policy directly in the 
-          enriched <code>authorization_details</code> (the primary path), 
-          explicit registration is not required — the policy travels 
+          When the AS embeds the validated policy directly in the
+          enriched <code>authorization_details</code> (the primary path),
+          explicit registration is not required; the policy travels
           with the token.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">
+          Policy registration in this specification is dynamic and
+          on-demand. The Authorization Server does not need to maintain
+          a pre-configured catalog of policies. When an agent proposes
+          a behavioral constraint contract, the AS evaluates it against
+          pre-established approval principles
+          (see <a href="#as-processing" class="auto internal xref">Section 6</a>) and registers it only
+          if approved. This eliminates the operational burden of
+          pre-deploying policies for every anticipated agent behavior,
+          which is impractical given the dynamic and unpredictable
+          nature of AI agent workflows.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">
+          Deployments MAY also pre-register policies for well-known
+          agent workflows (e.g., automated reconciliation, scheduled
+          reporting) where the behavioral boundaries are stable and
+          known in advance. In such cases, the agent can reference
+          the pre-registered policy by identifier rather than
+          submitting the full policy content in each authorization
+          request. Both modes are supported: dynamic registration
+          is the default for exploratory agent tasks, while
+          pre-registration is an optimization for predictable workflows.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
 </section>
 <section id="section-6.3">
         <h3 id="name-error-responses">
@@ -2758,10 +2759,10 @@ Content-Type: application/json
       "id": "user_12345",
       "tier": "premium"
     },
-    "action": "manage_portfolio",
+    "action": "search_products",
     "resource": {
-      "type": "portfolio",
-      "id": "portfolio_001"
+      "type": "product",
+      "id": "product_001"
     }
   }
 }
@@ -2849,7 +2850,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
   %22policy%22%3A%7B%22type%22%3A%22rego%22%2C
   %22content%22%3A%22package%20agent%5Cn...
   %22entry_point%22%3A%22allow%22%7D%2C
-  %22actions%22%3A%5B%22manage_portfolio%22%2C%22view_reports%22%5D%7D%5D
+  %22actions%22%3A%5B%22search_products%22%2C%22add_to_cart%22%5D%7D%5D
 </pre>
 </div>
 <figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
@@ -2935,6 +2936,18 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           (<code>actions</code>, <code>locations</code>) as an approximation,
           since comparing two Rego policies for semantic subset
           containment is undecidable in the general case.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+<p id="section-8.3-4">
+          Token Exchange is a common trigger for <strong>behavioral
+          drift</strong>: when an agent's next planned behavior falls
+          outside the approved policy constraints, the Resource Server
+          can return an <code>insufficient_authorization</code> error with
+          a <code>rego_profile</code> (as defined in
+          <a href="#reverse-guided" class="auto internal xref">Section 5</a>), guiding the agent toward
+          constructing an appropriate Token Exchange request with an
+          updated behavioral constraint contract.  This enables
+          multi-hop delegation scenarios where each hop progressively
+          refines the behavioral boundaries to match the delegatee's
+          specific task requirements.<a href="#section-8.3-4" class="pilcrow">¶</a></p>
 </section>
 </section>
 </div>
@@ -2982,7 +2995,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           In a behavioral authorization framework, the client (agent)
           proposes the behavioral constraint policy. A malicious agent
           could craft a policy that appears restrictive in its Rego
-          structure but contains subtle permissiveness — for example,
+          structure but contains subtle permissiveness. For example,
           using negation-by-failure to create unintended allow paths,
           or embedding wildcard conditions that match broader behavior
           sets than the RAR common fields suggest. The AS SHOULD
@@ -3005,7 +3018,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           URL, the Resource Server SHOULD authenticate to the AS policy
           endpoint using mutually authenticated TLS (mTLS) or a
           pre-shared service token. Anonymous retrieval of policy
-          content is NOT RECOMMENDED, as it allows any party that
+          content SHOULD NOT be performed, as it allows any party that
           discovers the endpoint URL to obtain the policy content.
           The <code>hash</code> field in <code>policy_ref</code> provides
           integrity verification of the retrieved content but does
@@ -3236,38 +3249,27 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           "OAuth 2.0 Bearer Token Error Values" registry established
           by <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>:<a href="#section-11.3-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11.3-2">
-          <dt id="section-11.3-2.1">Error Name:</dt>
+          <dt id="section-11.3-2.1">Name:</dt>
           <dd style="margin-left: 1.5em" id="section-11.3-2.2">insufficient_authorization<a href="#section-11.3-2.2" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-11.3-2.3">Common Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-11.3-2.4">Insufficient Authorization<a href="#section-11.3-2.4" class="pilcrow">¶</a>
+<dt id="section-11.3-2.3">Error Usage Location:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.3-2.4">Resource server error response using the
+            <code>WWW-Authenticate</code> header per <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>.<a href="#section-11.3-2.4" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-11.3-2.5">Error Usage Location:</dt>
-          <dd style="margin-left: 1.5em" id="section-11.3-2.6">Resource server error response using the
-            <code>WWW-Authenticate</code> header per <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>.<a href="#section-11.3-2.6" class="pilcrow">¶</a>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-11.3-2.7">Related Error Codes:</dt>
-          <dd style="margin-left: 1.5em" id="section-11.3-2.8">The existing <code>insufficient_scope</code> error defined in
+<dt id="section-11.3-2.5">Related Error Codes:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.3-2.6">The existing <code>insufficient_scope</code> error defined in
             <span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span> addresses scope insufficiency.
-            The <code>insufficient_authorization_details</code> error defined
-            in <span>[<a href="#I-D.zehavi-oauth-rar-metadata" class="cite xref">I-D.zehavi-oauth-rar-metadata</a>]</span> addresses
-            insufficient RAR authorization details by returning a
-            ready-to-use object. This error addresses the case where the
+            <code>insufficient_authorization</code> (this specification) addresses the case where the
             resource server returns structured policy constraints
             (<code>rego_profile</code>) for clients capable of constructing
-            policy-based authorization requests.<a href="#section-11.3-2.8" class="pilcrow">¶</a>
+            policy-based authorization requests.<a href="#section-11.3-2.6" class="pilcrow">¶</a>
 </dd>
           <dd class="break"></dd>
-<dt id="section-11.3-2.9">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-11.3-2.10">IETF<a href="#section-11.3-2.10" class="pilcrow">¶</a>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-11.3-2.11">Specification Document:</dt>
-          <dd style="margin-left: 1.5em" id="section-11.3-2.12">
-            <a href="#reverse-guided" class="auto internal xref">Section 5</a> of this document<a href="#section-11.3-2.12" class="pilcrow">¶</a>
+<dt id="section-11.3-2.7">Reference:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.3-2.8">
+            <a href="#reverse-guided" class="auto internal xref">Section 5</a> of this document<a href="#section-11.3-2.8" class="pilcrow">¶</a>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3360,16 +3362,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 <span class="refAuthor">Bertocci, V.</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens"</span>, <span class="seriesInfo">RFC 9068</span>, <span class="seriesInfo">DOI 10.17487/RFC9068</span>, <time datetime="2021-10" class="refDate">October 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9068">https://www.rfc-editor.org/info/rfc9068</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9396">[RFC9396]</dt>
-        <dd>
-<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9396">https://www.rfc-editor.org/info/rfc9396</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8414">[RFC8414]</dt>
-        <dd>
-<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8414">https://www.rfc-editor.org/info/rfc8414</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC9728">[RFC9728]</dt>
       <dd>
-<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9728">https://www.rfc-editor.org/info/rfc9728</a>&gt;</span>. </dd>
+<span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9396">https://www.rfc-editor.org/info/rfc9396</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3378,6 +3372,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 <a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8414">https://www.rfc-editor.org/info/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc9728">https://www.rfc-editor.org/info/rfc9728</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8693">[RFC8693]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8693">https://www.rfc-editor.org/info/rfc8693</a>&gt;</span>. </dd>
@@ -3390,21 +3392,21 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <dd>
 <span class="refAuthor">Richer, J., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">P. Hunt</span>, <span class="refTitle">"OAuth 2.0 Dynamic Client Registration Protocol"</span>, <span class="seriesInfo">RFC 7591</span>, <span class="seriesInfo">DOI 10.17487/RFC7591</span>, <time datetime="2015-07" class="refDate">July 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7591">https://www.rfc-editor.org/info/rfc7591</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.zehavi-oauth-rar-metadata">[I-D.zehavi-oauth-rar-metadata]</dt>
-        <dd>
-<span class="refAuthor">Zehavi, Y.</span>, <span class="refTitle">"OAuth 2.0 RAR Metadata and Error Signaling"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zehavi-oauth-rar-metadata-03</span>, <time datetime="2026-06-03" class="refDate">3 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-03">https://datatracker.ietf.org/doc/html/draft-zehavi-oauth-rar-metadata-03</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.parecki-oauth-jwt-grant-interaction-response">[I-D.parecki-oauth-jwt-grant-interaction-response]</dt>
         <dd>
 <span class="refAuthor">Parecki, A.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">D. Liu</span>, <span class="refTitle">"JWT Authorization Grant Interaction Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-parecki-oauth-jwt-grant-interaction-response-00</span>, <time datetime="2026-03-24" class="refDate">24 March 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-parecki-oauth-jwt-grant-interaction-response-00">https://datatracker.ietf.org/doc/html/draft-parecki-oauth-jwt-grant-interaction-response-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="OPA">[OPA]</dt>
         <dd>
-<span class="refAuthor">Cloud Native Computing Foundation</span>, <span class="refTitle">"Open Policy Agent"</span>, <span>&lt;<a href="https://www.openpolicyagent.org/">https://www.openpolicyagent.org/</a>&gt;</span>. </dd>
+<span class="refAuthor">Cloud Native Computing Foundation</span>, <span class="refTitle">"Open Policy Agent"</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://www.openpolicyagent.org/">https://www.openpolicyagent.org/</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="Rego">[Rego]</dt>
+        <dd>
+<span class="refAuthor">Open Policy Agent</span>, <span class="refTitle">"Rego Policy Language"</span>, <time datetime="2024" class="refDate">2024</time>, <span>&lt;<a href="https://www.openpolicyagent.org/docs/latest/policy-language/">https://www.openpolicyagent.org/docs/latest/policy-language/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.liu-oauth-chain-delegation">[I-D.liu-oauth-chain-delegation]</dt>
       <dd>
-<span class="refAuthor">Open Policy Agent</span>, <span class="refTitle">"Rego Policy Language"</span>, <span>&lt;<a href="https://www.openpolicyagent.org/docs/latest/policy-language/">https://www.openpolicyagent.org/docs/latest/policy-language/</a>&gt;</span>. </dd>
+<span class="refAuthor">Liu, D.</span>, <span class="refAuthor">Zhu, H.</span>, <span class="refAuthor">Krishnan, S.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"Delegation Chain for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-liu-oauth-chain-delegation</span>, <time datetime="2026-06" class="refDate">June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation">https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3425,13 +3427,13 @@ package agent
 default allow = false
 
 # Allow transactions up to $50
-allow {
+allow if {
   input.action == "purchase"
   input.amount &lt;= 50.0
 }
 
 # Allow cart modifications without amount limit
-allow {
+allow if {
   input.action == "add_to_cart"
 }
 </pre>
@@ -3450,7 +3452,7 @@ package agent
 default allow = false
 
 # Allow during business hours
-allow {
+allow if {
   input.action == "submit_order"
   hour := time.clock(time.now_ns())[0]
   hour &gt;= 9
@@ -3472,12 +3474,12 @@ package agent
 default allow = false
 
 # Premium users can access all features
-allow {
+allow if {
   input.user.tier == "premium"
 }
 
 # Standard users limited to basic actions
-allow {
+allow if {
   input.user.tier == "standard"
   input.action == "read"
 }

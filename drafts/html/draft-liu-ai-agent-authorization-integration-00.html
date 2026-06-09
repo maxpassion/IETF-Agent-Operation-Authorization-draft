@@ -1712,7 +1712,7 @@ li > p:last-of-type:only-child {
 |  |  Scope (Traditional OAuth)                          |  |
 |  |  +-----------------------------------------------+  |  |
 |  |  |  Policy via RAR (Primary)                     |  |  |
-|  |  |  authorization_details: rego_policy            |  |  |
+|  |  |  authorization_details: rego_policy           |  |  |
 |  |  |  "allow if amount &lt;= 50 AND time &lt; 6pm"       |  |  |
 |  |  +-----------------------------------------------+  |  |
 |  +-----------------------------------------------------+  |
@@ -1760,7 +1760,7 @@ li > p:last-of-type:only-child {
 +---------------------------------------------------------+
 |  +-------------+  +-------------+  +-------------+      |
 |  |  Identity   |  |  Consent    |  | Delegation  |      |
-|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |      |
+|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |       |
 |  +-------------+  +-------------+  +-------------+      |
 |                                                         |
 |  +---------------------------------------------------+  |
@@ -1804,22 +1804,22 @@ li > p:last-of-type:only-child {
         |                        | interaction_required   |
         |                        |&lt;-----------------------|
         |                        |                        |
-        |  interaction_uri  +----|                        |
-        |&lt;------------------+    |                        |
+        |  interaction_uri       |                        |
+        |&lt;-----------------------|                        |
         |  (user consent)        |                        |
-        |-------------------+---&gt;|                        |
+        |-----------------------&gt;|                        |
         |                        | Poll token endpoint    |
         |                        |-----------------------&gt;|
         |                        |                        |
         |                        |   Access Token         |
         |                        |&lt;-----------------------|
         |                        |                        |
-        |                        |                  +------------------+
-        |                        |                  | Resource Server  |
-        |                        |                  |                  |
-        |                        |   API Request   | - Token validation|
-        |                        |----------------&gt;| - Policy engine  |
-        |                        |                  +------------------+
+        |                        |                  +-------------------+
+        |                        |                  | Resource Server   |
+        |                        |                  |                   |
+        |                        |   API Request    | - Token validation|
+        |                        |-----------------&gt;| - Policy engine   |
+        |                        |                  +-------------------+
 </pre>
 </div>
 <figcaption><a href="#figure-3" class="selfRef">Figure 3</a></figcaption></figure>
@@ -1946,10 +1946,10 @@ li > p:last-of-type:only-child {
 |       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
 +-------+    +-------+    +--------+    +-------+    +-------+    +-----+
     |            |             |            |            |           |
-(1) | Authn     |             |            |            |           |
+(1) | Authn      |             |            |            |           |
     |-----------&gt;|             |            |            |           |
     |            |             |            |            |           |
-(2) |  ID Token (aud=agent)   |            |            |           |
+(2) |  ID Token (aud=agent)    |            |            |           |
     |&lt;-------------------------&gt;            |            |           |
     |            |             |            |            |           |
 (3) |            |   Agent builds token req:|            |           |
@@ -1970,19 +1970,19 @@ li > p:last-of-type:only-child {
     |            |             |  + interaction_uri      |           |
     |            |             |&lt;-----------|            |           |
     |            |             |            |            |           |
-(7) | User interaction via browser         |            |           |
-    |&lt;------------------------------------|            |           |
+(7) | User interaction via browser          |            |           |
+    |&lt;--------------------------------------|            |           |
     |            |             |            |            |           |
 (8) | User confirms            |            |            |           |
-    |-------------------------------------&gt;|            |           |
+    |--------------------------------------&gt;|            |           |
     |            |             |            |            |           |
-(9) |            |             |  Poll token endpoint   |           |
+(9) |            |             |  Poll token endpoint    |           |
     |            |             |-----------&gt;|            |           |
     |            |             |            |            |           |
-(10)|            |             |  Issue token with:     |           |
-    |            |             |  - act                 |           |
+(10)|            |             |  Issue token with:      |           |
+    |            |             |  - act                  |           |
     |            |             |  - authorization_details|           |
-    |            |             |  - evidence            |           |
+    |            |             |  - evidence             |           |
     |            |             |&lt;-----------|            |           |
     |            |             |            |            |           |
 (11)|            |             | API Request|            |           |
@@ -2133,7 +2133,7 @@ li > p:last-of-type:only-child {
      |                 |                 |                |
      | (has token)     |                 |                |
      |                 |                 |                |
-     | Token Exchange   |                 |                |
+     | Token Exchange  |                 |                |
      | - subject_token |                 |                |
      | - delegatee_wit |                 |                |
      | - authz_details |                 |                |

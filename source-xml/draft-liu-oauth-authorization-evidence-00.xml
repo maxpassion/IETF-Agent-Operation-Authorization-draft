@@ -48,7 +48,7 @@
       </address>
     </author>
 
-    <date year="2026" month="March" day="17"/>
+    <date year="2026" month="June"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -72,10 +72,10 @@
   <middle>
     <section anchor="introduction" title="Introduction">
       <t>
-        In traditional OAuth 2.0 flows, the Authorization Server records user consent 
-        internally, but this information is not typically conveyed to Resource Servers 
-        or included in access tokens. For many use cases, this is sufficient. However, 
-        emerging scenarios—particularly those involving AI agents acting autonomously 
+        In traditional OAuth 2.0 <xref target="RFC6749"/> flows, the Authorization Server records user consent
+        internally, but this information is not typically conveyed to Resource Servers
+        or included in access tokens. For many use cases, this is sufficient. However,
+        emerging scenarios—particularly those involving AI agents acting autonomously
         on behalf of users—require stronger guarantees about user intent and consent.
       </t>
 
@@ -103,9 +103,15 @@
       </ul>
 
       <t>
-        This specification defines two JWT claims: <tt>evidence</tt> for user 
-        confirmation records, and <tt>audit_trail</tt> for semantic traceability 
+        This specification defines two JWT claims: <tt>evidence</tt> for user
+        confirmation records, and <tt>audit_trail</tt> for semantic traceability
         metadata.
+      </t>
+
+      <t>
+        Unless otherwise noted, all data types and serialization rules
+        follow the JSON data interchange format as defined in
+        <xref target="RFC8259"/>.
       </t>
 
       <section title="Requirements Language">
@@ -126,7 +132,8 @@
 
         <ul>
           <li>
-            Authorization Code Grant (with or without PAR);
+            Authorization Code Grant (with or without PAR
+            <xref target="RFC9126"/>);
           </li>
           
           <li>
@@ -136,9 +143,15 @@
           <li>
             Token Exchange <xref target="RFC8693"/>;
           </li>
-          
+
           <li>
-            Resource Owner Password Credentials Grant.
+            JWT Authorization Grant with Interaction Response
+            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
+          </li>
+
+          <li>
+            Any other OAuth 2.0 grant type that involves user
+            authorization.
           </li>
         </ul>
 
@@ -187,9 +200,9 @@
 
     <section anchor="evidence-claim" title="The evidence Claim">
       <t>
-        The <tt>evidence</tt> claim contains a record of the user's confirmation 
-        action during the authorization process. It is included in access tokens 
-        to provide verifiable proof of user consent.
+        The <tt>evidence</tt> claim contains a record of the user's confirmation
+        action during the authorization process. It is included in JWT access
+        tokens <xref target="RFC7519"/> to provide verifiable proof of user consent.
       </t>
 
       <section title="Claim Definition">
@@ -222,7 +235,7 @@
       "client_instance": "dfp_abc123",
       "channel": "mobile-app"
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   }
 }
           ]]></artwork>
@@ -246,8 +259,10 @@
               <td>string</td>
               <td>REQUIRED</td>
               <td>Unique identifier for this evidence record. The value
-                SHOULD use a collision-resistant format such as a UUID URN
-                (e.g., "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6").</td>
+                MUST use a URI or URN format with at least 128 bits
+                of collision resistance.  UUID URNs (e.g.,
+                "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
+                are RECOMMENDED.</td>
             </tr>
             <tr>
               <td>user_confirmation</td>
@@ -292,7 +307,15 @@
                 <td>user_action</td>
                 <td>string</td>
                 <td>REQUIRED</td>
-                <td>How the user confirmed (e.g., button click).</td>
+                <td>How the user confirmed the operation.  The value
+                  is a free-form string, but implementations SHOULD
+                  use values from the following set for
+                  interoperability: <tt>button_click</tt>,
+                  <tt>biometric_confirmation</tt>,
+                  <tt>pin_entry</tt>, <tt>voice_confirmation</tt>,
+                  <tt>hardware_key</tt>, <tt>implicit_consent</tt>.
+                  Custom values MAY be used for deployment-specific
+                  confirmation mechanisms.</td>
               </tr>
               <tr>
                 <td>timestamp</td>
@@ -354,7 +377,9 @@
         <ul>
           <li>Proves the AS witnessed the user's consent;</li>
           <li>Ensures the evidence has not been tampered with;</li>
-          <li>Enables non-repudiation for dispute resolution.</li>
+          <li>Provides strong evidence of user consent for dispute
+            resolution (subject to trust in the AS, as discussed
+            in <xref target="security"/>).</li>
         </ul>
 
         <t>
@@ -369,21 +394,79 @@
         </ul>
 
         <t>
-          The <tt>as_signature</tt> field itself MUST be excluded from the 
-          signature computation. The signature input MUST be constructed using 
-          JSON Canonicalization Scheme (JCS) as defined in <xref target="RFC8785"/> to ensure 
-          deterministic serialization. The signature format MUST be a detached 
+          The <tt>as_signature</tt> field itself MUST be excluded from the
+          signature computation. The signature format MUST be a detached
           JWS <xref target="RFC7515"/> in Compact Serialization using the AS's signing key.
-          In detached Compact Serialization (see RFC 7515 Appendix F), the 
-          payload portion is omitted, resulting in the format 
+          In detached Compact Serialization (see RFC 7515 Appendix F), the
+          payload portion is omitted, resulting in the format
           "header..signature".
         </t>
 
         <t>
-          Note: In examples throughout this document, the 
-          <tt>as_signature</tt> value is shown in abbreviated form for 
-          readability. Actual values MUST use the detached JWS Compact 
+          The signature input is constructed using the following
+          deterministic algorithm:
+        </t>
+
+        <ol>
+          <li>
+            Create a new JSON object containing only the
+            <tt>id</tt> and <tt>user_confirmation</tt> fields
+            copied from the <tt>evidence</tt> object.  No other
+            fields from the <tt>evidence</tt> object are included
+            in this step.
+          </li>
+          <li>
+            If the <tt>session_context</tt> field is present in
+            the <tt>evidence</tt> object, add it to the JSON
+            object created in Step 1.  If <tt>session_context</tt>
+            is absent, skip this step.
+          </li>
+          <li>
+            Apply the JSON Canonicalization Scheme (JCS) as defined
+            in <xref target="RFC8785"/> to the JSON object from the
+            previous step, producing a deterministic byte string.
+          </li>
+          <li>
+            Compute a detached JWS (Compact Serialization) over
+            the JCS output from Step 3 using the AS's private
+            signing key.  The resulting value
+            (<tt>header..signature</tt>) is stored in the
+            <tt>as_signature</tt> field of the <tt>evidence</tt>
+            object.
+          </li>
+        </ol>
+
+        <t>
+          To verify an <tt>as_signature</tt>, the verifier
+          reconstructs the JCS input by performing Steps 1–3 above
+          on the received <tt>evidence</tt> object (excluding the
+          <tt>as_signature</tt> field), then verifies the detached
+          JWS using the AS's public key.  Any extension fields
+          present in the <tt>evidence</tt> object beyond
+          <tt>id</tt>, <tt>user_confirmation</tt>,
+          <tt>session_context</tt>, and <tt>as_signature</tt>
+          MUST NOT be included in the JCS input and therefore
+          are not covered by the signature.
+        </t>
+
+        <t>
+          Note: In examples throughout this document, the
+          <tt>as_signature</tt> value is shown in abbreviated form for
+          readability. Actual values MUST use the detached JWS Compact
           Serialization format described above.
+        </t>
+
+        <t>
+          The key used to sign the evidence record MAY be the same key
+          used to sign the access token, or it MAY be a separate
+          dedicated key.  When a separate key is used, implementations
+          MUST ensure that the evidence signing key is associated with
+          the AS through a verifiable mechanism (e.g., published in the
+          AS's JWKS endpoint as defined in <xref target="RFC7517"/>).
+          Using a dedicated evidence signing key enables independent key
+          rotation for evidence records without affecting token
+          validation, which is RECOMMENDED for deployments where evidence
+          records have longer retention periods than access tokens.
         </t>
       </section>
     </section>
@@ -457,7 +540,16 @@
               <td>proposal_ref</td>
               <td>URI</td>
               <td>OPTIONAL</td>
-              <td>Reference to the original authorization proposal.</td>
+              <td>Reference to the original authorization proposal —
+                the agent's initial request describing the intended
+                operation before the AS applied policy evaluation,
+                scope reduction, or user consent modifications.
+                The value is an opaque URI assigned by the AS for
+                internal correlation; no protocol for retrieving
+                the proposal content via this URI is defined by
+                this specification.  This enables post-hoc
+                comparison between what the agent originally
+                requested and what was ultimately authorized.</td>
             </tr>
           </tbody>
         </table>
@@ -465,22 +557,42 @@
 
       <section title="Semantic Expansion Levels">
         <t>
-          The <tt>semantic_expansion_level</tt> field indicates how much the system 
-          interpreted or expanded the user's original intent:
+          The <tt>semantic_expansion_level</tt> field indicates how much the system
+          interpreted or expanded the user's original intent.  The
+          following four values form a closed set; implementations
+          MUST NOT use values outside this set:
         </t>
 
         <dl>
           <dt>none:</dt>
-          <dd>No interpretation; user specified exact parameters.</dd>
+          <dd>
+            No interpretation; user specified exact parameters.
+            Example: User explicitly sets "transfer $100 to account X".
+          </dd>
 
           <dt>low:</dt>
-          <dd>Minor defaults applied (e.g., default quantity of 1).</dd>
+          <dd>
+            Minor defaults applied.
+            Example: User says "add to cart" and the system defaults
+            quantity to 1 and selects the user's saved shipping address.
+          </dd>
 
           <dt>medium:</dt>
-          <dd>Significant interpretation (e.g., "cheap" mapped to "$50").</dd>
+          <dd>
+            Significant interpretation of qualitative terms.
+            Example: User says "buy cheap headphones" and the system
+            maps "cheap" to a price ceiling of $50 and selects a
+            specific product category.
+          </dd>
 
           <dt>high:</dt>
-          <dd>Substantial expansion (e.g., multi-step plan derived from goal).</dd>
+          <dd>
+            Substantial expansion from a high-level goal into a
+            multi-step plan.
+            Example: User says "plan my trip to Tokyo" and the agent
+            derives flight search, hotel booking, and itinerary
+            creation as separate authorized operations.
+          </dd>
         </dl>
       </section>
 
@@ -550,6 +662,282 @@
     </section>
 
     <section anchor="as-processing" title="Authorization Server Processing">
+      <section anchor="evidence-collection" title="Evidence Collection from User Interaction">
+        <t>
+          The <tt>evidence</tt> claim records the outcome of a user
+          consent interaction.  Before the AS can generate a signed
+          evidence record, it must first present a consent interface
+          to the user and capture the user's response.  This section
+          describes the general consent-to-evidence pattern and provides
+          a concrete example using the JWT Grant Interaction Response
+          flow.
+        </t>
+
+        <section title="General Consent-to-Evidence Pattern">
+          <t>
+            Regardless of the specific OAuth grant type, evidence
+            collection follows a common pattern:
+          </t>
+
+          <ol>
+            <li>
+              The AS receives an authorization request from a client
+              (which may be acting on behalf of an AI agent).
+            </li>
+            <li>
+              The AS determines that user consent is required and
+              presents a consent interface to the user.  The consent
+              interface displays a human-readable description of the
+              requested operation (the <tt>displayed_content</tt>).
+            </li>
+            <li>
+              The user reviews the displayed content and performs a
+              confirmation action (e.g., clicking an "Allow" button,
+              providing biometric input, entering a PIN).
+            </li>
+            <li>
+              The AS captures the interaction details — what was
+              displayed, what action the user took, when, and in
+              what session context — and constructs the
+              <tt>evidence</tt> object as defined in
+              <xref target="evidence-claim"/>.
+            </li>
+            <li>
+              The AS signs the evidence record and includes it in
+              the issued access token.
+            </li>
+          </ol>
+
+          <t>
+            The following diagram illustrates this pattern:
+          </t>
+
+          <figure>
+            <artwork type="ascii-art"><![CDATA[
+Client/Agent          Authorization Server              User
+    |                         |                          |
+    |-- authorization req --->|                          |
+    |                         |                          |
+    |                         |--- consent UI ---------->|
+    |                         |    (displayed_content)   |
+    |                         |                          |
+    |                         |<-- user action ----------|
+    |                         |    (button_click, etc.)  |
+    |                         |                          |
+    |                         |  [capture evidence]      |
+    |                         |  [sign with as_signature]|
+    |                         |                          |
+    |<-- access token --------|                          |
+    |    (with evidence)      |                          |
+    |                         |                          |
+            ]]></artwork>
+          </figure>
+        </section>
+
+        <section title="Consent UI to Evidence Field Mapping">
+          <t>
+            Each field in the <tt>evidence</tt> claim corresponds to
+            a specific event during the consent interaction:
+          </t>
+
+          <table anchor="tbl-consent-mapping">
+            <name>Consent UI Event to Evidence Field Mapping</name>
+            <thead>
+              <tr>
+                <th>Consent UI Event</th>
+                <th>Evidence Field</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AS renders consent page</td>
+                <td><tt>displayed_content</tt></td>
+                <td>The text shown to the user describing the
+                  requested operation</td>
+              </tr>
+              <tr>
+                <td>User confirms or denies</td>
+                <td><tt>user_action</tt></td>
+                <td>How the user responded (button click, biometric,
+                  PIN, etc.)</td>
+              </tr>
+              <tr>
+                <td>Confirmation timestamp</td>
+                <td><tt>timestamp</tt></td>
+                <td>Server-side time when the user's action was
+                  received</td>
+              </tr>
+              <tr>
+                <td>Consent UI version</td>
+                <td><tt>interface_version</tt></td>
+                <td>Version identifier of the consent interface
+                  used</td>
+              </tr>
+              <tr>
+                <td>Session established</td>
+                <td><tt>session_id</tt></td>
+                <td>OAuth session identifier for this consent
+                  interaction</td>
+              </tr>
+              <tr>
+                <td>Client device detected</td>
+                <td><tt>client_instance</tt></td>
+                <td>Device fingerprint or client instance
+                  identifier</td>
+              </tr>
+              <tr>
+                <td>Access channel detected</td>
+                <td><tt>channel</tt></td>
+                <td>How the user accessed the consent UI (web,
+                  mobile app, etc.)</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section title="Example: JWT Grant Interaction Response Flow">
+          <t>
+            The JWT Grant Interaction Response
+            (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>)
+            defines a mechanism for AI agents to obtain user consent
+            from an external Authorization Server.  The following
+            sequence shows how evidence is collected during this flow:
+          </t>
+
+          <ol>
+            <li>
+              An AI agent sends a token request to the AS using a
+              JWT authorization grant
+              (<xref target="RFC7523"/>), including the requested
+              scope and <tt>authorization_details</tt>.
+            </li>
+            <li>
+              The AS validates the agent's identity and determines
+              that user interaction is required.  It responds with
+              an <tt>interaction_required</tt> error containing an
+              <tt>interaction_uri</tt> (a URL hosted by the AS for
+              the consent interface) and a polling
+              <tt>interval</tt>.
+            </li>
+            <li>
+              The agent opens the <tt>interaction_uri</tt> in the
+              user's browser.  The AS presents a consent page
+              showing the interpreted operation (e.g., "Add items
+              under $50 to cart on your behalf").
+            </li>
+            <li>
+              <t>
+                The user reviews the displayed content and clicks
+                "Allow".  The AS captures:
+              </t>
+              <ul>
+                <li>
+                  <tt>displayed_content</tt>: the operation
+                  description shown on the consent page;
+                </li>
+                <li>
+                  <tt>user_action</tt>: <tt>button_click</tt>;
+                </li>
+                <li>
+                  <tt>timestamp</tt>: the server time of the
+                  click;
+                </li>
+                <li>
+                  <tt>session_context</tt>: the session ID, device
+                  fingerprint, and channel (browser).
+                </li>
+              </ul>
+            </li>
+            <li>
+              The AS constructs the <tt>evidence</tt> object,
+              computes the <tt>as_signature</tt> per
+              <xref target="evidence-claim"/>, and stores the
+              evidence record.
+            </li>
+            <li>
+              The agent polls the token endpoint.  Upon detecting
+              that the user has completed interaction, the AS
+              issues an access token containing the signed
+              <tt>evidence</tt> claim.
+            </li>
+          </ol>
+
+          <figure>
+            <artwork type="ascii-art"><![CDATA[
+AI Agent          External AS                      User
+   |                   |                            |
+   |-- token request ->|                            |
+   |                   |                            |
+   |<- interaction_    |                            |
+   |   required        |                            |
+   |   (interaction_   |                            |
+   |    uri, interval) |                            |
+   |                   |                            |
+   |-- open interaction_uri in browser ------------>|
+   |                   |                            |
+   |                   |--- consent UI ------------>|
+   |                   |    "Add items under $50    |
+   |                   |     to cart on your behalf"|
+   |                   |                            |
+   |                   |<-- user clicks [Allow] ----|
+   |                   |                            |
+   |                   |  [capture evidence fields] |
+   |                   |  [compute as_signature]    |
+   |                   |                            |
+   |-- poll token  --->|                            |
+   |   endpoint        |                            |
+   |                   |                            |
+   |<- access token ---|                            |
+   |   (with evidence) |                            |
+   |                   |                            |
+            ]]></artwork>
+          </figure>
+        </section>
+
+        <section title="Applicability to Other Flows">
+          <t>
+            The consent-to-evidence pattern described above applies
+            to any OAuth flow that involves user interaction.  For
+            example:
+          </t>
+
+          <ul>
+            <li>
+              <strong>Authorization Code Grant</strong>: The AS
+              presents a consent screen during the
+              <tt>/authorize</tt> redirect.  Evidence is collected
+              when the user approves or denies the request.
+            </li>
+            <li>
+              <strong>CIBA (Client-Initiated Backchannel
+              Authentication)</strong>: The AS delivers a consent
+              request to the user's authentication device (e.g.,
+              push notification).  Evidence captures the user's
+              out-of-band confirmation action.
+            </li>
+            <li>
+              <strong>Consent-Only Flow</strong>: When the user
+              already holds a valid session and the AS determines
+              that only operation-specific consent is needed (not
+              re-authentication), the AS presents a targeted
+              consent prompt.  Evidence records the scoped
+              approval.
+            </li>
+          </ul>
+
+          <t>
+            Flows that do not involve user interaction (e.g.,
+            Client Credentials Grant without user context) cannot
+            produce <tt>evidence</tt> claims, since there is no
+            user confirmation to record.  Such flows MAY still use
+            the <tt>audit_trail</tt> claim
+            (<xref target="audit-trail-claim"/>) for semantic
+            traceability without user confirmation evidence.
+          </t>
+        </section>
+      </section>
+
       <section title="Evidence Generation">
         <t>
           When issuing an access token with evidence, the AS MUST:
@@ -587,6 +975,114 @@
           <li>Audit requests;</li>
           <li>Token introspection with evidence details.</li>
         </ul>
+
+        <t>
+          The retention period SHOULD be at least as long as the
+          longest-lived token that references the evidence record,
+          plus a configurable grace period for post-expiration
+          disputes.  For regulated industries (e.g., financial
+          services under PCI-DSS, healthcare under HIPAA), the
+          retention period MUST comply with the applicable regulatory
+          minimums, which typically range from 1 to 7 years.
+          Implementations SHOULD support per-deployment configuration
+          of retention periods and provide automated purging of
+          expired evidence records.
+        </t>
+      </section>
+
+      <section anchor="evidence-token-exchange" title="Evidence in Token Exchange">
+        <t>
+          When a token carrying an <tt>evidence</tt> claim is used as
+          the <tt>subject_token</tt> in a Token Exchange request
+          (<xref target="RFC8693"/>), the AS issuing the exchanged token
+          MUST decide how to handle the original evidence.  Three
+          strategies are defined:
+        </t>
+
+        <dl>
+          <dt>Propagate:</dt>
+          <dd>
+            Copy the original <tt>evidence</tt> claim into the new
+            token.  This preserves the direct link to the original
+            user consent.  The original AS signature remains valid
+            because the evidence fields are not re-signed.  This
+            strategy is RECOMMENDED when the exchanged token's scope
+            is a subset of the original token's scope.  When the
+            exchanging AS is different from the original AS, the
+            exchanging AS MUST verify the original
+            <tt>as_signature</tt> before propagating, and MAY
+            re-sign the evidence with its own key to establish a
+            direct trust chain with the target RS.
+          </dd>
+
+          <dt>Reference:</dt>
+          <dd>
+            Replace the embedded <tt>evidence</tt> object with an
+            <tt>audit_trail</tt> claim containing only the
+            <tt>evidence_ref</tt> pointing to the original evidence
+            record.  This reduces token size while maintaining
+            traceability.  Implementations using this strategy MUST
+            ensure the referenced evidence record is retrievable by
+            the target RS (e.g., via introspection).
+          </dd>
+
+          <dt>Omit:</dt>
+          <dd>
+            Do not include evidence in the exchanged token.  This is
+            appropriate only when the exchanged token's scope does not
+            require consent evidence (e.g., service-to-service calls
+            within the originally authorized boundary).
+          </dd>
+        </dl>
+
+        <t>
+          When using the Propagate strategy with delegation chains
+          (<xref target="I-D.liu-oauth-chain-delegation"/>), the
+          <tt>root_evidence_ref</tt> in the delegation chain entry
+          SHOULD reference the same evidence record, creating an
+          unbroken audit trail from the original user consent through
+          all delegation hops.
+        </t>
+      </section>
+
+      <section title="Evidence in Token Refresh">
+        <t>
+          When an access token carrying an <tt>evidence</tt> claim
+          expires and the client obtains a new access token using a
+          refresh token, the AS MUST decide whether to include
+          evidence in the refreshed token.  The same three strategies
+          defined in <xref target="evidence-token-exchange"/>
+          (Propagate, Reference, Omit) apply, with the following
+          additional considerations:
+        </t>
+
+        <ul>
+          <li>
+            The <tt>user_confirmation.timestamp</tt> in the
+            propagated evidence reflects the original consent time,
+            which may be significantly earlier than the refreshed
+            token's <tt>iat</tt> claim.  The RS SHOULD evaluate
+            evidence freshness
+            (<xref target="security"/>) against the original
+            consent time, not the refresh time.
+          </li>
+          <li>
+            If the refresh request narrows the token's scope, the
+            Propagate strategy is RECOMMENDED to maintain the
+            audit trail.  If the refresh request broadens the
+            scope beyond what the original consent covered, the AS
+            MUST NOT propagate the evidence and SHOULD initiate a
+            new consent interaction instead.
+          </li>
+          <li>
+            When the refresh token itself was issued alongside the
+            original access token, the evidence record remains
+            valid for the lifetime of the refresh token.  The AS
+            SHOULD retain the evidence record (per the Storage
+            Requirements) for at least as long as any refresh
+            token that references it.
+          </li>
+        </ul>
       </section>
     </section>
 
@@ -604,12 +1100,24 @@
             Verifying the signature using the AS's public key;
           </li>
           <li>
-            Confirming the displayed_content matches the requested operation;
+            Confirming that the evidence <tt>id</tt> and timestamp are
+            consistent with the token's <tt>iat</tt> claim (i.e., the
+            user confirmation occurred before or at token issuance);
           </li>
           <li>
-            Checking the timestamp is within acceptable bounds.
+            Checking the timestamp is within acceptable bounds based on
+            the deployment's evidence freshness policy.
           </li>
         </ol>
+
+        <t>
+          Note: The <tt>displayed_content</tt> field records what was
+          shown to the user during consent.  The RS typically does not
+          have direct knowledge of the consent interaction and therefore
+          cannot independently verify this field.  Instead, the RS
+          relies on the AS signature as proof that the AS witnessed the
+          user's consent to the described operation.
+        </t>
       </section>
 
       <section title="Audit Logging">
@@ -629,6 +1137,13 @@
     </section>
 
     <section anchor="security" title="Security Considerations">
+      <t>
+        This section discusses security considerations specific to
+        authorization evidence in OAuth 2.0.  General OAuth 2.0
+        security considerations, including token threats and
+        countermeasures, are described in <xref target="RFC6819"/>.
+      </t>
+
       <section title="Signature Verification">
         <t>
           The AS signature over the evidence fields (id, user_confirmation, 
@@ -643,11 +1158,26 @@
         </ul>
       </section>
 
-      <section title="Evidence Tampering">
+      <section title="Evidence Tampering and Trust in the AS">
         <t>
-          The evidence claim is protected by the access token's signature. However, 
-          the <tt>as_signature</tt> field provides an additional layer of protection 
+          The evidence claim is protected by the access token's signature. However,
+          the <tt>as_signature</tt> field provides an additional layer of protection
           specifically for the user confirmation record.
+        </t>
+
+        <t>
+          It is important to understand the trust boundary of the
+          evidence mechanism: the <tt>as_signature</tt> provides
+          cryptographic proof that the AS <strong>recorded</strong> a
+          user confirmation.  It does not independently prove that
+          the user <strong>actually</strong> consented.  The AS
+          controls both the consent interaction and the signing key,
+          so a compromised or malicious AS could fabricate evidence
+          records.  Trust in the evidence record therefore depends
+          on trust in the AS and its operational security.
+          Deployments requiring stronger non-repudiation guarantees
+          SHOULD supplement this mechanism with user-side signatures
+          or independent consent auditing.
         </t>
       </section>
 
@@ -673,9 +1203,127 @@
           <li>Omitting OPTIONAL fields (session_context, interpretation_notes) when not required.</li>
         </ul>
       </section>
+
+      <section title="Token-Evidence Binding">
+        <t>
+          The <tt>evidence</tt> claim is embedded in a signed access
+          token (<xref target="RFC9068"/>), which provides
+          integrity protection at the token level.  The inner
+          <tt>as_signature</tt> provides a second, independent integrity
+          layer specifically over the user confirmation record.  This
+          dual-signature design ensures that:
+        </t>
+
+        <ul>
+          <li>
+            Evidence cannot be moved from one token to another without
+            detection (the token signature would not cover the new
+            evidence);
+          </li>
+          <li>
+            Evidence fields cannot be modified within a valid token
+            (the inner AS signature would be invalidated);
+          </li>
+          <li>
+            Evidence can be independently verified even when extracted
+            from the token (e.g., via introspection) using the
+            <tt>as_signature</tt>.
+          </li>
+        </ul>
+
+        <t>
+          Implementations MUST NOT copy an <tt>evidence</tt> claim from
+          one access token into another without re-validating the
+          <tt>as_signature</tt> and confirming that the evidence
+          <tt>id</tt> and <tt>timestamp</tt> are consistent with the
+          new token's context.
+        </t>
+
+        <t>
+          The dual-signature design described above applies to signed
+          JWT access tokens (<xref target="RFC9068"/>).  When opaque
+          (reference) tokens are used, the <tt>evidence</tt> claim is
+          not embedded in the token itself and MUST be retrieved by
+          the RS via token introspection (<xref target="RFC7662"/>)
+          or a dedicated evidence retrieval endpoint.  In this case,
+          the <tt>as_signature</tt> provides the sole integrity
+          protection for the evidence record, and implementations
+          MUST ensure that the transport between the RS and the
+          introspection or retrieval endpoint is protected with TLS.
+        </t>
+      </section>
+
+      <section title="Evidence Freshness">
+        <t>
+          An evidence record captures user consent at a specific point
+          in time.  Deployments SHOULD define an evidence freshness
+          policy that specifies:
+        </t>
+
+        <ul>
+          <li>
+            The maximum acceptable age of an evidence record (measured
+            from the <tt>user_confirmation.timestamp</tt> to the
+            current time);
+          </li>
+          <li>
+            Whether evidence freshness is evaluated relative to the
+            token's <tt>iat</tt> claim or the current request time;
+          </li>
+          <li>
+            Actions to take when evidence is stale (e.g., reject the
+            request, require re-consent).
+          </li>
+        </ul>
+
+        <t>
+          For high-sensitivity operations (e.g., financial transactions),
+          a short freshness window (e.g., minutes) is RECOMMENDED.  For
+          lower-sensitivity operations, a longer window (e.g., hours)
+          may be acceptable.
+        </t>
+      </section>
+
+      <section title="Cross-Domain Evidence Verification">
+        <t>
+          In cross-domain scenarios where the RS is in a different
+          trust domain than the AS, the RS must be able to verify the
+          <tt>as_signature</tt> using the AS's public key.
+          Implementations SHOULD:
+        </t>
+
+        <ul>
+          <li>
+            Publish the AS's evidence signing keys at a well-known
+            JWKS endpoint (<xref target="RFC7517"/>) accessible to
+            the RS;
+          </li>
+          <li>
+            Include a <tt>kid</tt> (Key ID) in the JWS header of
+            the <tt>as_signature</tt> to enable key selection;
+          </li>
+          <li>
+            Support key caching at the RS with appropriate cache
+            invalidation to balance performance and key freshness.
+          </li>
+        </ul>
+
+        <t>
+          When the AS and RS belong to different administrative domains,
+          trust establishment for the evidence signing key MAY be
+          facilitated through a trust framework, federation agreement,
+          or explicit key distribution mechanism.
+        </t>
+      </section>
     </section>
 
     <section anchor="privacy" title="Privacy Considerations">
+      <t>
+        The privacy considerations in this section are informed by the
+        Internet protocol privacy analysis framework described in
+        <xref target="RFC6973"/>.
+      </t>
+
       <section title="Displayed Content">
         <t>
           The <tt>displayed_content</tt> field may contain sensitive information about 
@@ -691,7 +1339,7 @@
 
       <section title="Evidence Retention">
         <t>
-          Evidence records may be subject to data protection regulations. 
+          Evidence records may be subject to data protection regulations.
           Implementations MUST:
         </t>
 
@@ -700,6 +1348,91 @@
           <li>Provide mechanisms for evidence deletion when required;</li>
           <li>Limit access to evidence records to authorized parties.</li>
         </ul>
+      </section>
+
+      <section title="Right to Erasure and Audit Retention">
+        <t>
+          Data protection regulations such as GDPR and CCPA grant
+          individuals the right to request deletion of their personal
+          data.  Evidence records, which may contain
+          <tt>displayed_content</tt> reflecting user intent and
+          <tt>session_context</tt> containing session identifiers,
+          can constitute personal data.
+        </t>
+
+        <t>
+          However, evidence records also serve as audit artifacts
+          required by financial, healthcare, and other regulated
+          industries.  Implementations SHOULD resolve this tension by:
+        </t>
+
+        <ul>
+          <li>
+            Minimizing personal data in evidence fields at creation
+            time (e.g., using operation identifiers rather than
+            natural-language descriptions that may contain PII);
+          </li>
+          <li>
+            Applying pseudonymization or hashing to
+            <tt>session_id</tt> and <tt>client_instance</tt> values
+            before storage;
+          </li>
+          <li>
+            Defining separate retention policies for the evidence
+            record (which may be retained longer for audit) and the
+            personal data within it (which may need to be redacted
+            earlier).
+          </li>
+        </ul>
+
+        <t>
+          Note on redaction and signature integrity: The
+          <tt>as_signature</tt> covers the <tt>id</tt>,
+          <tt>user_confirmation</tt>, and <tt>session_context</tt>
+          fields as an inseparable unit.  Redacting any field within
+          these objects (e.g., removing <tt>displayed_content</tt>)
+          invalidates the <tt>as_signature</tt>.  Implementations
+          that require redaction of personal data from evidence
+          records SHOULD use the Reference strategy defined in
+          <xref target="evidence-token-exchange"/> (Evidence in Token Exchange):
+          issue tokens that carry only an <tt>audit_trail</tt> claim
+          with the <tt>evidence_ref</tt>, and perform redaction in
+          the AS's evidence store.  The RS then retrieves the
+          (potentially redacted) evidence record via token
+          introspection (<xref target="RFC7662"/>) rather than
+          reading it directly from the token.
+        </t>
+      </section>
+
+      <section title="Session Context Privacy">
+        <t>
+          The <tt>session_context</tt> object may contain values that
+          can be correlated with user behavior across sessions:
+        </t>
+
+        <ul>
+          <li>
+            <tt>session_id</tt>: If reused or predictable, enables
+            cross-request tracking;
+          </li>
+          <li>
+            <tt>client_instance</tt>: A device fingerprint can
+            uniquely identify the user's device;
+          </li>
+          <li>
+            <tt>channel</tt>: Reveals the access method (e.g., mobile
+            vs. web), which may be sensitive in certain contexts.
+          </li>
+        </ul>
+
+        <t>
+          Implementations SHOULD treat <tt>session_context</tt> values
+          as confidential and avoid including them in tokens that may
+          be logged, cached, or forwarded to third parties.  When
+          <tt>session_context</tt> is not required for the RS's
+          authorization decision, it SHOULD be omitted from the token
+          and retained only in the AS's evidence store.
+        </t>
       </section>
     </section>
 
@@ -721,7 +1454,7 @@
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd>Section 3 of this document</dd>
+          <dd><xref target="evidence-claim" format="counter"/> of this document</dd>
         </dl>
 
         <dl>
@@ -729,13 +1462,13 @@
           <dd>audit_trail</dd>
           <dt>Claim Description:</dt>
           <dd>
-            Semantic traceability metadata linking user intent to authorized 
+            Semantic traceability metadata linking user intent to authorized
             operations.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd>Section 4 of this document</dd>
+          <dd><xref target="audit-trail-claim" format="counter"/> of this document</dd>
         </dl>
       </section>
     </section>
@@ -748,24 +1481,90 @@
         <name>Normative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7517.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6819.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6973.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8259.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
       </references>
 
       <references>
         <name>Informative References</name>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7523.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+
+        <reference anchor="I-D.liu-oauth-rego-policy">
+          <front>
+            <title>Rego Policy Language for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="June"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
+        </reference>
+
+        <reference anchor="I-D.liu-oauth-chain-delegation">
+          <front>
+            <title>Chain Delegation for OAuth 2.0</title>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="June"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-01"/>
+        </reference>
+
+        <reference anchor="I-D.parecki-oauth-jwt-grant-interaction-response">
+          <front>
+            <title>JWT Authorization Grant with Interaction Response</title>
+            <author initials="A." surname="Parecki"/>
+            <author initials="B." surname="Campbell"/>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="June"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-parecki-oauth-jwt-grant-interaction-response-00"/>
+        </reference>
+
+        <reference anchor="I-D.ietf-oauth-identity-assertion-authz-grant">
+          <front>
+            <title>OAuth 2.0 Identity Assertion Authorization Grant</title>
+            <author initials="K." surname="Ying"/>
+            <author initials="B." surname="Campbell"/>
+            <date year="2026" month="January"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-identity-assertion-authz-grant"/>
+        </reference>
       </references>
     </references>
 
     <section title="Complete Example">
       <t>
-        The following shows a complete access token with both evidence and 
+        The following shows a complete access token with both evidence and
         audit_trail claims:
+      </t>
+
+      <t>
+        This example also illustrates how the <tt>evidence</tt> claim
+        complements the <tt>rego_policy</tt> authorization data type
+        (<xref target="I-D.liu-oauth-rego-policy"/>).  While the Rego
+        policy defines <strong>what operations are permitted</strong>
+        (the behavioral constraint contract), the evidence claim records
+        <strong>why those operations were authorized</strong> (the user's
+        explicit consent).  Together, they enable a Resource Server to
+        enforce fine-grained policy while maintaining a verifiable audit
+        trail linking each authorized action back to user intent.
+      </t>
+
+      <t>
+        The <tt>act.sub</tt> value uses the <tt>wit://</tt> URI scheme
+        to identify the acting agent by its workload identity, as
+        defined in the Identity Assertion Authorization Grant
+        (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>).
+        The hash suffix provides a collision-resistant binding between
+        the URI and the agent's attestation evidence.
       </t>
 
       <figure>
@@ -785,7 +1584,7 @@
   "evidence": {
     "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "user_confirmation": {
-      "displayed_content": "Add items under $50 to cart during Nov 11 sale",
+      "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
       "timestamp": 1731320595,
       "interface_version": "consent-ui-v2.1"
@@ -795,13 +1594,13 @@
       "client_instance": "dfp_abc123",
       "channel": "mobile-app"
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   },
   
   "audit_trail": {
     "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
-    "interpretation_notes": "User said 'cheap items', mapped to '$50 limit'",
+    "interpretation_notes": "Mapped 'cheap items' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   },
   

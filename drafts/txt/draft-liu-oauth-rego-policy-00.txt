@@ -5,13 +5,13 @@
 Web Authorization Protocol                                        D. Liu
 Internet-Draft                                                    H. Zhu
 Intended status: Standards Track                           Alibaba Group
-Expires: 10 December 2026                                    S. Krishnan
+Expires: 11 December 2026                                    S. Krishnan
                                                                    Cisco
                                                               A. Parecki
                                                                     Okta
                                                                   H. Xue
                                                            Alibaba Group
-                                                             8 June 2026
+                                                             9 June 2026
 
 
             Rego Policy Language for OAuth 2.0 Authorization
@@ -48,12 +48,12 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 December 2026.
+   This Internet-Draft will expire on 11 December 2026.
 
 
 
 
-Liu, et al.             Expires 10 December 2026                [Page 1]
+Liu, et al.             Expires 11 December 2026                [Page 1]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
@@ -81,23 +81,23 @@ Table of Contents
    3.  RAR Authorization Data Type . . . . . . . . . . . . . . . . .   6
      3.1.  rego_policy . . . . . . . . . . . . . . . . . . . . . . .   6
        3.1.1.  Type Definition . . . . . . . . . . . . . . . . . . .   6
-       3.1.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   6
+       3.1.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   7
        3.1.3.  Policy Requirements . . . . . . . . . . . . . . . . .   8
      3.2.  policy_ref Claim  . . . . . . . . . . . . . . . . . . . .   9
-       3.2.1.  Claim Definition  . . . . . . . . . . . . . . . . . .   9
-       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .   9
+       3.2.1.  Claim Definition  . . . . . . . . . . . . . . . . . .  10
+       3.2.2.  Structure . . . . . . . . . . . . . . . . . . . . . .  10
      3.3.  Policy Context  . . . . . . . . . . . . . . . . . . . . .  10
      3.4.  Extensibility . . . . . . . . . . . . . . . . . . . . . .  11
    4.  Protocol Flow . . . . . . . . . . . . . . . . . . . . . . . .  11
      4.1.  Step Details  . . . . . . . . . . . . . . . . . . . . . .  12
    5.  Reverse-Guided Authorization  . . . . . . . . . . . . . . . .  13
-     5.1.  Error Response Format . . . . . . . . . . . . . . . . . .  13
+     5.1.  Error Response Format . . . . . . . . . . . . . . . . . .  14
      5.2.  Relationship to insufficient_scope  . . . . . . . . . . .  15
      5.3.  Rego Profile Structure  . . . . . . . . . . . . . . . . .  15
      5.4.  Agent Adaptive Behavior . . . . . . . . . . . . . . . . .  16
      5.5.  Security Considerations . . . . . . . . . . . . . . . . .  17
-   6.  Authorization Server Processing . . . . . . . . . . . . . . .  17
-     6.1.  Policy Validation . . . . . . . . . . . . . . . . . . . .  17
+   6.  Authorization Server Processing . . . . . . . . . . . . . . .  18
+     6.1.  Policy Validation . . . . . . . . . . . . . . . . . . . .  18
      6.2.  Policy Registration . . . . . . . . . . . . . . . . . . .  18
      6.3.  Error Responses . . . . . . . . . . . . . . . . . . . . .  19
      6.4.  Policy Approval Basis . . . . . . . . . . . . . . . . . .  19
@@ -105,41 +105,41 @@ Table of Contents
      7.1.  Policy Retrieval  . . . . . . . . . . . . . . . . . . . .  20
      7.2.  Policy Engine Integration . . . . . . . . . . . . . . . .  21
      7.3.  Enforcement Decision  . . . . . . . . . . . . . . . . . .  22
-   8.  Applicability to Different Authorization Flows  . . . . . . .  22
+   8.  Applicability to Different Authorization Flows  . . . . . . .  23
 
 
 
-Liu, et al.             Expires 10 December 2026                [Page 2]
+Liu, et al.             Expires 11 December 2026                [Page 2]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
 
-     8.1.  JWT Grant with Interaction Response . . . . . . . . . . .  22
-     8.2.  Client Credentials Grant  . . . . . . . . . . . . . . . .  23
+     8.1.  JWT Grant with Interaction Response . . . . . . . . . . .  23
+     8.2.  Client Credentials Grant  . . . . . . . . . . . . . . . .  24
      8.3.  Token Exchange (RFC 8693) . . . . . . . . . . . . . . . .  24
-   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  24
-     9.1.  Policy Injection  . . . . . . . . . . . . . . . . . . . .  24
-     9.2.  Behavioral Boundary Evasion . . . . . . . . . . . . . . .  25
-     9.3.  Policy Integrity  . . . . . . . . . . . . . . . . . . . .  25
-     9.4.  Policy URI Fetching . . . . . . . . . . . . . . . . . . .  25
-     9.5.  Policy Size Limits  . . . . . . . . . . . . . . . . . . .  26
-     9.6.  Error Response Header Size  . . . . . . . . . . . . . . .  26
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  25
+     9.1.  Policy Injection  . . . . . . . . . . . . . . . . . . . .  25
+     9.2.  Behavioral Boundary Evasion . . . . . . . . . . . . . . .  26
+     9.3.  Policy Integrity  . . . . . . . . . . . . . . . . . . . .  26
+     9.4.  Policy URI Fetching . . . . . . . . . . . . . . . . . . .  26
+     9.5.  Policy Size Limits  . . . . . . . . . . . . . . . . . . .  27
+     9.6.  Error Response Header Size  . . . . . . . . . . . . . . .  27
      9.7.  Behavioral Audit  . . . . . . . . . . . . . . . . . . . .  27
-   10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  27
+   10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  28
    11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  28
-     11.1.  RAR Authorization Data Type Registration . . . . . . . .  28
-     11.2.  JWT Access Token Claims Registration . . . . . . . . . .  28
-     11.3.  OAuth 2.0 Bearer Token Error Values Registration . . . .  28
-     11.4.  WWW-Authenticate Parameter Definition  . . . . . . . . .  29
-   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  29
-     12.1.  Normative References . . . . . . . . . . . . . . . . . .  29
-     12.2.  Informative References . . . . . . . . . . . . . . . . .  30
-   Appendix A.  Example Policies . . . . . . . . . . . . . . . . . .  31
-     A.1.  Amount-Based Authorization  . . . . . . . . . . . . . . .  31
-     A.2.  Time-Window Authorization . . . . . . . . . . . . . . . .  31
-     A.3.  Role-Based Authorization  . . . . . . . . . . . . . . . .  32
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  32
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  32
+     11.1.  RAR Authorization Data Type Registration . . . . . . . .  29
+     11.2.  JWT Access Token Claims Registration . . . . . . . . . .  29
+     11.3.  OAuth 2.0 Bearer Token Error Values Registration . . . .  29
+     11.4.  WWW-Authenticate Parameter Definition  . . . . . . . . .  30
+   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  30
+     12.1.  Normative References . . . . . . . . . . . . . . . . . .  30
+     12.2.  Informative References . . . . . . . . . . . . . . . . .  31
+   Appendix A.  Example Policies . . . . . . . . . . . . . . . . . .  32
+     A.1.  Amount-Based Authorization  . . . . . . . . . . . . . . .  32
+     A.2.  Time-Window Authorization . . . . . . . . . . . . . . . .  33
+     A.3.  Role-Based Authorization  . . . . . . . . . . . . . . . .  33
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  33
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  33
 
 1.  Introduction
 
@@ -165,7 +165,7 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
 
 
-Liu, et al.             Expires 10 December 2026                [Page 3]
+Liu, et al.             Expires 11 December 2026                [Page 3]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
@@ -221,10 +221,17 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
 
 
-Liu, et al.             Expires 10 December 2026                [Page 4]
+Liu, et al.             Expires 11 December 2026                [Page 4]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
+
+   The rego_policy authorization data type can be used in conjunction
+   with the delegation_chain claim ([I-D.liu-oauth-chain-delegation]).
+   When a delegation hop carries a structured policy, the Rego
+   behavioral constraint contract defines the fine-grained authorization
+   constraints that were approved at that hop, complementing the
+   delegation lineage and attestation provided by delegation_chain.
 
 1.1.  Requirements Language
 
@@ -267,20 +274,18 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    Resource Servers MAY advertise supported authorization details types
    via the authorization_details_types_supported attribute in Protected
    Resource Metadata ([RFC9728]), enabling clients to discover which
+
+
+
+Liu, et al.             Expires 11 December 2026                [Page 5]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    authorization details types are accepted before constructing
    rego_policy authorization requests.  This discovery mechanism is
    particularly valuable in multi-tenant or federated environments where
    different resource servers may require different policy structures.
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026                [Page 5]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
 2.  Terminology
 
@@ -326,17 +331,17 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
    Usage:  authorization_details (RFC 9396)
 
+
+
+Liu, et al.             Expires 11 December 2026                [Page 6]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
 3.1.2.  Structure
 
    The following example shows the authorization_details request
    parameter containing a rego_policy object:
-
-
-
-Liu, et al.             Expires 10 December 2026                [Page 6]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
 {
   "authorization_details": [
@@ -344,7 +349,7 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       "type": "rego_policy",
       "policy": {
         "type": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow {\n  input.user.tier == \"premium\"\n  input.action in {\"search_products\", \"add_to_cart\"}\n}",
+        "content": "package agent\n\ndefault allow = false\n\nallow if {\n  input.user.tier == \"premium\"\n  input.action in {\"search_products\", \"add_to_cart\"}\n}",
         "entry_point": "allow"
       },
       "actions": ["search_products", "add_to_cart"],
@@ -376,6 +381,19 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    the Resource Server performs per-behavior verification using the full
    expressiveness of the policy.
 
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026                [Page 7]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    The AS SHOULD verify that the policy does not exceed the scope
    declared in the common fields.  Since this verification is based on
    declarative RAR fields rather than full Rego AST analysis, it
@@ -385,14 +403,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    authorization scope.
 
    The policy object has the following fields:
-
-
-
-
-Liu, et al.             Expires 10 December 2026                [Page 7]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    type:  REQUIRED.  The policy language type.  MUST be "rego" for this
       specification.  Future extensions MAY define additional types.
@@ -430,31 +440,34 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
        is not enforced by AS validation but is considered a security
        best practice for policy authors.
 
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026                [Page 8]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    4.  Input Reference: The policy accesses data via the input object.
        The structure and content of the input object are determined by
        the evaluating party (AS or RS) and MAY include token claims, API
        request parameters, resource attributes, and other contextual
        data as agreed between the client and the resource server.
 
-   The policy syntax used in this specification follows Rego v0 as
+   The policy syntax used in this specification follows Rego v1 as
    defined in the OPA documentation [Rego].  Implementations of this
-   specification MUST use a policy engine that accepts Rego v0 syntax,
-   either through v0 compatibility mode or through automatic version
-   detection.
-
-
-
-
-Liu, et al.             Expires 10 December 2026                [Page 8]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
+   specification MUST use a policy engine that accepts Rego v1 syntax.
+   Policy engines MAY additionally support Rego v0 syntax through
+   backward compatibility mode to facilitate migration from existing v0
+   policy deployments.
 
    package agent
 
    default allow = false
 
-   allow {
+   allow if {
      # Authorization rules here
      input.action == "read"
      input.resource.owner == input.user.id
@@ -484,6 +497,15 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    When policy_ref is used, the AS performs policy registration as
    described in Section 6.
 
+
+
+
+
+Liu, et al.             Expires 11 December 2026                [Page 9]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
 3.2.1.  Claim Definition
 
    Claim Name:  policy_ref
@@ -494,17 +516,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       responses for opaque tokens per [RFC7662])
 
 3.2.2.  Structure
-
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026                [Page 9]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    {
      "policy_ref": {
@@ -539,6 +550,18 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    The context field within rego_policy provides additional structured
    data that the client wishes to include at authorization request time.
 
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 10]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    The input object used for policy evaluation is constructed by the
    Resource Server (the evaluating party) and is not limited to the
    context field.  When the RS constructs the input object, it SHOULD
@@ -554,13 +577,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    *  action: Requested action details (from the API request);
 
    *  resource: Target resource attributes (from the resource server);
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 10]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    *  environment: Contextual conditions (time, location, device).
 
@@ -594,6 +610,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
        |--------------->|                |                |
        |                |                |                |
        |                | (2) Validate   |                |
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 11]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
        |                | policy syntax  |                |
        |                |                |                |
        |                | (3) Policy     |                |
@@ -610,14 +634,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
        | (5) Agent      |                |                |
        |    Behavior    |                |                |
        |    with token  |                |                |
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 11]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
        |-------------------------------->|                |
        |                |                |                |
        |                |                | (6) Extract    |
@@ -649,6 +665,15 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
         with policy and optional context fields.  This leverages RAR
         (RFC 9396) for structured authorization requests.
 
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 12]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    2.   Policy Validation: AS validates that the Rego policy is
         syntactically correct and safe to evaluate (see Section 6).
 
@@ -659,20 +684,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
         binding context (see Section 6).  The AS does not perform full
         runtime policy evaluation (which occurs at the RS on a per-
         behavior basis).
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 12]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    4.   Token Binding: AS issues an access token with enriched
         authorization_details array per RFC 9396 Section 7.1, binding
@@ -711,6 +722,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    guidance to recover autonomously.  Resource servers can provide this
    guidance through structured error responses that enable agents to
    construct appropriate authorization requests with updated behavioral
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 13]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    constraints.
 
 5.1.  Error Response Format
@@ -720,15 +739,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    header containing the insufficient_authorization error code and a
    rego_profile parameter.  This parameter provides machine-readable
    guidance on the required authorization conditions.
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 13]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
 HTTP/1.1 403 Forbidden
 Content-Type: application/json
@@ -754,6 +764,28 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
    quoting issues in the WWW-Authenticate header.  The decoded object
    has the following structure:
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 14]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    {
      "profile_uri": "https://resource.example/policies/purchase",
      "required_scope": ["purchase.create"],
@@ -775,16 +807,6 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
    }
 
                        Figure 6: Decoded rego_profile
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 14]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
 5.2.  Relationship to insufficient_scope
 
@@ -812,6 +834,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       human consumption and is not machine-parsed by the agent.
 
    required_scope:  OPTIONAL.  Array of scope values that the access
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 15]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
       token MUST include.
 
    required_claims:  OPTIONAL.  Array of access token claim names (e.g.,
@@ -825,23 +855,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       and required (boolean, whether the constraint must be provided).
 
    confirmation_required:  OPTIONAL.  Boolean indicating whether
-
-
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 15]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
       explicit user authorization is required for the requested
       behavioral boundaries.  If true, the agent MUST initiate an OAuth
       authorization flow to obtain the resource owner's explicit consent
@@ -877,6 +890,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
    4.  If confirmation_required is true, initiate user consent flow.
 
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 16]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    5.  Discover the token endpoint via the auth_server's metadata (RFC
        8414) and submit the authorization request.
 
@@ -890,14 +911,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    three options: (1) request a new authorization with an updated policy
    that accommodates the new behavior (using the reverse-guided
    authorization mechanism described above); (2) degrade its behavior to
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 16]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    stay within the approved constraints (e.g., selecting an alternative,
    less privileged action); or (3) request human confirmation to approve
    an expanded behavioral boundary.  The choice among these options
@@ -932,6 +945,15 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    *  *TLS Protection*: All communications MUST use TLS to prevent man-
       in-the-middle attacks on the error response.
 
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 17]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
 6.  Authorization Server Processing
 
 6.1.  Policy Validation
@@ -944,15 +966,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
    2.  Entry Point Check: Verify the policy defines the rule specified
        by the entry_point field (defaulting to allow if not specified).
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 17]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    3.  Safety Check: Ensure the policy does not contain dangerous
        operations (e.g., external HTTP calls via http.send, excessive
@@ -989,6 +1002,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    catalog of policies.  When an agent proposes a behavioral constraint
    contract, the AS evaluates it against pre-established approval
    principles (see Section 6) and registers it only if approved.  This
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 18]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    eliminates the operational burden of pre-deploying policies for every
    anticipated agent behavior, which is impractical given the dynamic
    and unpredictable nature of AI agent workflows.
@@ -1001,14 +1022,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    authorization request.  Both modes are supported: dynamic
    registration is the default for exploratory agent tasks, while pre-
    registration is an optimization for predictable workflows.
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 18]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
 6.3.  Error Responses
 
@@ -1043,6 +1056,16 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    whether the proposed behavioral boundaries are appropriate for the
    specific client and resource owner based on the following factors:
 
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 19]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    *  *Client registration metadata*: Pre-registered client
       capabilities, allowed scopes, and trust level established during
       OAuth 2.0 Dynamic Client Registration [RFC7591] or out-of-band
@@ -1058,13 +1081,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       obtained through the OAuth 2.0 authorization interaction (e.g.,
       the consent screen in the authorization code flow, or the
       interaction_uri mechanism in JWT Grant Interaction Response).
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 19]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    *  *Token binding context*: The authorization grant type, requested
       scopes, and other token request parameters that establish the
@@ -1099,6 +1115,13 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    authorization_details array included in the token per RFC 9396
    Section 7.1.
 
+
+
+Liu, et al.             Expires 11 December 2026               [Page 20]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    The binding between the policy and the access token depends on the
    token type.  For JWT access tokens, the policy content or policy_ref
    claim is integrity-protected by the token signature.  For opaque
@@ -1113,14 +1136,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       the policy.
 
    *  Local Cache: Use a cached copy if available and not expired.
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 20]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
 
    *  Introspection: Include policy content in token introspection
       [RFC7662] response.
@@ -1142,6 +1157,26 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
    Once loaded, the RS queries the policy engine with the request
    context as input:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 21]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
    POST /v1/data/agent/allow HTTP/1.1
    Host: opa.example.com
@@ -1169,15 +1204,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
                                   Figure 9
 
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 21]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
 7.3.  Enforcement Decision
 
    Based on the policy engine's response:
@@ -1194,6 +1220,19 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
    *  If the policy engine is unreachable or encounters an internal
       error: Deny with 500 Internal Server Error.
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 22]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
 8.  Applicability to Different Authorization Flows
 
@@ -1219,21 +1258,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    performs behavioral boundary checks, and determines whether user
    consent is needed before issuing the token.
 
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 22]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
  POST /token HTTP/1.1
  Host: as.example.com
  Content-Type: application/x-www-form-urlencoded
@@ -1257,6 +1281,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
      "interval": 5,
      "expires_in": 600
    }
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 23]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
                   Figure 11: Interaction Required Response
 
@@ -1283,13 +1315,6 @@ grant_type=client_credentials
 
                               Figure 12
 
-
-
-Liu, et al.             Expires 10 December 2026               [Page 23]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
 8.3.  Token Exchange (RFC 8693)
 
    When exchanging tokens [RFC8693], a new behavioral constraint
@@ -1309,12 +1334,34 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
                               Figure 13
 
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 24]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    The resulting access token MUST include the new behavioral constraint
    contract.  The AS SHOULD verify that the new policy does not appear
    to grant permissions exceeding those of the original token.  The AS
    MAY use the RAR common fields (actions, locations) as an
    approximation, since comparing two Rego policies for semantic subset
    containment is undecidable in the general case.
+
+   Token Exchange is a common trigger for *behavioral drift*: when an
+   agent's next planned behavior falls outside the approved policy
+   constraints, the Resource Server can return an
+   insufficient_authorization error with a rego_profile (as defined in
+   Section 5), guiding the agent toward constructing an appropriate
+   Token Exchange request with an updated behavioral constraint
+   contract.  This enables multi-hop delegation scenarios where each hop
+   progressively refines the behavioral boundaries to match the
+   delegatee's specific task requirements.
 
 9.  Security Considerations
 
@@ -1337,19 +1384,23 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
    *  Restrict dangerous built-in functions (e.g., http.send);
 
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 24]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    *  Restrict or sanitize regular expressions in policies to prevent
       catastrophic backtracking (ReDoS);
 
    *  Enforce recursion depth limits and set size bounds.
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 25]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
 9.2.  Behavioral Boundary Evasion
 
@@ -1374,7 +1425,7 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    When retrieving policy content from the policy_ref.endpoint URL, the
    Resource Server SHOULD authenticate to the AS policy endpoint using
    mutually authenticated TLS (mTLS) or a pre-shared service token.
-   Anonymous retrieval of policy content is NOT RECOMMENDED, as it
+   Anonymous retrieval of policy content SHOULD NOT be performed, as it
    allows any party that discovers the endpoint URL to obtain the policy
    content.  The hash field in policy_ref provides integrity
    verification of the retrieved content but does not authenticate the
@@ -1394,19 +1445,18 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    fetches policy content from a client-provided URI.  This introduces
    Server-Side Request Forgery (SSRF) risks.  The AS MUST:
 
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 25]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    *  Reject URIs pointing to private/internal network addresses
       (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16,
       127.0.0.0/8, ::1, and link-local addresses);
 
    *  Enforce HTTPS for all policy URIs;
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 26]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
    *  Set strict timeouts and size limits on fetched content;
 
@@ -1444,20 +1494,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    returning only a profile_uri reference and having clients fetch the
    full profile separately.
 
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 26]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
 9.7.  Behavioral Audit
 
    In behavioral authorization, the policy defines _what behaviors are
@@ -1470,6 +1506,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    the policy identifier (policy_ref.id), a hash or summary of the
    evaluated input, the allow/deny result, and the evaluation timestamp.
    These audit logs enable post-incident analysis of agent behavior,
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 27]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
+
    detection of behavioral drift patterns, and compliance reporting.
    Audit logs SHOULD be protected against tampering and retained
    according to the deployment's data retention policy.  Authorization
@@ -1506,14 +1550,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       abstract endpoint identifiers rather than exposing internal
       service URLs.
 
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 27]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    *  *Behavioral Profiling*: The sequence of rego_policy behavioral
       constraint proposals submitted by a client may reveal the client's
       intent, capabilities, or decision-making patterns.  Authorization
@@ -1523,6 +1559,16 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       without explicit consent.
 
 11.  IANA Considerations
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 28]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
 11.1.  RAR Authorization Data Type Registration
 
@@ -1563,13 +1609,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    Error Usage Location:  Resource server error response using the WWW-
       Authenticate header per [RFC6750].
 
-
-
-Liu, et al.             Expires 10 December 2026               [Page 28]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    Related Error Codes:  The existing insufficient_scope error defined
       in [RFC6750] addresses scope insufficiency.
       insufficient_authorization (this specification) addresses the case
@@ -1578,6 +1617,14 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
       authorization requests.
 
    Reference:  Section 5 of this document
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 29]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
 11.4.  WWW-Authenticate Parameter Definition
 
@@ -1616,16 +1663,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
 
-
-
-
-
-
-Liu, et al.             Expires 10 December 2026               [Page 29]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
               Encodings", RFC 4648, DOI 10.17487/RFC4648, October 2006,
               <https://www.rfc-editor.org/info/rfc4648>.
@@ -1633,6 +1670,17 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/info/rfc6749>.
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 30]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
    [RFC6750]  Jones, M. and D. Hardt, "The OAuth 2.0 Authorization
               Framework: Bearer Token Usage", RFC 6750,
@@ -1649,6 +1697,10 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
               (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
               <https://www.rfc-editor.org/info/rfc7519>.
 
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/info/rfc9068>.
+
    [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
@@ -1661,10 +1713,6 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
               DOI 10.17487/RFC8414, June 2018,
               <https://www.rfc-editor.org/info/rfc8414>.
 
-   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
-              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
-              2021, <https://www.rfc-editor.org/info/rfc9068>.
-
    [RFC9728]  Jones, M.B., Hunt, P., and A. Parecki, "OAuth 2.0
               Protected Resource Metadata", RFC 9728,
               DOI 10.17487/RFC9728, April 2025,
@@ -1675,16 +1723,20 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/info/rfc8693>.
 
-
-
-Liu, et al.             Expires 10 December 2026               [Page 30]
-
-Internet-Draft            Rego Policy in OAuth                 June 2026
-
-
    [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
               RFC 7662, DOI 10.17487/RFC7662, October 2015,
               <https://www.rfc-editor.org/info/rfc7662>.
+
+
+
+
+
+
+
+Liu, et al.             Expires 11 December 2026               [Page 31]
+
+Internet-Draft            Rego Policy in OAuth                 June 2026
+
 
    [RFC7591]  Richer, J., Ed., Jones, M., Bradley, J., Machulak, M., and
               P. Hunt, "OAuth 2.0 Dynamic Client Registration Protocol",
@@ -1699,11 +1751,18 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
               draft-parecki-oauth-jwt-grant-interaction-response-00>.
 
    [OPA]      Cloud Native Computing Foundation, "Open Policy Agent",
-              <https://www.openpolicyagent.org/>.
+              2024, <https://www.openpolicyagent.org/>.
 
-   [Rego]     Open Policy Agent, "Rego Policy Language",
+   [Rego]     Open Policy Agent, "Rego Policy Language", 2024,
               <https://www.openpolicyagent.org/docs/latest/policy-
               language/>.
+
+   [I-D.liu-oauth-chain-delegation]
+              Liu, D., Zhu, H., Krishnan, S., and A. Parecki,
+              "Delegation Chain for OAuth 2.0", Work in Progress,
+              Internet-Draft, draft-liu-oauth-chain-delegation, June
+              2026, <https://datatracker.ietf.org/doc/html/draft-liu-
+              oauth-chain-delegation>.
 
 Appendix A.  Example Policies
 
@@ -1714,36 +1773,35 @@ A.1.  Amount-Based Authorization
    default allow = false
 
    # Allow transactions up to $50
-   allow {
+   allow if {
      input.action == "purchase"
      input.amount <= 50.0
    }
 
    # Allow cart modifications without amount limit
-   allow {
+   allow if {
      input.action == "add_to_cart"
    }
 
                                  Figure 14
 
-A.2.  Time-Window Authorization
 
 
 
 
-
-
-Liu, et al.             Expires 10 December 2026               [Page 31]
+Liu, et al.             Expires 11 December 2026               [Page 32]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
+
+A.2.  Time-Window Authorization
 
    package agent
 
    default allow = false
 
    # Allow during business hours
-   allow {
+   allow if {
      input.action == "submit_order"
      hour := time.clock(time.now_ns())[0]
      hour >= 9
@@ -1759,12 +1817,12 @@ A.3.  Role-Based Authorization
    default allow = false
 
    # Premium users can access all features
-   allow {
+   allow if {
      input.user.tier == "premium"
    }
 
    # Standard users limited to basic actions
-   allow {
+   allow if {
      input.user.tier == "standard"
      input.action == "read"
    }
@@ -1784,16 +1842,16 @@ Authors' Addresses
    Email: max.ldp@alibaba-inc.com
 
 
-   Hongru Zhu
-   Alibaba Group
 
 
 
-Liu, et al.             Expires 10 December 2026               [Page 32]
+Liu, et al.             Expires 11 December 2026               [Page 33]
 
 Internet-Draft            Rego Policy in OAuth                 June 2026
 
 
+   Hongru Zhu
+   Alibaba Group
    Email: hongru.zhr@alibaba-inc.com
 
 
@@ -1843,6 +1901,4 @@ Internet-Draft            Rego Policy in OAuth                 June 2026
 
 
 
-
-
-Liu, et al.             Expires 10 December 2026               [Page 33]
+Liu, et al.             Expires 11 December 2026               [Page 34]
