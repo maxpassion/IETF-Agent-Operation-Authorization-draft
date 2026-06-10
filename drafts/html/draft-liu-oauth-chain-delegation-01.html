@@ -4329,7 +4329,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       "delegatee_id": "wit://agent-c.example/sha256.ccc333...",
       "as_id": "https://as.example.com",
       "delegation_timestamp": 1734517800,
-      "root_evidence_ref": "evidence-root",
+      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "delegated_policy": {
         "type": "rego",
         "content": "package agent\ndefault allow = false\n\nallow if {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
@@ -4344,7 +4344,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       "delegatee_id": "wit://agent-b.example/sha256.bbb222...",
       "as_id": "https://as.example.com",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "evidence-root",
+      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "delegated_policy": {
         "type": "rego",
         "content": "package agent\ndefault allow = false\n\nallow if {\n  input.action == \"cart_op\"\n}\nallow if {\n  input.action == \"inventory_op\"\n}",
@@ -4357,18 +4357,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
   ],
 
   "evidence": {
-    "id": "evidence-root",
+    "id": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "user_confirmation": {
       "displayed_content": "Allow shopping assistant to manage cart",
-      "user_action": "confirmed_via_button_click",
-      "timestamp": 1734516000,
-      "interface_version": "consent-ui-v2.1"
+      "user_action": "button_click",
+      "timestamp": 1734516000
     },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "channel": "mobile-app"
-    },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDw..."
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDw..."
   }
 }
 </pre>
