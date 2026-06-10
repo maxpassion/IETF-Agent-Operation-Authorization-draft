@@ -131,6 +131,12 @@
         </t>
 
         <ul>
+
+          <li>
+            JWT Authorization Grant with Interaction Response
+            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
+          </li>
+
           <li>
             Authorization Code Grant (with or without PAR
             <xref target="RFC9126"/>);
@@ -142,11 +148,6 @@
           
           <li>
             Token Exchange <xref target="RFC8693"/>;
-          </li>
-
-          <li>
-            JWT Authorization Grant with Interaction Response
-            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
           </li>
 
           <li>

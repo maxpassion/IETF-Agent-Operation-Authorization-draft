@@ -184,14 +184,14 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    used with various OAuth 2.0 authorization flows, including but not
    limited to:
 
+   *  JWT Authorization Grant with Interaction Response
+      [I-D.parecki-oauth-jwt-grant-interaction-response];
+
    *  Authorization Code Grant (with or without PAR [RFC9126]);
 
    *  Client Credentials Grant;
 
    *  Token Exchange [RFC8693];
-
-   *  JWT Authorization Grant with Interaction Response
-      [I-D.parecki-oauth-jwt-grant-interaction-response];
 
    *  Any other OAuth 2.0 grant type that involves user authorization.
 
