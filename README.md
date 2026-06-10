@@ -34,13 +34,13 @@ Organizations can start at any level and upgrade as requirements evolve.
 
 The AOA framework consists of multiple interconnected IETF drafts, each addressing specific aspects of agent authorization:
 
-| # | Draft Name | Purpose |
-|---|------------|---------|
-| 1 | [JWT Grant Interaction Response](#1-jwt-grant-interaction-response) | JWT authorization grants with user interaction, consent, and cross-domain agent-user identity binding |
-| 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | Policy-based authorization using Rego language |
-| 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | Defines evidence for OAuth authorization decisions |
-| 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | Multi-hop delegation with cryptographic binding |
-| 5 | [AI Agent Authorization Integration](#5-ai-agent-authorization-integration) | Integrates all mechanisms for AI agent scenarios |
+| # | Draft Name | Version | Purpose |
+|---|------------|---------|---------|
+| 1 | [JWT Grant Interaction Response](#1-jwt-grant-interaction-response) | -00 | JWT authorization grants with user interaction, consent, and cross-domain agent-user identity binding |
+| 2 | [OAuth Rego Policy](#2-oauth-rego-policy) | -00 | Behavioral authorization using Rego policy language with reverse-guided authorization |
+| 3 | [OAuth Authorization Evidence](#3-oauth-authorization-evidence) | -00 | Authorization evidence and audit trail claims for OAuth 2.0 access tokens |
+| 4 | [OAuth Chain Delegation](#4-oauth-chain-delegation) | -01 | Multi-hop delegation chains with cryptographic binding and evidence propagation |
+| 5 | [AI Agent Authorization Integration](#5-ai-agent-authorization-integration) | -00 | Integration framework with progressive deployment matrix and reverse-guided authorization |
 
 
 
@@ -85,7 +85,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-oauth-authorization-evidence-00.xml
 
-**Purpose**: Defines the foundational evidence types required for making informed authorization decisions in agent-to-agent interactions. Establishes the base layer for trust establishment.
+**Purpose**: Defines two JWT claims (`evidence` and `audit_trail`) for OAuth 2.0 access tokens. The `evidence` claim provides cryptographic proof of user consent with a signed confirmation record. The `audit_trail` claim enables semantic traceability from user intent to authorized operations. Includes a consent-to-evidence collection pipeline with JAG-IR as a concrete example, token exchange propagation strategies (Propagate / Reference / Omit), and GDPR/CCPA retention guidance.
 
 ---
 
@@ -109,7 +109,7 @@ The AOA framework consists of multiple interconnected IETF drafts, each addressi
 
 - **XML Source**: https://github.com/maxpassion/IETF-Agent-Operation-Authorization-draft/blob/main/source-xml/draft-liu-ai-agent-authorization-integration-00.xml
 
-**Purpose**: Comprehensive integration framework that combines all AOA mechanisms for AI agent authorization scenarios. This is the top-level specification that orchestrates evidence collection, chain delegation, cross-domain identity binding, and policy enforcement.
+**Purpose**: Comprehensive integration framework that combines all AOA mechanisms for AI agent authorization scenarios. Defines a progressive deployment matrix (3 identity levels × 3 token levels), reverse-guided authorization where resource servers guide agents toward valid authorization, and profiles the complete 15-step authorization workflow. This is the top-level Informational specification that orchestrates evidence collection, chain delegation, cross-domain identity binding, and policy enforcement without defining new protocol mechanisms.
 
 ---
 
