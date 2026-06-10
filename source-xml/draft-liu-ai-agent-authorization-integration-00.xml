@@ -55,7 +55,7 @@
       </address>
     </author>
 
-    <date year="2026" month="March" day="17"/>
+    <date year="2026" month="June" day="10"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -78,8 +78,9 @@
   <middle>
     <section anchor="introduction" title="Introduction">
       <t>
-        AI agents increasingly need to access protected resources on behalf of 
-        users across different trust domains. Traditional OAuth 2.0 provides 
+        AI agents increasingly need to access protected resources on behalf of
+        users across different trust domains. Traditional OAuth 2.0
+        <xref target="RFC6749"/> provides 
         basic delegation mechanisms, but AI agent scenarios require additional 
         capabilities:
       </t>
@@ -165,7 +166,8 @@
             <tr>
               <td>Consent Evidence</td>
               <td><xref target="I-D.liu-oauth-authorization-evidence"/></td>
-              <td>User confirmation records</td>
+              <td>User confirmation records, audit trail, and
+                consent-to-evidence pipeline</td>
             </tr>
             <tr>
               <td>Multi-hop Delegation</td>
@@ -207,7 +209,8 @@
           </li>
           <li>
             <strong>Resource Server:</strong> RS evaluates the policy at runtime using 
-            a Rego-compatible policy engine with request context.
+            a Rego-compatible policy engine (e.g., Open Policy Agent
+            <xref target="OPA"/>) with request context.
           </li>
         </ul>
 
@@ -382,7 +385,9 @@
 
       <section title="Token Structure">
         <t>
-          The framework uses JWT access tokens following OAuth 2.0 standards. 
+          The framework uses JWT access tokens
+          (<xref target="RFC7519"/>, <xref target="RFC9068"/>) following
+          OAuth 2.0 standards. 
           Key claim semantics:
         </t>
 
@@ -408,10 +413,39 @@
               <li>
                 <tt>agent_user_id</tt> (OPTIONAL): The user's identifier at the 
                 Agent system, enabling audit trail correlation at the Agent side.
-                Note: This is a non-registered extension field within the 
+                Note: This is a non-registered extension field within the
                 <tt>act</tt> claim structure.
               </li>
             </ul>
+          </li>
+          <li>
+            <strong><tt>evidence</tt></strong>: Contains a signed record of
+            the user's confirmation action during authorization, including
+            what was displayed to the user, how the user confirmed, and a
+            cryptographic signature from the AS.  Defined in
+            <xref target="I-D.liu-oauth-authorization-evidence"/>.
+          </li>
+          <li>
+            <strong><tt>audit_trail</tt></strong>: Provides semantic
+            traceability metadata linking user intent to authorized
+            operations, including a reference to the evidence record and
+            the semantic expansion level.  Defined in
+            <xref target="I-D.liu-oauth-authorization-evidence"/>.
+          </li>
+          <li>
+            <strong><tt>authorization_details</tt></strong>: Carries the
+            Rego policy authorization data (<tt>rego_policy</tt> type)
+            via Rich Authorization Requests
+            (<xref target="RFC9396"/>), defining what operations the
+            agent is permitted to perform.  Defined in
+            <xref target="I-D.liu-oauth-rego-policy"/>.
+          </li>
+          <li>
+            <strong><tt>delegation_chain</tt></strong>: Records the
+            chain of delegation hops when authorization is transferred
+            between agents, with cryptographic signatures for each hop.
+            Only present in delegated scenarios.  Defined in
+            <xref target="I-D.liu-oauth-chain-delegation"/>.
           </li>
         </ul>
 
@@ -440,15 +474,25 @@
       },
       "context": {
         "user": { "id": "user_12345" },
-        "agent": { "id": "wit://agent.example/sha256.abc123..." }
+        "action": "add_to_cart"
       }
     }
   ],
 
   "evidence": {
-    "id": "evidence-xyz",
-    "user_confirmation": { "..." : "..." },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+    "user_confirmation": {
+      "displayed_content": "Add items under $50 to cart",
+      "user_action": "button_click",
+      "timestamp": 1731320595
+    },
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
+  },
+
+  "audit_trail": {
+    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+    "semantic_expansion_level": "medium",
+    "proposal_ref": "urn:uuid:proposal-xyz"
   },
 
   "delegation_chain": [ "..." ]
@@ -504,6 +548,7 @@
     |            |             |  - act                  |           |
     |            |             |  - authorization_details|           |
     |            |             |  - evidence             |           |
+    |            |             |  - audit_trail          |           |
     |            |             |<-----------|            |           |
     |            |             |            |            |           |
 (11)|            |             | API Request|            |           |
@@ -593,7 +638,9 @@
             <ul>
               <li><tt>act</tt>: Agent's SPIFFE ID;</li>
               <li><tt>authorization_details</tt>: Enriched response per RFC 9396 Section 7.1;</li>
-              <li><tt>evidence</tt>: Signed user confirmation record.</li>
+              <li><tt>evidence</tt>: Signed user confirmation record;</li>
+              <li><tt>audit_trail</tt>: Semantic traceability metadata
+                linking user intent to authorized operations.</li>
             </ul>
           </li>
           <li>
@@ -658,9 +705,25 @@
       </figure>
 
       <t>
-        The resulting token for Agent B includes a <tt>delegation_chain</tt> 
-        recording the delegation hop, as defined in 
+        The resulting token for Agent B includes a <tt>delegation_chain</tt>
+        recording the delegation hop, as defined in
         <xref target="I-D.liu-oauth-chain-delegation"/>.
+      </t>
+
+      <t>
+        The AS MUST also decide how to handle the original
+        <tt>evidence</tt> claim from Agent A's token.  Three strategies
+        are defined in <xref target="I-D.liu-oauth-authorization-evidence"/>:
+        <strong>Propagate</strong> (copy the original evidence into
+        Agent B's token), <strong>Reference</strong> (replace the
+        embedded evidence with an <tt>audit_trail</tt> claim containing
+        only the <tt>evidence_ref</tt>), or <strong>Omit</strong> (do
+        not include evidence).  The Propagate strategy is RECOMMENDED
+        when the delegated token's scope is a subset of the original
+        token's scope.  When using delegation chains, the
+        <tt>root_evidence_ref</tt> in the delegation chain entry SHOULD
+        reference the same evidence record, creating an unbroken audit
+        trail from the original user consent through all delegation hops.
       </t>
     </section>
 
@@ -671,23 +734,31 @@
 
       <section title="Redirect-Based Consent">
         <t>
-          Traditional OAuth redirect flow where the agent redirects the user 
-          to the AS's consent page.
+          Traditional OAuth redirect flow where the agent redirects the user
+          to the AS's consent page.  This is the most common consent
+          mechanism and is suitable for web-based agents that can launch
+          a browser for user interaction.
         </t>
       </section>
 
       <section title="CIBA-Based Consent">
         <t>
-          Client-Initiated Backchannel Authentication (CIBA) for out-of-band 
+          Client-Initiated Backchannel Authentication (CIBA)
+          <xref target="CIBA"/> for out-of-band
           consent, useful when the agent cannot redirect the user.
+          Typical scenarios include voice assistants, IoT devices,
+          and mobile applications where the user completes consent
+          on a separate device.
         </t>
       </section>
 
       <section title="Consent-Only Flow">
         <t>
-          When the user has a valid, non-expired ID Token and the agent's 
-          identity is already trusted, the AS MAY skip re-authentication and 
-          only prompt for consent to the specific operation.
+          When the user has a valid, non-expired ID Token and the agent's
+          identity is already trusted, the AS MAY skip re-authentication and
+          only prompt for consent to the specific operation.  This mode
+          reduces user friction for repeat operations while maintaining
+          explicit consent for each authorized action.
         </t>
       </section>
     </section>
@@ -853,7 +924,8 @@
             Agent → External AS: SPIFFE authentication + JWT assertion (ID-JAG);
           </li>
           <li>
-            External AS → RS: Signed access token with policy reference;
+            External AS → RS: Signed access token with policy reference
+            (JWS <xref target="RFC7515"/>);
           </li>
           <li>
             Delegation: AS-signed delegation chain entries.
@@ -908,12 +980,251 @@
           <li>Audit trails enable post-hoc verification.</li>
         </ul>
       </section>
+
+      <section title="Token Size">
+        <t>
+          A full AOA access token may carry multiple claims beyond the
+          standard JWT fields: <tt>act</tt>, <tt>authorization_details</tt>
+          (with embedded Rego policy), <tt>evidence</tt> (with signed
+          user confirmation), <tt>audit_trail</tt>, and
+          <tt>delegation_chain</tt> (for multi-hop scenarios).  The
+          combined size of these claims can exceed typical HTTP header
+          limits when the token is passed in an Authorization header.
+        </t>
+
+        <t>
+          Implementations SHOULD consider:
+        </t>
+
+        <ul>
+          <li>
+            Using token introspection (<xref target="RFC7662"/>) to
+            retrieve detailed evidence and policy information rather than
+            embedding all data in the token;
+          </li>
+          <li>
+            Using policy references (URIs) instead of inline Rego policy
+            in <tt>authorization_details</tt>;
+          </li>
+          <li>
+            Applying the Reference strategy for evidence in token
+            exchange scenarios, as defined in
+            <xref target="I-D.liu-oauth-authorization-evidence"/>.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Evidence Freshness">
+        <t>
+          In the AOA framework, evidence records capture user consent at
+          a specific point in time.  When tokens are exchanged or
+          refreshed across delegation hops, the original consent
+          timestamp may become significantly older than the current
+          request time.  Deployments SHOULD define an evidence freshness
+          policy that specifies the maximum acceptable age of an
+          evidence record and the actions to take when evidence is stale
+          (e.g., reject the request, require re-consent).  See
+          <xref target="I-D.liu-oauth-authorization-evidence"/> for
+          detailed guidance.
+        </t>
+      </section>
+
+      <section title="Policy Injection and Server-Side Request Forgery">
+        <t>
+          When agents submit Rego policy via <tt>authorization_details</tt>,
+          the AS must validate the policy before evaluation.  Malicious
+          or compromised agents could attempt to inject policies that
+          exploit the policy engine (e.g., resource exhaustion, data
+          exfiltration via external calls).  The AS SHOULD enforce
+          policy size limits, restrict available Rego built-in functions
+          (particularly those that perform network I/O), and validate
+          policy syntax before evaluation.  See
+          <xref target="I-D.liu-oauth-rego-policy"/> for the complete
+          threat model and mitigation strategies.
+        </t>
+      </section>
+
+      <section title="Cross-Domain Trust">
+        <t>
+          The AOA framework operates across multiple trust domains
+          (Home IdP, Agent domain, External AS, Resource Server).
+          Trust establishment between these domains relies on:
+        </t>
+
+        <ul>
+          <li>
+            The External AS trusting the Home IdP's JWT assertions
+            (ID-JAG), which requires either a pre-established trust
+            relationship or federation;
+          </li>
+          <li>
+            The Resource Server trusting the External AS's signing keys
+            for both token validation and evidence signature
+            verification;
+          </li>
+          <li>
+            Cross-domain delegation requiring trust in each
+            intermediate AS's signing key for delegation chain
+            verification.
+          </li>
+        </ul>
+
+        <t>
+          Deployments SHOULD establish explicit trust frameworks or
+          federation agreements that define key distribution, revocation,
+          and liability across participating domains.
+        </t>
+      </section>
+
+      <section title="Delegation Depth and Privilege Escalation">
+        <t>
+          Multi-hop delegation chains introduce the risk of unbounded
+          delegation depth and privilege escalation at intermediate
+          hops.  The framework mitigates these risks through:
+        </t>
+
+        <ul>
+          <li>
+            AS-enforced maximum delegation depth limits;
+          </li>
+          <li>
+            Scope subset validation ensuring each delegation hop can
+            only narrow (never broaden) the authorized scope;
+          </li>
+          <li>
+            Cryptographic chain integrity via per-hop AS signatures in
+            the <tt>delegation_chain</tt> claim.
+          </li>
+        </ul>
+
+        <t>
+          See <xref target="I-D.liu-oauth-chain-delegation"/> for the
+          complete delegation security model and validation checklist.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="privacy" title="Privacy Considerations">
+      <t>
+        The privacy considerations in this section are informed by the
+        Internet protocol privacy analysis framework described in
+        <xref target="RFC6973"/>.  This section addresses privacy
+        considerations specific to the integrated AOA framework;
+        implementers MUST also consult the privacy considerations in
+        each component specification.
+      </t>
+
+      <section title="Cross-Domain Identity Correlation">
+        <t>
+          The AOA framework inherently links user identities across
+          multiple trust domains: the Home IdP (where the user
+          authenticates), the Agent domain (where the user interacts
+          with the AI agent), and the External AS/RS domain (where
+          resources are accessed).  The <tt>act.agent_user_id</tt> field
+          and the <tt>evidence</tt> claim both carry identifiers that
+          could be used to correlate a user's activities across these
+          domains.
+        </t>
+
+        <t>
+          Implementations SHOULD minimize cross-domain correlation by:
+        </t>
+
+        <ul>
+          <li>
+            Using domain-specific subject identifiers in the access
+            token's <tt>sub</tt> claim rather than globally unique
+            identifiers;
+          </li>
+          <li>
+            Treating <tt>agent_user_id</tt> as optional and including
+            it only when required for audit correlation;
+          </li>
+          <li>
+            Avoiding inclusion of stable, globally correlatable
+            identifiers in the <tt>evidence</tt> claim's
+            <tt>displayed_content</tt> field.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Agent Observability">
+        <t>
+          AI agents acting on behalf of users can observe resource
+          contents, policy evaluation outcomes, and error responses
+          (including reverse-guided authorization hints).  A compromised
+          or malicious agent could accumulate sensitive information about
+          the user's access patterns, resource contents, and
+          organizational policy structure.
+        </t>
+
+        <t>
+          Mitigations include:
+        </t>
+
+        <ul>
+          <li>
+            Applying the principle of least privilege to agent
+            capabilities via Rego policy constraints;
+          </li>
+          <li>
+            Using the <tt>semantic_expansion_level</tt> in the
+            <tt>audit_trail</tt> claim to flag operations where
+            significant interpretation was applied, enabling
+            post-hoc review of agent behavior;
+          </li>
+          <li>
+            Limiting the information exposed in reverse-guided
+            authorization error responses to what is necessary for
+            constructing a valid request.
+          </li>
+        </ul>
+      </section>
+
+      <section title="Displayed Content Sensitivity">
+        <t>
+          The <tt>displayed_content</tt> field in the <tt>evidence</tt>
+          claim records the human-readable description shown to the user
+          during consent.  This field may contain sensitive information
+          about the user's intent, financial parameters, health-related
+          operations, or personal data.  Since the <tt>evidence</tt>
+          claim is included in the access token and may be logged by
+          resource servers, implementations MUST minimize personal data
+          in this field and SHOULD use operation identifiers rather than
+          natural-language descriptions that may contain PII.
+        </t>
+
+        <t>
+          See <xref target="I-D.liu-oauth-authorization-evidence"/> for
+          detailed guidance on displayed content minimization, evidence
+          retention, and the tension between audit retention and the
+          right to erasure under GDPR and CCPA.
+        </t>
+      </section>
+
+      <section title="Delegation Chain Privacy">
+        <t>
+          Delegation chains record the identity of each intermediate
+          agent in the <tt>delegation_chain</tt> claim.  In multi-hop
+          scenarios, this creates a record of all agents involved in a
+          transaction, which may reveal organizational structure or
+          agent relationships that participants consider sensitive.
+          Implementations SHOULD evaluate whether the full delegation
+          chain needs to be visible to the final resource server, or
+          whether a summarized view is sufficient.
+        </t>
+
+        <t>
+          See <xref target="I-D.liu-oauth-chain-delegation"/> for
+          delegation chain privacy considerations.
+        </t>
+      </section>
     </section>
 
     <section anchor="relationships" title="Relationship to Other Specifications">
       <t>
-        This section clarifies the relationship between this framework and other 
-        OAuth 2.0 specifications. Understanding these relationships is essential 
+        This section clarifies the relationship between this framework and other
+        OAuth 2.0 specifications. Understanding these relationships is essential
         for implementers to determine which specifications are required for their 
         specific use cases.
       </t>
@@ -1077,7 +1388,8 @@
       <section anchor="rel-ciba" title="Relationship to CIBA">
         <t>
           This framework profiles the OpenID Connect Client-Initiated Backchannel 
-          Authentication (CIBA) specification for out-of-band user consent. While 
+          Authentication (CIBA) <xref target="CIBA"/> specification for
+          out-of-band user consent. While
           CIBA focuses on user authentication, this framework uses it for authorization 
           and consent collection.
         </t>
@@ -1194,7 +1506,7 @@
               <td>All</td>
             </tr>
             <tr>
-              <td>PAR (RFC 9126)</td>
+              <td>PAR (<xref target="RFC9126"/>)</td>
               <td>MAY</td>
               <td>Agent, AS</td>
             </tr>
@@ -1266,6 +1578,10 @@
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6973.xml"/>
 
         <reference anchor="I-D.ietf-oauth-identity-assertion-authz-grant">
           <front>
@@ -1279,10 +1595,11 @@
 
         <reference anchor="I-D.parecki-oauth-jwt-grant-interaction-response">
           <front>
-            <title>JWT Grant Interaction Response</title>
+            <title>JWT Authorization Grant with Interaction Response</title>
             <author initials="A." surname="Parecki"/>
+            <author initials="B." surname="Campbell"/>
             <author initials="D." surname="Liu"/>
-            <date year="2026" month="March"/>
+            <date year="2026" month="June"/>
           </front>
           <seriesInfo name="Internet-Draft" value="draft-parecki-oauth-jwt-grant-interaction-response-00"/>
         </reference>
@@ -1298,35 +1615,46 @@
 
         <reference anchor="I-D.liu-oauth-rego-policy">
           <front>
-            <title>Rego Policy Language for OAuth 2.0</title>
+            <title>Rego Policy Language for OAuth 2.0 Authorization</title>
             <author initials="D." surname="Liu"/>
-            <date year="2026" month="March"/>
+            <author initials="H." surname="Zhu"/>
+            <author initials="S." surname="Krishnan"/>
+            <author initials="A." surname="Parecki"/>
+            <author initials="H." surname="Xue"/>
+            <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
         </reference>
 
         <reference anchor="I-D.liu-oauth-authorization-evidence">
           <front>
-            <title>Authorization Evidence for OAuth 2.0</title>
+            <title>Authorization Evidence and Audit Trail for OAuth 2.0 Access Tokens</title>
             <author initials="D." surname="Liu"/>
-            <date year="2026" month="March"/>
+            <author initials="H." surname="Zhu"/>
+            <author initials="S." surname="Krishnan"/>
+            <author initials="A." surname="Parecki"/>
+            <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-00"/>
         </reference>
 
         <reference anchor="I-D.liu-oauth-chain-delegation">
           <front>
-            <title>Chain Delegation for OAuth 2.0</title>
+            <title>Delegation Chain for OAuth 2.0</title>
             <author initials="D." surname="Liu"/>
-            <date year="2026" month="March"/>
+            <author initials="H." surname="Zhu"/>
+            <author initials="S." surname="Krishnan"/>
+            <author initials="A." surname="Parecki"/>
+            <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-01"/>
         </reference>
       </references>
 
       <references>
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
 
         <reference anchor="I-D.ietf-oauth-transaction-tokens">
           <front>
@@ -1429,13 +1757,19 @@ Content-Type: application/json
   ],
   
   "evidence": {
-    "id": "evidence-consent-abc",
+    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
-      "user_action": "confirmed_via_button_click",
+      "user_action": "button_click",
       "timestamp": 1731320595
     },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
+  },
+
+  "audit_trail": {
+    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+    "semantic_expansion_level": "medium",
+    "proposal_ref": "urn:uuid:proposal-xyz"
   }
 }
           ]]></artwork>
