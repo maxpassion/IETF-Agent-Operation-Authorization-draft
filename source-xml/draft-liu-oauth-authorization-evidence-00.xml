@@ -229,13 +229,7 @@
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
-      "timestamp": 1731320595,
-      "interface_version": "consent-ui-v2.1"
-    },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "client_instance": "dfp_abc123",
-      "channel": "mobile-app"
+      "timestamp": 1731320595
     },
     "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   }
@@ -271,12 +265,6 @@
               <td>object</td>
               <td>REQUIRED</td>
               <td>Details of the user's confirmation action.</td>
-            </tr>
-            <tr>
-              <td>session_context</td>
-              <td>object</td>
-              <td>OPTIONAL</td>
-              <td>Session and device context information.</td>
             </tr>
             <tr>
               <td>as_signature</td>
@@ -325,49 +313,10 @@
                 <td>REQUIRED</td>
                 <td>When the confirmation occurred.</td>
               </tr>
-              <tr>
-                <td>interface_version</td>
-                <td>string</td>
-                <td>OPTIONAL</td>
-                <td>Version of the consent UI used.</td>
-              </tr>
             </tbody>
           </table>
         </section>
 
-        <section title="session_context Object">
-          <table anchor="tbl-session-context-fields">
-            <name>session_context Fields</name>
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Type</th>
-                <th>Requirement</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>session_id</td>
-                <td>string</td>
-                <td>OPTIONAL</td>
-                <td>OAuth session identifier.</td>
-              </tr>
-              <tr>
-                <td>client_instance</td>
-                <td>string</td>
-                <td>OPTIONAL</td>
-                <td>Device/client instance fingerprint.</td>
-              </tr>
-              <tr>
-                <td>channel</td>
-                <td>string</td>
-                <td>OPTIONAL</td>
-                <td>Authorization channel (mobile, web, etc.).</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
       </section>
 
       <section title="AS Signature">
@@ -392,7 +341,6 @@
         <ul>
           <li><tt>id</tt></li>
           <li><tt>user_confirmation</tt> (entire object)</li>
-          <li><tt>session_context</tt> (if present)</li>
         </ul>
 
         <t>
@@ -414,14 +362,7 @@
             Create a new JSON object containing only the
             <tt>id</tt> and <tt>user_confirmation</tt> fields
             copied from the <tt>evidence</tt> object.  No other
-            fields from the <tt>evidence</tt> object are included
-            in this step.
-          </li>
-          <li>
-            If the <tt>session_context</tt> field is present in
-            the <tt>evidence</tt> object, add it to the JSON
-            object created in Step 1.  If <tt>session_context</tt>
-            is absent, skip this step.
+            fields from the <tt>evidence</tt> object are included.
           </li>
           <li>
             Apply the JSON Canonicalization Scheme (JCS) as defined
@@ -430,7 +371,7 @@
           </li>
           <li>
             Compute a detached JWS (Compact Serialization) over
-            the JCS output from Step 3 using the AS's private
+            the JCS output from Step 2 using the AS's private
             signing key.  The resulting value
             (<tt>header..signature</tt>) is stored in the
             <tt>as_signature</tt> field of the <tt>evidence</tt>
@@ -440,13 +381,13 @@
 
         <t>
           To verify an <tt>as_signature</tt>, the verifier
-          reconstructs the JCS input by performing Steps 1 through 3 above
+          reconstructs the JCS input by performing Steps 1 and 2 above
           on the received <tt>evidence</tt> object (excluding the
           <tt>as_signature</tt> field), then verifies the detached
           JWS using the AS's public key.  Any extension fields
           present in the <tt>evidence</tt> object beyond
           <tt>id</tt>, <tt>user_confirmation</tt>,
-          <tt>session_context</tt>, and <tt>as_signature</tt>
+          and <tt>as_signature</tt>
           MUST NOT be included in the JCS input and therefore
           are not covered by the signature.
         </t>
@@ -500,7 +441,6 @@
   "audit_trail": {
     "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
-    "interpretation_notes": "Mapped 'cheap' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   }
 }
@@ -531,12 +471,6 @@
               <td>string</td>
               <td>OPTIONAL</td>
               <td>Degree of interpretation applied (none, low, medium, high).</td>
-            </tr>
-            <tr>
-              <td>interpretation_notes</td>
-              <td>string</td>
-              <td>OPTIONAL</td>
-              <td>Human-readable notes about semantic mapping.</td>
             </tr>
             <tr>
               <td>proposal_ref</td>
@@ -770,30 +704,6 @@ Client/Agent          Authorization Server              User
                 <td>Server-side time when the user's action was
                   received</td>
               </tr>
-              <tr>
-                <td>Consent UI version</td>
-                <td><tt>interface_version</tt></td>
-                <td>Version identifier of the consent interface
-                  used</td>
-              </tr>
-              <tr>
-                <td>Session established</td>
-                <td><tt>session_id</tt></td>
-                <td>OAuth session identifier for this consent
-                  interaction</td>
-              </tr>
-              <tr>
-                <td>Client device detected</td>
-                <td><tt>client_instance</tt></td>
-                <td>Device fingerprint or client instance
-                  identifier</td>
-              </tr>
-              <tr>
-                <td>Access channel detected</td>
-                <td><tt>channel</tt></td>
-                <td>How the user accessed the consent UI (web,
-                  mobile app, etc.)</td>
-              </tr>
             </tbody>
           </table>
         </section>
@@ -843,11 +753,7 @@ Client/Agent          Authorization Server              User
                 </li>
                 <li>
                   <tt>timestamp</tt>: the server time of the
-                  click;
-                </li>
-                <li>
-                  <tt>session_context</tt>: the session ID, device
-                  fingerprint, and channel (browser).
+                  click.
                 </li>
               </ul>
             </li>
@@ -956,9 +862,8 @@ AI Agent          External AS                      User
             Generate a unique evidence identifier;
           </li>
           <li>
-            Sign the evidence fields (id, user_confirmation, and
-            session_context if present) with the AS's private key using
-            JCS canonicalization;
+            Sign the evidence fields (id and user_confirmation)
+            with the AS's private key using JCS canonicalization;
           </li>
           <li>
             Include the evidence claim in the access token.
@@ -1148,8 +1053,8 @@ AI Agent          External AS                      User
 
       <section title="Signature Verification">
         <t>
-          The AS signature over the evidence fields (id, user_confirmation, 
-          and session_context if present) is critical for evidence integrity.
+          The AS signature over the evidence fields (id and
+          user_confirmation) is critical for evidence integrity.
           Implementations MUST:
         </t>
 
@@ -1201,8 +1106,7 @@ AI Agent          External AS                      User
           <li>HTTP header size limits when tokens are passed in Authorization headers;</li>
           <li>Using token introspection <xref target="RFC7662"/> to retrieve evidence
               details rather than embedding all data in the token;</li>
-          <li>Limiting displayed_content length to essential information;</li>
-          <li>Omitting OPTIONAL fields (session_context, interpretation_notes) when not required.</li>
+          <li>Limiting displayed_content length to essential information.</li>
         </ul>
       </section>
 
@@ -1357,8 +1261,7 @@ AI Agent          External AS                      User
           Data protection regulations such as GDPR and CCPA grant
           individuals the right to request deletion of their personal
           data.  Evidence records, which may contain
-          <tt>displayed_content</tt> reflecting user intent and
-          <tt>session_context</tt> containing session identifiers,
+          <tt>displayed_content</tt> reflecting user intent,
           can constitute personal data.
         </t>
 
@@ -1375,11 +1278,6 @@ AI Agent          External AS                      User
             natural-language descriptions that may contain PII);
           </li>
           <li>
-            Applying pseudonymization or hashing to
-            <tt>session_id</tt> and <tt>client_instance</tt> values
-            before storage;
-          </li>
-          <li>
             Defining separate retention policies for the evidence
             record (which may be retained longer for audit) and the
             personal data within it (which may need to be redacted
@@ -1389,8 +1287,8 @@ AI Agent          External AS                      User
 
         <t>
           Note on redaction and signature integrity: The
-          <tt>as_signature</tt> covers the <tt>id</tt>,
-          <tt>user_confirmation</tt>, and <tt>session_context</tt>
+          <tt>as_signature</tt> covers the <tt>id</tt> and
+          <tt>user_confirmation</tt>
           fields as an inseparable unit.  Redacting any field within
           these objects (e.g., removing <tt>displayed_content</tt>)
           invalidates the <tt>as_signature</tt>.  Implementations
@@ -1403,37 +1301,6 @@ AI Agent          External AS                      User
           (potentially redacted) evidence record via token
           introspection (<xref target="RFC7662"/>) rather than
           reading it directly from the token.
-        </t>
-      </section>
-
-      <section title="Session Context Privacy">
-        <t>
-          The <tt>session_context</tt> object may contain values that
-          can be correlated with user behavior across sessions:
-        </t>
-
-        <ul>
-          <li>
-            <tt>session_id</tt>: If reused or predictable, enables
-            cross-request tracking;
-          </li>
-          <li>
-            <tt>client_instance</tt>: A device fingerprint can
-            uniquely identify the user's device;
-          </li>
-          <li>
-            <tt>channel</tt>: Reveals the access method (e.g., mobile
-            vs. web), which may be sensitive in certain contexts.
-          </li>
-        </ul>
-
-        <t>
-          Implementations SHOULD treat <tt>session_context</tt> values
-          as confidential and avoid including them in tokens that may
-          be logged, cached, or forwarded to third parties.  When
-          <tt>session_context</tt> is not required for the RS's
-          authorization decision, it SHOULD be omitted from the token
-          and retained only in the AS's evidence store.
         </t>
       </section>
     </section>
@@ -1588,13 +1455,7 @@ AI Agent          External AS                      User
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
-      "timestamp": 1731320595,
-      "interface_version": "consent-ui-v2.1"
-    },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "client_instance": "dfp_abc123",
-      "channel": "mobile-app"
+      "timestamp": 1731320595
     },
     "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   },
@@ -1602,7 +1463,6 @@ AI Agent          External AS                      User
   "audit_trail": {
     "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
-    "interpretation_notes": "Mapped 'cheap items' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   },
   

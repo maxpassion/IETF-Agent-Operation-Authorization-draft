@@ -73,39 +73,39 @@ Table of Contents
      3.2.  Structure . . . . . . . . . . . . . . . . . . . . . . . .   5
      3.3.  Field Definitions . . . . . . . . . . . . . . . . . . . .   5
        3.3.1.  user_confirmation Object  . . . . . . . . . . . . . .   6
-       3.3.2.  session_context Object  . . . . . . . . . . . . . . .   7
-     3.4.  AS Signature  . . . . . . . . . . . . . . . . . . . . . .   7
+     3.4.  AS Signature  . . . . . . . . . . . . . . . . . . . . . .   6
    4.  The audit_trail Claim . . . . . . . . . . . . . . . . . . . .   8
-     4.1.  Claim Definition  . . . . . . . . . . . . . . . . . . . .   9
-     4.2.  Structure . . . . . . . . . . . . . . . . . . . . . . . .   9
-     4.3.  Field Definitions . . . . . . . . . . . . . . . . . . . .   9
-     4.4.  Semantic Expansion Levels . . . . . . . . . . . . . . . .  10
-     4.5.  Minimum Content Guidance  . . . . . . . . . . . . . . . .  11
-   5.  Audit Trail Purposes  . . . . . . . . . . . . . . . . . . . .  11
-   6.  Authorization Server Processing . . . . . . . . . . . . . . .  11
-     6.1.  Evidence Collection from User Interaction . . . . . . . .  12
-       6.1.1.  General Consent-to-Evidence Pattern . . . . . . . . .  12
-       6.1.2.  Consent UI to Evidence Field Mapping  . . . . . . . .  13
-       6.1.3.  Example: JWT Grant Interaction Response Flow  . . . .  14
-       6.1.4.  Applicability to Other Flows  . . . . . . . . . . . .  16
-     6.2.  Evidence Generation . . . . . . . . . . . . . . . . . . .  17
-     6.3.  Storage Requirements  . . . . . . . . . . . . . . . . . .  17
-     6.4.  Evidence in Token Exchange  . . . . . . . . . . . . . . .  18
-     6.5.  Evidence in Token Refresh . . . . . . . . . . . . . . . .  18
-   7.  Resource Server Processing  . . . . . . . . . . . . . . . . .  19
-     7.1.  Evidence Verification . . . . . . . . . . . . . . . . . .  19
-     7.2.  Audit Logging . . . . . . . . . . . . . . . . . . . . . .  19
-   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  20
-     8.1.  Signature Verification  . . . . . . . . . . . . . . . . .  20
-     8.2.  Evidence Tampering and Trust in the AS  . . . . . . . . .  20
-     8.3.  Replay Attacks  . . . . . . . . . . . . . . . . . . . . .  20
-     8.4.  Token Size Considerations . . . . . . . . . . . . . . . .  20
-     8.5.  Token-Evidence Binding  . . . . . . . . . . . . . . . . .  21
-     8.6.  Evidence Freshness  . . . . . . . . . . . . . . . . . . .  21
-     8.7.  Cross-Domain Evidence Verification  . . . . . . . . . . .  22
-   9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  22
-     9.1.  Displayed Content . . . . . . . . . . . . . . . . . . . .  22
-     9.2.  Evidence Retention  . . . . . . . . . . . . . . . . . . .  23
+     4.1.  Claim Definition  . . . . . . . . . . . . . . . . . . . .   8
+     4.2.  Structure . . . . . . . . . . . . . . . . . . . . . . . .   8
+     4.3.  Field Definitions . . . . . . . . . . . . . . . . . . . .   8
+     4.4.  Semantic Expansion Levels . . . . . . . . . . . . . . . .   9
+     4.5.  Minimum Content Guidance  . . . . . . . . . . . . . . . .  10
+   5.  Audit Trail Purposes  . . . . . . . . . . . . . . . . . . . .  10
+   6.  Authorization Server Processing . . . . . . . . . . . . . . .  10
+     6.1.  Evidence Collection from User Interaction . . . . . . . .  11
+       6.1.1.  General Consent-to-Evidence Pattern . . . . . . . . .  11
+       6.1.2.  Consent UI to Evidence Field Mapping  . . . . . . . .  12
+       6.1.3.  Example: JWT Grant Interaction Response Flow  . . . .  13
+       6.1.4.  Applicability to Other Flows  . . . . . . . . . . . .  14
+     6.2.  Evidence Generation . . . . . . . . . . . . . . . . . . .  15
+     6.3.  Storage Requirements  . . . . . . . . . . . . . . . . . .  15
+     6.4.  Evidence in Token Exchange  . . . . . . . . . . . . . . .  16
+     6.5.  Evidence in Token Refresh . . . . . . . . . . . . . . . .  16
+   7.  Resource Server Processing  . . . . . . . . . . . . . . . . .  17
+     7.1.  Evidence Verification . . . . . . . . . . . . . . . . . .  17
+     7.2.  Audit Logging . . . . . . . . . . . . . . . . . . . . . .  17
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .  18
+     8.1.  Signature Verification  . . . . . . . . . . . . . . . . .  18
+     8.2.  Evidence Tampering and Trust in the AS  . . . . . . . . .  18
+     8.3.  Replay Attacks  . . . . . . . . . . . . . . . . . . . . .  18
+     8.4.  Token Size Considerations . . . . . . . . . . . . . . . .  18
+     8.5.  Token-Evidence Binding  . . . . . . . . . . . . . . . . .  19
+     8.6.  Evidence Freshness  . . . . . . . . . . . . . . . . . . .  19
+     8.7.  Cross-Domain Evidence Verification  . . . . . . . . . . .  20
+   9.  Privacy Considerations  . . . . . . . . . . . . . . . . . . .  20
+     9.1.  Displayed Content . . . . . . . . . . . . . . . . . . . .  20
+     9.2.  Evidence Retention  . . . . . . . . . . . . . . . . . . .  21
+     9.3.  Right to Erasure and Audit Retention  . . . . . . . . . .  21
 
 
 
@@ -114,16 +114,14 @@ Liu, et al.             Expires 12 December 2026                [Page 2]
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
-     9.3.  Right to Erasure and Audit Retention  . . . . . . . . . .  23
-     9.4.  Session Context Privacy . . . . . . . . . . . . . . . . .  24
-   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  24
-     10.1.  JWT Claims Registration  . . . . . . . . . . . . . . . .  24
-   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  24
-     11.1.  Normative References . . . . . . . . . . . . . . . . . .  24
-     11.2.  Informative References . . . . . . . . . . . . . . . . .  26
-   Appendix A.  Complete Example . . . . . . . . . . . . . . . . . .  27
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  29
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  29
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  21
+     10.1.  JWT Claims Registration  . . . . . . . . . . . . . . . .  21
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  22
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  22
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  23
+   Appendix A.  Complete Example . . . . . . . . . . . . . . . . . .  24
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  25
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  26
 
 1.  Introduction
 
@@ -162,6 +160,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    "OPTIONAL" in this document are to be interpreted as described in BCP
    14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals.
+
+
 
 
 
@@ -242,13 +242,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
        "user_confirmation": {
          "displayed_content": "Add items under $50 to cart",
          "user_action": "confirmed_via_button_click",
-         "timestamp": 1731320595,
-         "interface_version": "consent-ui-v2.1"
-       },
-       "session_context": {
-         "session_id": "session_xyz789",
-         "client_instance": "dfp_abc123",
-         "channel": "mobile-app"
+         "timestamp": 1731320595
        },
        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
      }
@@ -274,6 +268,12 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
     +-------------------+------+-----------+--------------------------+
     | user_confirmation |object|REQUIRED   | Details of the user's    |
     |                   |      |           | confirmation action.     |
+    +-------------------+------+-----------+--------------------------+
+    | as_signature      |string|REQUIRED   | AS signature over the    |
+    |                   |      |           | confirmation record.     |
+    +-------------------+------+-----------+--------------------------+
+
+                       Table 1: evidence Claim Fields
 
 
 
@@ -281,16 +281,6 @@ Liu, et al.             Expires 12 December 2026                [Page 5]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
-
-    +-------------------+------+-----------+--------------------------+
-    | session_context   |object|OPTIONAL   | Session and device       |
-    |                   |      |           | context information.     |
-    +-------------------+------+-----------+--------------------------+
-    | as_signature      |string|REQUIRED   | AS signature over the    |
-    |                   |      |           | confirmation record.     |
-    +-------------------+------+-----------+--------------------------+
-
-                       Table 1: evidence Claim Fields
 
 3.3.1.  user_confirmation Object
 
@@ -322,38 +312,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    |timestamp        |NumericDate|REQUIRED   | When the confirmation   |
    |                 |           |           | occurred.               |
    +-----------------+-----------+-----------+-------------------------+
-   |interface_version|string     |OPTIONAL   | Version of the consent  |
-   |                 |           |           | UI used.                |
-   +-----------------+-----------+-----------+-------------------------+
 
                      Table 2: user_confirmation Fields
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026                [Page 6]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
-
-3.3.2.  session_context Object
-
-    +=================+========+=============+=======================+
-    | Field           | Type   | Requirement | Description           |
-    +=================+========+=============+=======================+
-    | session_id      | string | OPTIONAL    | OAuth session         |
-    |                 |        |             | identifier.           |
-    +-----------------+--------+-------------+-----------------------+
-    | client_instance | string | OPTIONAL    | Device/client         |
-    |                 |        |             | instance fingerprint. |
-    +-----------------+--------+-------------+-----------------------+
-    | channel         | string | OPTIONAL    | Authorization channel |
-    |                 |        |             | (mobile, web, etc.).  |
-    +-----------------+--------+-------------+-----------------------+
-
-                     Table 3: session_context Fields
 
 3.4.  AS Signature
 
@@ -370,11 +330,17 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    The signature MUST be computed over the following fields of the
    evidence object:
 
+
+
+
+Liu, et al.             Expires 12 December 2026                [Page 6]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
+
    *  id
 
    *  user_confirmation (entire object)
-
-   *  session_context (if present)
 
    The as_signature field itself MUST be excluded from the signature
    computation.  The signature format MUST be a detached JWS [RFC7515]
@@ -385,39 +351,26 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    The signature input is constructed using the following deterministic
    algorithm:
 
-
-
-
-
-Liu, et al.             Expires 12 December 2026                [Page 7]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
-
    1.  Create a new JSON object containing only the id and
        user_confirmation fields copied from the evidence object.  No
-       other fields from the evidence object are included in this step.
+       other fields from the evidence object are included.
 
-   2.  If the session_context field is present in the evidence object,
-       add it to the JSON object created in Step 1.  If session_context
-       is absent, skip this step.
-
-   3.  Apply the JSON Canonicalization Scheme (JCS) as defined in
+   2.  Apply the JSON Canonicalization Scheme (JCS) as defined in
        [RFC8785] to the JSON object from the previous step, producing a
        deterministic byte string.
 
-   4.  Compute a detached JWS (Compact Serialization) over the JCS
-       output from Step 3 using the AS's private signing key.  The
+   3.  Compute a detached JWS (Compact Serialization) over the JCS
+       output from Step 2 using the AS's private signing key.  The
        resulting value (header..signature) is stored in the as_signature
        field of the evidence object.
 
    To verify an as_signature, the verifier reconstructs the JCS input by
-   performing Steps 1 through 3 above on the received evidence object
+   performing Steps 1 and 2 above on the received evidence object
    (excluding the as_signature field), then verifies the detached JWS
    using the AS's public key.  Any extension fields present in the
-   evidence object beyond id, user_confirmation, session_context, and
-   as_signature MUST NOT be included in the JCS input and therefore are
-   not covered by the signature.
+   evidence object beyond id, user_confirmation, and as_signature MUST
+   NOT be included in the JCS input and therefore are not covered by the
+   signature.
 
    Note: In examples throughout this document, the as_signature value is
    shown in abbreviated form for readability.  Actual values MUST use
@@ -433,22 +386,19 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    which is RECOMMENDED for deployments where evidence records have
    longer retention periods than access tokens.
 
+
+
+
+Liu, et al.             Expires 12 December 2026                [Page 7]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
+
 4.  The audit_trail Claim
 
    The audit_trail claim provides metadata for semantic traceability,
    enabling analysis of how user intent was interpreted and translated
    into authorized operations.
-
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026                [Page 8]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
 
 4.1.  Claim Definition
 
@@ -464,7 +414,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
      "audit_trail": {
        "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
        "semantic_expansion_level": "medium",
-       "interpretation_notes": "Mapped 'cheap' to '$50 limit'",
        "proposal_ref": "urn:uuid:proposal-xyz"
      }
    }
@@ -486,11 +435,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    |                          |        |             | low, medium,    |
    |                          |        |             | high).          |
    +--------------------------+--------+-------------+-----------------+
-   | interpretation_notes     | string | OPTIONAL    | Human-readable  |
-   |                          |        |             | notes about     |
-   |                          |        |             | semantic        |
-   |                          |        |             | mapping.        |
-   +--------------------------+--------+-------------+-----------------+
    | proposal_ref             | URI    | OPTIONAL    | Reference to    |
    |                          |        |             | the original    |
    |                          |        |             | authorization   |
@@ -501,7 +445,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026                [Page 9]
+Liu, et al.             Expires 12 December 2026                [Page 8]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -542,7 +486,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    |                          |        |             | authorized.     |
    +--------------------------+--------+-------------+-----------------+
 
-                     Table 4: audit_trail Claim Fields
+                     Table 3: audit_trail Claim Fields
 
 4.4.  Semantic Expansion Levels
 
@@ -557,7 +501,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 10]
+Liu, et al.             Expires 12 December 2026                [Page 9]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -606,14 +550,14 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    | Support        | responsibility for erroneous transactions.      |
    +----------------+-------------------------------------------------+
 
-               Table 5: Purposes of Authorization Evidence
+               Table 4: Purposes of Authorization Evidence
 
 6.  Authorization Server Processing
 
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 11]
+Liu, et al.             Expires 12 December 2026               [Page 10]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -669,7 +613,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 12]
+Liu, et al.             Expires 12 December 2026               [Page 11]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -698,38 +642,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    Each field in the evidence claim corresponds to a specific event
    during the consent interaction:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 13]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
-
        +==============+===================+========================+
        | Consent UI   | Evidence Field    | Description            |
        | Event        |                   |                        |
@@ -746,24 +658,21 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
        | timestamp    |                   | the user's action was  |
        |              |                   | received               |
        +--------------+-------------------+------------------------+
-       | Consent UI   | interface_version | Version identifier of  |
-       | version      |                   | the consent interface  |
-       |              |                   | used                   |
-       +--------------+-------------------+------------------------+
-       | Session      | session_id        | OAuth session          |
-       | established  |                   | identifier for this    |
-       |              |                   | consent interaction    |
-       +--------------+-------------------+------------------------+
-       | Client       | client_instance   | Device fingerprint or  |
-       | device       |                   | client instance        |
-       | detected     |                   | identifier             |
-       +--------------+-------------------+------------------------+
-       | Access       | channel           | How the user accessed  |
-       | channel      |                   | the consent UI (web,   |
-       | detected     |                   | mobile app, etc.)      |
-       +--------------+-------------------+------------------------+
 
-            Table 6: Consent UI Event to Evidence Field Mapping
+            Table 5: Consent UI Event to Evidence Field Mapping
+
+
+
+
+
+
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 12]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
 
 6.1.3.  Example: JWT Grant Interaction Response Flow
 
@@ -776,15 +685,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    1.  An AI agent sends a token request to the AS using a JWT
        authorization grant ([RFC7523]), including the requested scope
        and authorization_details.
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 14]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
 
    2.  The AS validates the agent's identity and determines that user
        interaction is required.  It responds with an
@@ -804,10 +704,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
        *  user_action: button_click;
 
-       *  timestamp: the server time of the click;
-
-       *  session_context: the session ID, device fingerprint, and
-          channel (browser).
+       *  timestamp: the server time of the click.
 
    5.  The AS constructs the evidence object, computes the as_signature
        per Section 3, and stores the evidence record.
@@ -828,16 +725,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 15]
+Liu, et al.             Expires 12 December 2026               [Page 13]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -893,7 +781,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 16]
+Liu, et al.             Expires 12 December 2026               [Page 14]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -914,9 +802,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
    3.  Generate a unique evidence identifier;
 
-   4.  Sign the evidence fields (id, user_confirmation, and
-       session_context if present) with the AS's private key using JCS
-       canonicalization;
+   4.  Sign the evidence fields (id and user_confirmation) with the AS's
+       private key using JCS canonicalization;
 
    5.  Include the evidence claim in the access token.
 
@@ -949,7 +836,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 17]
+
+Liu, et al.             Expires 12 December 2026               [Page 15]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -1005,7 +893,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 18]
+Liu, et al.             Expires 12 December 2026               [Page 16]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -1061,7 +949,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 19]
+Liu, et al.             Expires 12 December 2026               [Page 17]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -1077,9 +965,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 8.1.  Signature Verification
 
-   The AS signature over the evidence fields (id, user_confirmation, and
-   session_context if present) is critical for evidence integrity.
-   Implementations MUST:
+   The AS signature over the evidence fields (id and user_confirmation)
+   is critical for evidence integrity.  Implementations MUST:
 
    *  Use strong cryptographic algorithms (e.g., RS256, ES256);
 
@@ -1117,7 +1004,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 20]
+
+Liu, et al.             Expires 12 December 2026               [Page 18]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -1128,10 +1016,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    *  Using token introspection [RFC7662] to retrieve evidence details
       rather than embedding all data in the token;
 
-   *  Limiting displayed_content length to essential information;
-
-   *  Omitting OPTIONAL fields (session_context, interpretation_notes)
-      when not required.
+   *  Limiting displayed_content length to essential information.
 
 8.5.  Token-Evidence Binding
 
@@ -1171,15 +1056,15 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
    Deployments SHOULD define an evidence freshness policy that
    specifies:
 
+   *  The maximum acceptable age of an evidence record (measured from
+      the user_confirmation.timestamp to the current time);
 
 
-Liu, et al.             Expires 12 December 2026               [Page 21]
+
+Liu, et al.             Expires 12 December 2026               [Page 19]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
-
-   *  The maximum acceptable age of an evidence record (measured from
-      the user_confirmation.timestamp to the current time);
 
    *  Whether evidence freshness is evaluated relative to the token's
       iat claim or the current request time;
@@ -1226,15 +1111,16 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
    *  Avoid including personal data unless required;
 
+   *  Consider encryption for highly sensitive content.
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 22]
+
+
+Liu, et al.             Expires 12 December 2026               [Page 20]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
-
-   *  Consider encryption for highly sensitive content.
 
 9.2.  Evidence Retention
 
@@ -1251,9 +1137,8 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
    Data protection regulations such as GDPR and CCPA grant individuals
    the right to request deletion of their personal data.  Evidence
-   records, which may contain displayed_content reflecting user intent
-   and session_context containing session identifiers, can constitute
-   personal data.
+   records, which may contain displayed_content reflecting user intent,
+   can constitute personal data.
 
    However, evidence records also serve as audit artifacts required by
    financial, healthcare, and other regulated industries.
@@ -1263,52 +1148,21 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
       (e.g., using operation identifiers rather than natural-language
       descriptions that may contain PII);
 
-   *  Applying pseudonymization or hashing to session_id and
-      client_instance values before storage;
-
    *  Defining separate retention policies for the evidence record
       (which may be retained longer for audit) and the personal data
       within it (which may need to be redacted earlier).
 
    Note on redaction and signature integrity: The as_signature covers
-   the id, user_confirmation, and session_context fields as an
-   inseparable unit.  Redacting any field within these objects (e.g.,
-   removing displayed_content) invalidates the as_signature.
-   Implementations that require redaction of personal data from evidence
-   records SHOULD use the Reference strategy defined in Section 6.4
-   (Evidence in Token Exchange): issue tokens that carry only an
-   audit_trail claim with the evidence_ref, and perform redaction in the
-   AS's evidence store.  The RS then retrieves the (potentially
-   redacted) evidence record via token introspection ([RFC7662]) rather
-   than reading it directly from the token.
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 23]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
-
-9.4.  Session Context Privacy
-
-   The session_context object may contain values that can be correlated
-   with user behavior across sessions:
-
-   *  session_id: If reused or predictable, enables cross-request
-      tracking;
-
-   *  client_instance: A device fingerprint can uniquely identify the
-      user's device;
-
-   *  channel: Reveals the access method (e.g., mobile vs. web), which
-      may be sensitive in certain contexts.
-
-   Implementations SHOULD treat session_context values as confidential
-   and avoid including them in tokens that may be logged, cached, or
-   forwarded to third parties.  When session_context is not required for
-   the RS's authorization decision, it SHOULD be omitted from the token
-   and retained only in the AS's evidence store.
+   the id and user_confirmation fields as an inseparable unit.
+   Redacting any field within these objects (e.g., removing
+   displayed_content) invalidates the as_signature.  Implementations
+   that require redaction of personal data from evidence records SHOULD
+   use the Reference strategy defined in Section 6.4 (Evidence in Token
+   Exchange): issue tokens that carry only an audit_trail claim with the
+   evidence_ref, and perform redaction in the AS's evidence store.  The
+   RS then retrieves the (potentially redacted) evidence record via
+   token introspection ([RFC7662]) rather than reading it directly from
+   the token.
 
 10.  IANA Considerations
 
@@ -1316,6 +1170,13 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
    This specification registers the following claims in the "JSON Web
    Token Claims" registry:
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 21]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
 
    Claim Name:  evidence
 
@@ -1338,13 +1199,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 11.  References
 
 11.1.  Normative References
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 24]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1371,6 +1225,15 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
               DOI 10.17487/RFC7517, May 2015,
               <https://www.rfc-editor.org/info/rfc7517>.
 
+
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 22]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
+
    [RFC6819]  Lodderstedt, T., Ed., McGloin, M., and P. Hunt, "OAuth 2.0
               Threat Model and Security Considerations", RFC 6819,
               DOI 10.17487/RFC6819, January 2013,
@@ -1391,16 +1254,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
               Interchange Format", STD 90, RFC 8259,
               DOI 10.17487/RFC8259, December 2017,
               <https://www.rfc-editor.org/info/rfc8259>.
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 25]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
 
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
@@ -1427,6 +1280,16 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
               <https://www.rfc-editor.org/info/rfc9126>.
 
+
+
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 23]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
+
    [I-D.liu-oauth-rego-policy]
               Liu, D., "Rego Policy Language for OAuth 2.0", Work in
               Progress, Internet-Draft, draft-liu-oauth-rego-policy-00,
@@ -1447,16 +1310,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
               response-00, June 2026,
               <https://datatracker.ietf.org/doc/html/draft-parecki-
               oauth-jwt-grant-interaction-response-00>.
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 26]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
 
    [I-D.ietf-oauth-identity-assertion-authz-grant]
               Ying, K. and B. Campbell, "OAuth 2.0 Identity Assertion
@@ -1488,28 +1341,7 @@ Appendix A.  Complete Example
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Liu, et al.             Expires 12 December 2026               [Page 27]
+Liu, et al.             Expires 12 December 2026               [Page 24]
 
 Internet-Draft        OAuth Authorization Evidence             June 2026
 
@@ -1531,13 +1363,7 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
        "user_confirmation": {
          "displayed_content": "Add items under $50 to cart",
          "user_action": "confirmed_via_button_click",
-         "timestamp": 1731320595,
-         "interface_version": "consent-ui-v2.1"
-       },
-       "session_context": {
-         "session_id": "session_xyz789",
-         "client_instance": "dfp_abc123",
-         "channel": "mobile-app"
+         "timestamp": 1731320595
        },
        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
      },
@@ -1545,7 +1371,6 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
      "audit_trail": {
        "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
        "semantic_expansion_level": "medium",
-       "interpretation_notes": "Mapped 'cheap items' to '$50 limit'",
        "proposal_ref": "urn:uuid:proposal-xyz"
      },
 
@@ -1563,18 +1388,19 @@ Internet-Draft        OAuth Authorization Evidence             June 2026
 
                                   Figure 5
 
-
-
-Liu, et al.             Expires 12 December 2026               [Page 28]
-
-Internet-Draft        OAuth Authorization Evidence             June 2026
-
-
 Acknowledgments
 
    The authors would like to thank Brian Campbell for his valuable
    feedback and insightful discussions during the development of this
    specification.  His contributions helped shape key design decisions.
+
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 25]
+
+Internet-Draft        OAuth Authorization Evidence             June 2026
+
 
 Authors' Addresses
 
@@ -1621,4 +1447,10 @@ Authors' Addresses
 
 
 
-Liu, et al.             Expires 12 December 2026               [Page 29]
+
+
+
+
+
+
+Liu, et al.             Expires 12 December 2026               [Page 26]

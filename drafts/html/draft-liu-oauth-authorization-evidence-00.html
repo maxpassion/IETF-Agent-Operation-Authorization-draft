@@ -1361,9 +1361,6 @@ li > p:last-of-type:only-child {
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3.2.1">
                     <p id="section-toc.1-1.3.2.3.2.1.1"><a href="#section-3.3.1" class="auto internal xref">3.3.1</a>.  <a href="#name-user_confirmation-object" class="internal xref">user_confirmation Object</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3.2.2">
-                    <p id="section-toc.1-1.3.2.3.2.2.1"><a href="#section-3.3.2" class="auto internal xref">3.3.2</a>.  <a href="#name-session_context-object" class="internal xref">session_context Object</a></p>
-</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
@@ -1476,9 +1473,6 @@ li > p:last-of-type:only-child {
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
                 <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-right-to-erasure-and-audit-" class="internal xref">Right to Erasure and Audit Retention</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
-                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-session-context-privacy" class="internal xref">Session Context Privacy</a></p>
 </li>
             </ul>
 </li>
@@ -1680,13 +1674,7 @@ li > p:last-of-type:only-child {
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
-      "timestamp": 1731320595,
-      "interface_version": "consent-ui-v2.1"
-    },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "client_instance": "dfp_abc123",
-      "channel": "mobile-app"
+      "timestamp": 1731320595
     },
     "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   }
@@ -1729,12 +1717,6 @@ li > p:last-of-type:only-child {
               <td class="text-left" rowspan="1" colspan="1">object</td>
               <td class="text-left" rowspan="1" colspan="1">REQUIRED</td>
               <td class="text-left" rowspan="1" colspan="1">Details of the user's confirmation action.</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">session_context</td>
-              <td class="text-left" rowspan="1" colspan="1">object</td>
-              <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-              <td class="text-left" rowspan="1" colspan="1">Session and device context information.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">as_signature</td>
@@ -1790,53 +1772,6 @@ li > p:last-of-type:only-child {
                 <td class="text-left" rowspan="1" colspan="1">REQUIRED</td>
                 <td class="text-left" rowspan="1" colspan="1">When the confirmation occurred.</td>
               </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">interface_version</td>
-                <td class="text-left" rowspan="1" colspan="1">string</td>
-                <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-                <td class="text-left" rowspan="1" colspan="1">Version of the consent UI used.</td>
-              </tr>
-            </tbody>
-          </table>
-</div>
-</section>
-<section id="section-3.3.2">
-          <h4 id="name-session_context-object">
-<a href="#section-3.3.2" class="section-number selfRef">3.3.2. </a><a href="#name-session_context-object" class="section-name selfRef">session_context Object</a>
-          </h4>
-<span id="name-session_context-fields"></span><div id="tbl-session-context-fields">
-<table class="center" id="table-3">
-            <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
-<a href="#name-session_context-fields" class="selfRef">session_context Fields</a>
-            </caption>
-<thead>
-              <tr>
-                <th class="text-left" rowspan="1" colspan="1">Field</th>
-                <th class="text-left" rowspan="1" colspan="1">Type</th>
-                <th class="text-left" rowspan="1" colspan="1">Requirement</th>
-                <th class="text-left" rowspan="1" colspan="1">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">session_id</td>
-                <td class="text-left" rowspan="1" colspan="1">string</td>
-                <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-                <td class="text-left" rowspan="1" colspan="1">OAuth session identifier.</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">client_instance</td>
-                <td class="text-left" rowspan="1" colspan="1">string</td>
-                <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-                <td class="text-left" rowspan="1" colspan="1">Device/client instance fingerprint.</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">channel</td>
-                <td class="text-left" rowspan="1" colspan="1">string</td>
-                <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-                <td class="text-left" rowspan="1" colspan="1">Authorization channel (mobile, web, etc.).</td>
-              </tr>
             </tbody>
           </table>
 </div>
@@ -1869,9 +1804,6 @@ li > p:last-of-type:only-child {
           <li class="normal" id="section-3.4-4.2">
             <code>user_confirmation</code> (entire object)<a href="#section-3.4-4.2" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-3.4-4.3">
-            <code>session_context</code> (if present)<a href="#section-3.4-4.3" class="pilcrow">¶</a>
-</li>
         </ul>
 <p id="section-3.4-5">
           The <code>as_signature</code> field itself MUST be excluded from the
@@ -1888,38 +1820,31 @@ li > p:last-of-type:only-child {
             Create a new JSON object containing only the
             <code>id</code> and <code>user_confirmation</code> fields
             copied from the <code>evidence</code> object.  No other
-            fields from the <code>evidence</code> object are included
-            in this step.<a href="#section-3.4-7.1" class="pilcrow">¶</a>
+            fields from the <code>evidence</code> object are included.<a href="#section-3.4-7.1" class="pilcrow">¶</a>
 </li>
           <li id="section-3.4-7.2">
-            If the <code>session_context</code> field is present in
-            the <code>evidence</code> object, add it to the JSON
-            object created in Step 1.  If <code>session_context</code>
-            is absent, skip this step.<a href="#section-3.4-7.2" class="pilcrow">¶</a>
-</li>
-          <li id="section-3.4-7.3">
             Apply the JSON Canonicalization Scheme (JCS) as defined
             in <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> to the JSON object from the
-            previous step, producing a deterministic byte string.<a href="#section-3.4-7.3" class="pilcrow">¶</a>
+            previous step, producing a deterministic byte string.<a href="#section-3.4-7.2" class="pilcrow">¶</a>
 </li>
-          <li id="section-3.4-7.4">
+          <li id="section-3.4-7.3">
             Compute a detached JWS (Compact Serialization) over
-            the JCS output from Step 3 using the AS's private
+            the JCS output from Step 2 using the AS's private
             signing key.  The resulting value
             (<code>header..signature</code>) is stored in the
             <code>as_signature</code> field of the <code>evidence</code>
-            object.<a href="#section-3.4-7.4" class="pilcrow">¶</a>
+            object.<a href="#section-3.4-7.3" class="pilcrow">¶</a>
 </li>
         </ol>
 <p id="section-3.4-8">
           To verify an <code>as_signature</code>, the verifier
-          reconstructs the JCS input by performing Steps 1 through 3 above
+          reconstructs the JCS input by performing Steps 1 and 2 above
           on the received <code>evidence</code> object (excluding the
           <code>as_signature</code> field), then verifies the detached
           JWS using the AS's public key.  Any extension fields
           present in the <code>evidence</code> object beyond
           <code>id</code>, <code>user_confirmation</code>,
-          <code>session_context</code>, and <code>as_signature</code>
+          and <code>as_signature</code>
           MUST NOT be included in the JCS input and therefore
           are not covered by the signature.<a href="#section-3.4-8" class="pilcrow">¶</a></p>
 <p id="section-3.4-9">
@@ -1980,7 +1905,6 @@ li > p:last-of-type:only-child {
   "audit_trail": {
     "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
-    "interpretation_notes": "Mapped 'cheap' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   }
 }
@@ -1993,9 +1917,9 @@ li > p:last-of-type:only-child {
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-field-definitions-2" class="section-name selfRef">Field Definitions</a>
         </h3>
 <span id="name-audit_trail-claim-fields"></span><div id="tbl-audit-trail-fields">
-<table class="center" id="table-4">
+<table class="center" id="table-3">
           <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#table-3" class="selfRef">Table 3</a>:
 <a href="#name-audit_trail-claim-fields" class="selfRef">audit_trail Claim Fields</a>
           </caption>
 <thead>
@@ -2018,12 +1942,6 @@ li > p:last-of-type:only-child {
               <td class="text-left" rowspan="1" colspan="1">string</td>
               <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
               <td class="text-left" rowspan="1" colspan="1">Degree of interpretation applied (none, low, medium, high).</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">interpretation_notes</td>
-              <td class="text-left" rowspan="1" colspan="1">string</td>
-              <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-              <td class="text-left" rowspan="1" colspan="1">Human-readable notes about semantic mapping.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">proposal_ref</td>
@@ -2108,9 +2026,9 @@ li > p:last-of-type:only-child {
 <p id="section-5-1">
         The evidence and audit trail claims serve several important purposes:<a href="#section-5-1" class="pilcrow">¶</a></p>
 <span id="name-purposes-of-authorization-e"></span><div id="tbl-purposes">
-<table class="center" id="table-5">
+<table class="center" id="table-4">
         <caption>
-<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#table-4" class="selfRef">Table 4</a>:
 <a href="#name-purposes-of-authorization-e" class="selfRef">Purposes of Authorization Evidence</a>
         </caption>
 <thead>
@@ -2246,9 +2164,9 @@ Client/Agent          Authorization Server              User
             Each field in the <code>evidence</code> claim corresponds to
             a specific event during the consent interaction:<a href="#section-6.1.2-1" class="pilcrow">¶</a></p>
 <span id="name-consent-ui-event-to-evidenc"></span><div id="tbl-consent-mapping">
-<table class="center" id="table-6">
+<table class="center" id="table-5">
             <caption>
-<a href="#table-6" class="selfRef">Table 6</a>:
+<a href="#table-5" class="selfRef">Table 5</a>:
 <a href="#name-consent-ui-event-to-evidenc" class="selfRef">Consent UI Event to Evidence Field Mapping</a>
             </caption>
 <thead>
@@ -2282,38 +2200,6 @@ Client/Agent          Authorization Server              User
 </td>
                 <td class="text-left" rowspan="1" colspan="1">Server-side time when the user's action was
                   received</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Consent UI version</td>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>interface_version</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">Version identifier of the consent interface
-                  used</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Session established</td>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>session_id</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">OAuth session identifier for this consent
-                  interaction</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Client device detected</td>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>client_instance</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">Device fingerprint or client instance
-                  identifier</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Access channel detected</td>
-                <td class="text-left" rowspan="1" colspan="1">
-                  <code>channel</code>
-</td>
-                <td class="text-left" rowspan="1" colspan="1">How the user accessed the consent UI (web,
-                  mobile app, etc.)</td>
               </tr>
             </tbody>
           </table>
@@ -2364,11 +2250,7 @@ Client/Agent          Authorization Server              User
 </li>
                 <li class="normal" id="section-6.1.3-2.4.2.3">
                   <code>timestamp</code>: the server time of the
-                  click;<a href="#section-6.1.3-2.4.2.3" class="pilcrow">¶</a>
-</li>
-                <li class="normal" id="section-6.1.3-2.4.2.4">
-                  <code>session_context</code>: the session ID, device
-                  fingerprint, and channel (browser).<a href="#section-6.1.3-2.4.2.4" class="pilcrow">¶</a>
+                  click.<a href="#section-6.1.3-2.4.2.3" class="pilcrow">¶</a>
 </li>
               </ul>
 </li>
@@ -2477,9 +2359,8 @@ AI Agent          External AS                      User
             Generate a unique evidence identifier;<a href="#section-6.2-2.3" class="pilcrow">¶</a>
 </li>
           <li id="section-6.2-2.4">
-            Sign the evidence fields (id, user_confirmation, and
-            session_context if present) with the AS's private key using
-            JCS canonicalization;<a href="#section-6.2-2.4" class="pilcrow">¶</a>
+            Sign the evidence fields (id and user_confirmation)
+            with the AS's private key using JCS canonicalization;<a href="#section-6.2-2.4" class="pilcrow">¶</a>
 </li>
           <li id="section-6.2-2.5">
             Include the evidence claim in the access token.<a href="#section-6.2-2.5" class="pilcrow">¶</a>
@@ -2685,8 +2566,8 @@ AI Agent          External AS                      User
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-signature-verification" class="section-name selfRef">Signature Verification</a>
         </h3>
 <p id="section-8.1-1">
-          The AS signature over the evidence fields (id, user_confirmation, 
-          and session_context if present) is critical for evidence integrity.
+          The AS signature over the evidence fields (id and
+          user_confirmation) is critical for evidence integrity.
           Implementations MUST:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.1-2.1">Use strong cryptographic algorithms (e.g., RS256, ES256);<a href="#section-8.1-2.1" class="pilcrow">¶</a>
@@ -2741,9 +2622,7 @@ AI Agent          External AS                      User
           <li class="normal" id="section-8.4-2.2">Using token introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> to retrieve evidence
               details rather than embedding all data in the token;<a href="#section-8.4-2.2" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-8.4-2.3">Limiting displayed_content length to essential information;<a href="#section-8.4-2.3" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-8.4-2.4">Omitting OPTIONAL fields (session_context, interpretation_notes) when not required.<a href="#section-8.4-2.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-8.4-2.3">Limiting displayed_content length to essential information.<a href="#section-8.4-2.3" class="pilcrow">¶</a>
 </li>
         </ul>
 </section>
@@ -2902,8 +2781,7 @@ AI Agent          External AS                      User
           Data protection regulations such as GDPR and CCPA grant
           individuals the right to request deletion of their personal
           data.  Evidence records, which may contain
-          <code>displayed_content</code> reflecting user intent and
-          <code>session_context</code> containing session identifiers,
+          <code>displayed_content</code> reflecting user intent,
           can constitute personal data.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 <p id="section-9.3-2">
           However, evidence records also serve as audit artifacts
@@ -2916,21 +2794,16 @@ AI Agent          External AS                      User
             natural-language descriptions that may contain PII);<a href="#section-9.3-3.1" class="pilcrow">¶</a>
 </li>
           <li class="normal" id="section-9.3-3.2">
-            Applying pseudonymization or hashing to
-            <code>session_id</code> and <code>client_instance</code> values
-            before storage;<a href="#section-9.3-3.2" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-9.3-3.3">
             Defining separate retention policies for the evidence
             record (which may be retained longer for audit) and the
             personal data within it (which may need to be redacted
-            earlier).<a href="#section-9.3-3.3" class="pilcrow">¶</a>
+            earlier).<a href="#section-9.3-3.2" class="pilcrow">¶</a>
 </li>
         </ul>
 <p id="section-9.3-4">
           Note on redaction and signature integrity: The
-          <code>as_signature</code> covers the <code>id</code>,
-          <code>user_confirmation</code>, and <code>session_context</code>
+          <code>as_signature</code> covers the <code>id</code> and
+          <code>user_confirmation</code>
           fields as an inseparable unit.  Redacting any field within
           these objects (e.g., removing <code>displayed_content</code>)
           invalidates the <code>as_signature</code>.  Implementations
@@ -2943,35 +2816,6 @@ AI Agent          External AS                      User
           (potentially redacted) evidence record via token
           introspection (<span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>) rather than
           reading it directly from the token.<a href="#section-9.3-4" class="pilcrow">¶</a></p>
-</section>
-<section id="section-9.4">
-        <h3 id="name-session-context-privacy">
-<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-session-context-privacy" class="section-name selfRef">Session Context Privacy</a>
-        </h3>
-<p id="section-9.4-1">
-          The <code>session_context</code> object may contain values that
-          can be correlated with user behavior across sessions:<a href="#section-9.4-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9.4-2.1">
-            <code>session_id</code>: If reused or predictable, enables
-            cross-request tracking;<a href="#section-9.4-2.1" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-9.4-2.2">
-            <code>client_instance</code>: A device fingerprint can
-            uniquely identify the user's device;<a href="#section-9.4-2.2" class="pilcrow">¶</a>
-</li>
-          <li class="normal" id="section-9.4-2.3">
-            <code>channel</code>: Reveals the access method (e.g., mobile
-            vs. web), which may be sensitive in certain contexts.<a href="#section-9.4-2.3" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-9.4-3">
-          Implementations SHOULD treat <code>session_context</code> values
-          as confidential and avoid including them in tokens that may
-          be logged, cached, or forwarded to third parties.  When
-          <code>session_context</code> is not required for the RS's
-          authorization decision, it SHOULD be omitted from the token
-          and retained only in the AS's evidence store.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
 </section>
 </section>
 </div>
@@ -3171,13 +3015,7 @@ AI Agent          External AS                      User
     "user_confirmation": {
       "displayed_content": "Add items under $50 to cart",
       "user_action": "confirmed_via_button_click",
-      "timestamp": 1731320595,
-      "interface_version": "consent-ui-v2.1"
-    },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "client_instance": "dfp_abc123",
-      "channel": "mobile-app"
+      "timestamp": 1731320595
     },
     "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   },
@@ -3185,7 +3023,6 @@ AI Agent          External AS                      User
   "audit_trail": {
     "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
-    "interpretation_notes": "Mapped 'cheap items' to '$50 limit'",
     "proposal_ref": "urn:uuid:proposal-xyz"
   },
 
