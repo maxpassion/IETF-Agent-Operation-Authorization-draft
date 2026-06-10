@@ -75,8 +75,9 @@
         In traditional OAuth 2.0 <xref target="RFC6749"/> flows, the Authorization Server records user consent
         internally, but this information is not typically conveyed to Resource Servers
         or included in access tokens. For many use cases, this is sufficient. However,
-        emerging scenarios—particularly those involving AI agents acting autonomously
-        on behalf of users—require stronger guarantees about user intent and consent.
+        emerging scenarios, particularly those involving AI agents
+        acting autonomously on behalf of users, require stronger
+        guarantees about user intent and consent.
       </t>
 
       <t>
@@ -439,7 +440,7 @@
 
         <t>
           To verify an <tt>as_signature</tt>, the verifier
-          reconstructs the JCS input by performing Steps 1–3 above
+          reconstructs the JCS input by performing Steps 1 through 3 above
           on the received <tt>evidence</tt> object (excluding the
           <tt>as_signature</tt> field), then verifies the detached
           JWS using the AS's public key.  Any extension fields
@@ -541,7 +542,7 @@
               <td>proposal_ref</td>
               <td>URI</td>
               <td>OPTIONAL</td>
-              <td>Reference to the original authorization proposal —
+              <td>Reference to the original authorization proposal,
                 the agent's initial request describing the intended
                 operation before the AS applied policy evaluation,
                 scope reduction, or user consent modifications.
@@ -697,9 +698,9 @@
               providing biometric input, entering a PIN).
             </li>
             <li>
-              The AS captures the interaction details — what was
+              The AS captures the interaction details (what was
               displayed, what action the user took, when, and in
-              what session context — and constructs the
+              what session context) and constructs the
               <tt>evidence</tt> object as defined in
               <xref target="evidence-claim"/>.
             </li>

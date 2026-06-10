@@ -1523,8 +1523,9 @@ li > p:last-of-type:only-child {
         In traditional OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> flows, the Authorization Server records user consent
         internally, but this information is not typically conveyed to Resource Servers
         or included in access tokens. For many use cases, this is sufficient. However,
-        emerging scenarios—particularly those involving AI agents acting autonomously
-        on behalf of users—require stronger guarantees about user intent and consent.<a href="#section-1-1" class="pilcrow">¶</a></p>
+        emerging scenarios, particularly those involving AI agents
+        acting autonomously on behalf of users, require stronger
+        guarantees about user intent and consent.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">
         This specification addresses the need for:<a href="#section-1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1912,7 +1913,7 @@ li > p:last-of-type:only-child {
         </ol>
 <p id="section-3.4-8">
           To verify an <code>as_signature</code>, the verifier
-          reconstructs the JCS input by performing Steps 1–3 above
+          reconstructs the JCS input by performing Steps 1 through 3 above
           on the received <code>evidence</code> object (excluding the
           <code>as_signature</code> field), then verifies the detached
           JWS using the AS's public key.  Any extension fields
@@ -2028,7 +2029,7 @@ li > p:last-of-type:only-child {
               <td class="text-left" rowspan="1" colspan="1">proposal_ref</td>
               <td class="text-left" rowspan="1" colspan="1">URI</td>
               <td class="text-left" rowspan="1" colspan="1">OPTIONAL</td>
-              <td class="text-left" rowspan="1" colspan="1">Reference to the original authorization proposal —
+              <td class="text-left" rowspan="1" colspan="1">Reference to the original authorization proposal,
                 the agent's initial request describing the intended
                 operation before the AS applied policy evaluation,
                 scope reduction, or user consent modifications.
@@ -2201,9 +2202,9 @@ li > p:last-of-type:only-child {
               providing biometric input, entering a PIN).<a href="#section-6.1.1-2.3" class="pilcrow">¶</a>
 </li>
             <li id="section-6.1.1-2.4">
-              The AS captures the interaction details — what was
+              The AS captures the interaction details (what was
               displayed, what action the user took, when, and in
-              what session context — and constructs the
+              what session context) and constructs the
               <code>evidence</code> object as defined in
               <a href="#evidence-claim" class="auto internal xref">Section 3</a>.<a href="#section-6.1.1-2.4" class="pilcrow">¶</a>
 </li>
