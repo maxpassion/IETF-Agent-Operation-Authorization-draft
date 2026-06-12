@@ -569,8 +569,13 @@ allow if {
         <t>
           The <tt>context</tt> field within <tt>rego_policy</tt> provides
           additional structured data that the client wishes to include
-          at authorization request time.
+          at authorization request time. Typical context data includes:
         </t>
+
+        <ul>
+          <li>User identity: the principal on whose behalf the agent operates (e.g., user ID, organizational role);</li>
+          <li>Execution environment: runtime conditions such as source IP address, machine identifier, or network segment from which the request originates.</li>
+        </ul>
 
         <t>
           The <tt>input</tt> object used for policy evaluation is
@@ -1258,6 +1263,14 @@ Content-Type: application/json
     "resource": {
       "type": "product",
       "id": "product_001"
+    },
+    "context": {
+      "user": {
+        "id": "user_12345",
+        "role": "analyst"
+      },
+      "source_ip": "192.0.2.45",
+      "machine_id": "workstation-7a3f"
     }
   }
 }

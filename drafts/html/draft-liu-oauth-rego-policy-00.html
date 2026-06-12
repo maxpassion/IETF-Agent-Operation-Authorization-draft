@@ -2062,8 +2062,14 @@ allow if {
 <p id="section-3.3-1">
           The <code>context</code> field within <code>rego_policy</code> provides
           additional structured data that the client wishes to include
-          at authorization request time.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
-<p id="section-3.3-2">
+          at authorization request time. Typical context data includes:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.3-2.1">User identity: the principal on whose behalf the agent operates (e.g., user ID, organizational role);<a href="#section-3.3-2.1" class="pilcrow">¶</a>
+</li>
+          <li class="normal" id="section-3.3-2.2">Execution environment: runtime conditions such as source IP address, machine identifier, or network segment from which the request originates.<a href="#section-3.3-2.2" class="pilcrow">¶</a>
+</li>
+        </ul>
+<p id="section-3.3-3">
           The <code>input</code> object used for policy evaluation is
           constructed by the Resource Server (the evaluating party)
           and is not limited to the <code>context</code> field.
@@ -2071,23 +2077,23 @@ allow if {
           SHOULD merge the <code>context</code> data under a
           <code>context</code> key within <code>input</code>
           (e.g., <code>input.context</code>) to avoid key collisions
-          with other input categories. Common input categories include:<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+          with other input categories. Common input categories include:<a href="#section-3.3-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.3-3.1">user: User identity and attributes (from token claims or AS data);<a href="#section-3.3-3.1" class="pilcrow">¶</a>
+<li class="normal" id="section-3.3-4.1">user: User identity and attributes (from token claims or AS data);<a href="#section-3.3-4.1" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-3.3-3.2">client: Client/agent identity and metadata (from client registration);<a href="#section-3.3-3.2" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-4.2">client: Client/agent identity and metadata (from client registration);<a href="#section-3.3-4.2" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-3.3-3.3">action: Requested action details (from the API request);<a href="#section-3.3-3.3" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-4.3">action: Requested action details (from the API request);<a href="#section-3.3-4.3" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-3.3-3.4">resource: Target resource attributes (from the resource server);<a href="#section-3.3-3.4" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-4.4">resource: Target resource attributes (from the resource server);<a href="#section-3.3-4.4" class="pilcrow">¶</a>
 </li>
-          <li class="normal" id="section-3.3-3.5">environment: Contextual conditions (time, location, device).<a href="#section-3.3-3.5" class="pilcrow">¶</a>
+          <li class="normal" id="section-3.3-4.5">environment: Contextual conditions (time, location, device).<a href="#section-3.3-4.5" class="pilcrow">¶</a>
 </li>
         </ul>
-<p id="section-3.3-4">
+<p id="section-3.3-5">
           The specific <code>input</code> structure is determined by 
           bilateral agreement between the client and the resource 
-          server, typically documented in developer integration guides.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+          server, typically documented in developer integration guides.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <section id="section-3.4">
@@ -2763,6 +2769,14 @@ Content-Type: application/json
     "resource": {
       "type": "product",
       "id": "product_001"
+    },
+    "context": {
+      "user": {
+        "id": "user_12345",
+        "role": "analyst"
+      },
+      "source_ip": "192.0.2.45",
+      "machine_id": "workstation-7a3f"
     }
   }
 }
