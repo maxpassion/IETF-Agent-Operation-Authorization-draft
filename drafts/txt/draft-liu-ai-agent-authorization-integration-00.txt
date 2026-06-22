@@ -11,7 +11,7 @@ Expires: 12 December 2026                                    S. Krishnan
                                                                     Okta
                                                                   H. Xue
                                                            Alibaba Group
-                                                               June 2026
+                                                            10 June 2026
 
 
               AI Agent Authorization Integration Framework
@@ -40,7 +40,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 December 2026.
+   This Internet-Draft will expire on 12 December 2026.
 
 Copyright Notice
 
@@ -86,7 +86,7 @@ Table of Contents
      6.3.  Consent-Only Flow . . . . . . . . . . . . . . . . . . . .  16
    7.  Progressive Deployment  . . . . . . . . . . . . . . . . . . .  16
      7.1.  Identity Deployment Levels  . . . . . . . . . . . . . . .  16
-       7.1.1.  Level 0: Self-Issued Identity . . . . . . . . . . . .  16
+       7.1.1.  Level 0: Self-Issued Identity . . . . . . . . . . . .  17
        7.1.2.  Level 1: WIMSE Workload Identity  . . . . . . . . . .  17
        7.1.3.  Level 2: Enterprise Identity  . . . . . . . . . . . .  17
      7.2.  Token Deployment Levels . . . . . . . . . . . . . . . . .  17
@@ -539,15 +539,15 @@ Internet-Draft           AI Agent Authorization                June 2026
       evidence record and the semantic expansion level.  Defined in
       [I-D.liu-oauth-authorization-evidence].
 
+   *  *authorization_details*: Carries the Rego policy authorization
+      data (rego_policy type) via Rich Authorization Requests
+      ([RFC9396]), defining what operations the agent is permitted to
+      perform.  Defined in [I-D.liu-oauth-rego-policy].
 
-
-
-
-
-
-
-
-
+   *  *delegation_chain*: Records the chain of delegation hops when
+      authorization is transferred between agents, with cryptographic
+      signatures for each hop.  Only present in delegated scenarios.
+      Defined in [I-D.liu-oauth-chain-delegation].
 
 
 
@@ -594,7 +594,7 @@ Internet-Draft           AI Agent Authorization                June 2026
        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
        "user_confirmation": {
          "displayed_content": "Add items under $50 to cart",
-         "user_action": "confirmed_via_button_click",
+         "user_action": "button_click",
          "timestamp": 1731320595
        },
        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
@@ -856,18 +856,24 @@ Internet-Draft           AI Agent Authorization                June 2026
 6.1.  Redirect-Based Consent
 
    Traditional OAuth redirect flow where the agent redirects the user to
-   the AS's consent page.
+   the AS's consent page.  This is the most common consent mechanism and
+   is suitable for web-based agents that can launch a browser for user
+   interaction.
 
 6.2.  CIBA-Based Consent
 
    Client-Initiated Backchannel Authentication (CIBA) [CIBA] for out-of-
    band consent, useful when the agent cannot redirect the user.
+   Typical scenarios include voice assistants, IoT devices, and mobile
+   applications where the user completes consent on a separate device.
 
 6.3.  Consent-Only Flow
 
    When the user has a valid, non-expired ID Token and the agent's
    identity is already trusted, the AS MAY skip re-authentication and
-   only prompt for consent to the specific operation.
+   only prompt for consent to the specific operation.  This mode reduces
+   user friction for repeat operations while maintaining explicit
+   consent for each authorized action.
 
 7.  Progressive Deployment
 
@@ -881,12 +887,6 @@ Internet-Draft           AI Agent Authorization                June 2026
    Implementations MAY deploy agent identity at three progressive
    levels:
 
-7.1.1.  Level 0: Self-Issued Identity
-
-   The agent generates its own key pair and self-issues identity
-   assertions.  Suitable for development, testing, and low-trust
-   scenarios such as personal or small-team agents.
-
 
 
 
@@ -897,6 +897,12 @@ Liu, et al.             Expires 12 December 2026               [Page 16]
 
 Internet-Draft           AI Agent Authorization                June 2026
 
+
+7.1.1.  Level 0: Self-Issued Identity
+
+   The agent generates its own key pair and self-issues identity
+   assertions.  Suitable for development, testing, and low-trust
+   scenarios such as personal or small-team agents.
 
 7.1.2.  Level 1: WIMSE Workload Identity
 
@@ -939,12 +945,6 @@ Internet-Draft           AI Agent Authorization                June 2026
 
    The combination of identity and token levels creates a deployment
    matrix:
-
-
-
-
-
-
 
 
 
@@ -1716,7 +1716,7 @@ A.3.  Access Token
        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
        "user_confirmation": {
          "displayed_content": "Add items under $50 to cart",
-         "user_action": "confirmed_via_button_click",
+         "user_action": "button_click",
          "timestamp": 1731320595
        },
        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."

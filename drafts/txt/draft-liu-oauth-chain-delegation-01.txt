@@ -2489,9 +2489,9 @@ Internet-Draft           OAuth Delegation Chain                June 2026
               Schwenkschuster, A., Kasselman, P., Burgin, K., Jenkins,
               M. J., Campbell, B., and A. Parecki, "OAuth Identity and
               Authorization Chaining Across Domains", Work in Progress,
-              Internet-Draft, draft-ietf-oauth-identity-chaining-14, 2
+              Internet-Draft, draft-ietf-oauth-identity-chaining-15, 19
               June 2026, <https://datatracker.ietf.org/doc/html/draft-
-              ietf-oauth-identity-chaining-14>.
+              ietf-oauth-identity-chaining-15>.
 
    [I-D.parecki-oauth-jwt-grant-interaction-response]
               Parecki, A., Campbell, B., and D. Liu, "JWT Authorization
@@ -2594,7 +2594,7 @@ Internet-Draft           OAuth Delegation Chain                June 2026
       "delegatee_id": "wit://agent-c.example/sha256.ccc333...",
       "as_id": "https://as.example.com",
       "delegation_timestamp": 1734517800,
-      "root_evidence_ref": "evidence-root",
+      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "delegated_policy": {
         "type": "rego",
         "content": "package agent\ndefault allow = false\n\nallow if {\n  input.action == \"inventory_check\"\n  input.item_id == \"123\"\n}",
@@ -2609,7 +2609,7 @@ Internet-Draft           OAuth Delegation Chain                June 2026
       "delegatee_id": "wit://agent-b.example/sha256.bbb222...",
       "as_id": "https://as.example.com",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "evidence-root",
+      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "delegated_policy": {
         "type": "rego",
         "content": "package agent\ndefault allow = false\n\nallow if {\n  input.action == \"cart_op\"\n}\nallow if {\n  input.action == \"inventory_op\"\n}",
@@ -2622,10 +2622,10 @@ Internet-Draft           OAuth Delegation Chain                June 2026
   ],
 
   "evidence": {
-    "id": "evidence-root",
+    "id": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "user_confirmation": {
       "displayed_content": "Allow shopping assistant to manage cart",
-      "user_action": "confirmed_via_button_click",
+      "user_action": "button_click",
 
 
 
@@ -2634,14 +2634,9 @@ Liu, et al.             Expires 11 December 2026               [Page 47]
 Internet-Draft           OAuth Delegation Chain                June 2026
 
 
-      "timestamp": 1734516000,
-      "interface_version": "consent-ui-v2.1"
+      "timestamp": 1734516000
     },
-    "session_context": {
-      "session_id": "session_xyz789",
-      "channel": "mobile-app"
-    },
-    "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDw..."
+    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDw..."
   }
 }
 
@@ -2682,6 +2677,11 @@ Appendix B.  Validation Checklist
 
    *Token structure (per hop):*
 
+   *  iss: Authorization Server identifier
+
+   *  sub: original user (preserved from root)
+
+   *  act.sub: delegatee agent identifier
 
 
 
@@ -2689,12 +2689,6 @@ Liu, et al.             Expires 11 December 2026               [Page 48]
 
 Internet-Draft           OAuth Delegation Chain                June 2026
 
-
-   *  iss: Authorization Server identifier
-
-   *  sub: original user (preserved from root)
-
-   *  act.sub: delegatee agent identifier
 
    *  delegation_chain: accumulated delegation records
 
@@ -2739,6 +2733,12 @@ Authors' Addresses
    Email: hongru.zhr@alibaba-inc.com
 
 
+   Suresh Krishnan
+   Cisco
+   Email: suresh.krishnan@gmail.com
+
+
+
 
 
 Liu, et al.             Expires 11 December 2026               [Page 49]
@@ -2746,14 +2746,14 @@ Liu, et al.             Expires 11 December 2026               [Page 49]
 Internet-Draft           OAuth Delegation Chain                June 2026
 
 
-   Suresh Krishnan
-   Cisco
-   Email: suresh.krishnan@gmail.com
-
-
    Aaron Parecki
    Okta
    Email: aaron@parecki.com
+
+
+
+
+
 
 
 

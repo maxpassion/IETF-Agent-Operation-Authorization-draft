@@ -60,11 +60,13 @@
 
     <abstract>
       <t>
-        This specification defines JWT claims for including authorization evidence 
-        and audit trail information in OAuth 2.0 access tokens. These claims enable 
-        cryptographic proof of user consent, supporting accountability, compliance, 
-        and dispute resolution in scenarios where autonomous agents act on behalf 
-        of users.
+        This specification defines an authorization details type for including
+        authorization evidence and audit trail information in OAuth 2.0 access
+        tokens using the Rich Authorization Requests (RAR) framework. When an
+        Authorization Server processes user consent, it enriches the authorization
+        details with cryptographic proof of user confirmation, supporting
+        accountability, compliance, and dispute resolution in scenarios where
+        autonomous agents act on behalf of users.
       </t>
     </abstract>
   </front>
@@ -98,15 +100,18 @@
           questions arise about what was authorized;
         </li>
         <li>
-          Regulatory compliance: Documentation required by 
-          regulations in finance, healthcare, and other domains.
+          Regulatory compliance: Documentation required by applicable
+          regulations.
         </li>
       </ul>
 
       <t>
-        This specification defines two JWT claims: <tt>evidence</tt> for user
-        confirmation records, and <tt>audit_trail</tt> for semantic traceability
-        metadata.
+        This specification defines an authorization details type that leverages
+        the Rich Authorization Requests (RAR) <xref target="RFC9396"/> framework
+        to convey authorization evidence. When a client includes an
+        <tt>authorization_evidence</tt> authorization details object in its
+        request, the Authorization Server enriches it during the consent process
+        with cryptographic proof of user confirmation.
       </t>
 
       <t>
@@ -124,44 +129,48 @@
         </t>
       </section>
 
-      <section title="Applicability">
+      <section title="Relationship to Rich Authorization Requests">
         <t>
-          This specification defines general-purpose JWT claims that 
-          MAY be used with various OAuth 2.0 authorization flows, 
-          including but not limited to:
+          This specification builds on the Rich Authorization Requests (RAR)
+          framework <xref target="RFC9396"/>. In RAR, clients include
+          <tt>authorization_details</tt> in authorization requests to convey
+          fine-grained authorization data. RAR Section 7.1 defines an "Enriched
+          Response" mechanism where the Authorization Server dynamically
+          populates fields in the <tt>authorization_details</tt> based on user
+          consent decisions or policy rules.
         </t>
 
-        <ul>
+        <t>
+          The <tt>authorization_evidence</tt> type defined in this specification
+          follows this enriched response pattern:
+        </t>
 
+        <ol>
           <li>
-            JWT Authorization Grant with Interaction Response
-            <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
+            The client includes an <tt>authorization_evidence</tt> authorization
+            details object in its request, typically with minimal or placeholder
+            fields indicating that evidence is requested.
           </li>
-
           <li>
-            Authorization Code Grant (with or without PAR
-            <xref target="RFC9126"/>);
+            During the consent interaction, the AS presents the requested
+            operation to the user and captures the user's confirmation action.
           </li>
-          
           <li>
-            Client Credentials Grant;
+            The AS enriches the <tt>authorization_evidence</tt> object with the
+            complete evidence record, including <tt>user_confirmation</tt>
+            details and the AS's cryptographic signature.
           </li>
-          
           <li>
-            Token Exchange <xref target="RFC8693"/>;
+            The enriched authorization details is included in the token response
+            and bound to the issued access token.
           </li>
-
-          <li>
-            Any other OAuth 2.0 grant type that involves user
-            authorization.
-          </li>
-        </ul>
+        </ol>
 
         <t>
-          Different authorization flows may have different security 
-          considerations when using this specification. Implementations 
-          SHOULD carefully evaluate the security implications based on 
-          their specific deployment scenario.
+          This approach ensures that authorization evidence is structured as a
+          first-class authorization detail rather than a standalone JWT claim,
+          enabling consistent handling across OAuth flows and composability with
+          other authorization details types.
         </t>
       </section>
     </section>
@@ -200,27 +209,92 @@
       </dl>
     </section>
 
-    <section anchor="evidence-claim" title="The evidence Claim">
+    <section anchor="evidence-claim" title="The authorization_evidence Authorization Details Type">
       <t>
-        The <tt>evidence</tt> claim contains a record of the user's confirmation
-        action during the authorization process. It is included in JWT access
-        tokens <xref target="RFC7519"/> to provide verifiable proof of user consent.
+        The <tt>authorization_evidence</tt> authorization details type contains
+        a record of the user's confirmation action during the authorization
+        process. Following the RAR enriched response pattern
+        (<xref target="RFC9396"/> Section 7.1), the client requests this type
+        and the AS enriches it with the complete evidence record.
       </t>
 
-      <section title="Claim Definition">
+      <section title="Type Definition">
         <dl>
-          <dt>Claim Name:</dt>
-          <dd>evidence</dd>
-
-          <dt>Claim Type:</dt>
-          <dd>Object</dd>
+          <dt>Type Identifier:</dt>
+          <dd>authorization_evidence</dd>
 
           <dt>Usage:</dt>
-          <dd>Access tokens</dd>
+          <dd>authorization_details in authorization requests and token responses</dd>
         </dl>
       </section>
 
-      <section title="Structure">
+      <section title="Client Request">
+        <t>
+          A client requests authorization evidence by including an
+          <tt>authorization_evidence</tt> authorization details object in its
+          authorization request. The client typically includes minimal fields,
+          indicating that evidence is requested:
+        </t>
+
+        <figure>
+          <artwork name="Client Request" type="json"><![CDATA[
+{
+  "authorization_details": [
+    {
+      "type": "authorization_evidence"
+    }
+  ]
+}
+          ]]></artwork>
+        </figure>
+
+        <t>
+          The client MAY include optional fields to indicate preferences, such
+          as specific audit trail requirements. However, the AS has final authority over the evidence
+          content based on the actual consent interaction.
+        </t>
+      </section>
+
+      <section title="Enriched Response">
+        <t>
+          After the user completes the consent interaction, the AS enriches the
+          <tt>authorization_evidence</tt> object with the complete evidence
+          record. The enriched authorization details is included in the token
+          response:
+        </t>
+
+        <figure>
+          <artwork name="Enriched Response" type="json"><![CDATA[
+{
+  "authorization_details": [
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
+    }
+  ]
+}
+          ]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Evidence Object Structure">
+        <t>
+          The <tt>evidence</tt> object within the <tt>authorization_evidence</tt>
+          authorization details type contains the following fields:
+        </t>
+
         <figure>
           <artwork name="evidence structure" type="json"><![CDATA[
 {
@@ -240,7 +314,7 @@
 
       <section title="Field Definitions">
         <table anchor="tbl-evidence-fields">
-          <name>evidence Claim Fields</name>
+          <name>Evidence Object Fields</name>
           <thead>
             <tr>
               <th>Field</th>
@@ -407,39 +481,25 @@
           the AS through a verifiable mechanism (e.g., published in the
           AS's JWKS endpoint as defined in <xref target="RFC7517"/>).
           Using a dedicated evidence signing key enables independent key
-          rotation for evidence records without affecting token
-          validation, which is RECOMMENDED for deployments where evidence
-          records have longer retention periods than access tokens.
+          rotation without affecting token validation.
         </t>
       </section>
     </section>
 
-    <section anchor="audit-trail-claim" title="The audit_trail Claim">
+    <section anchor="audit-trail-claim" title="The audit_trail Sub-object">
       <t>
-        The <tt>audit_trail</tt> claim provides metadata for semantic traceability, 
-        enabling analysis of how user intent was interpreted and translated into 
-        authorized operations.
+        The <tt>audit_trail</tt> sub-object provides metadata for semantic
+        traceability, enabling analysis of how user intent was interpreted and
+        translated into authorized operations. It is included within the
+        <tt>evidence</tt> object in the <tt>authorization_evidence</tt>
+        authorization details type.
       </t>
-
-      <section title="Claim Definition">
-        <dl>
-          <dt>Claim Name:</dt>
-          <dd>audit_trail</dd>
-
-          <dt>Claim Type:</dt>
-          <dd>Object</dd>
-
-          <dt>Usage:</dt>
-          <dd>Access tokens</dd>
-        </dl>
-      </section>
 
       <section title="Structure">
         <figure>
           <artwork name="audit_trail structure" type="json"><![CDATA[
 {
   "audit_trail": {
-    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
     "semantic_expansion_level": "medium",
     "proposal_ref": "urn:uuid:proposal-xyz"
   }
@@ -450,7 +510,7 @@
 
       <section title="Field Definitions">
         <table anchor="tbl-audit-trail-fields">
-          <name>audit_trail Claim Fields</name>
+          <name>audit_trail Fields</name>
           <thead>
             <tr>
               <th>Field</th>
@@ -464,7 +524,10 @@
               <td>evidence_ref</td>
               <td>string</td>
               <td>OPTIONAL</td>
-              <td>Reference to the evidence record by ID.</td>
+              <td>Reference to a related evidence record by ID.
+                Can be used to link this audit trail to another
+                evidence record, such as the original consent in a
+                delegation chain.</td>
             </tr>
             <tr>
               <td>semantic_expansion_level</td>
@@ -531,22 +594,11 @@
           </dd>
         </dl>
       </section>
-
-      <section title="Minimum Content Guidance">
-        <t>
-          When the <tt>audit_trail</tt> claim is included, the 
-          <tt>evidence_ref</tt> field SHOULD be present to link 
-          the audit record to its corresponding evidence. Including 
-          at least <tt>evidence_ref</tt> and 
-          <tt>semantic_expansion_level</tt> is RECOMMENDED for 
-          meaningful audit capability.
-        </t>
-      </section>
     </section>
 
     <section anchor="purposes" title="Audit Trail Purposes">
       <t>
-        The evidence and audit trail claims serve several important purposes:
+        The evidence and audit trail objects serve several important purposes:
       </t>
 
       <table anchor="tbl-purposes">
@@ -600,7 +652,7 @@
     <section anchor="as-processing" title="Authorization Server Processing">
       <section anchor="evidence-collection" title="Evidence Collection from User Interaction">
         <t>
-          The <tt>evidence</tt> claim records the outcome of a user
+          The <tt>evidence</tt> object records the outcome of a user
           consent interaction.  Before the AS can generate a signed
           evidence record, it must first present a consent interface
           to the user and capture the user's response.  This section
@@ -672,7 +724,7 @@ Client/Agent          Authorization Server              User
 
         <section title="Consent UI to Evidence Field Mapping">
           <t>
-            Each field in the <tt>evidence</tt> claim corresponds to
+            Each field in the <tt>evidence</tt> object corresponds to
             a specific event during the consent interaction:
           </t>
 
@@ -767,7 +819,7 @@ Client/Agent          Authorization Server              User
               The agent polls the token endpoint.  Upon detecting
               that the user has completed interaction, the AS
               issues an access token containing the signed
-              <tt>evidence</tt> claim.
+              <tt>evidence</tt> object.
             </li>
           </ol>
 
@@ -837,9 +889,9 @@ AI Agent          External AS                      User
           <t>
             Flows that do not involve user interaction (e.g.,
             Client Credentials Grant without user context) cannot
-            produce <tt>evidence</tt> claims, since there is no
+            produce <tt>evidence</tt> records, since there is no
             user confirmation to record.  Such flows MAY still use
-            the <tt>audit_trail</tt> claim
+            the <tt>audit_trail</tt> sub-object
             (<xref target="audit-trail-claim"/>) for semantic
             traceability without user confirmation evidence.
           </t>
@@ -866,137 +918,16 @@ AI Agent          External AS                      User
             with the AS's private key using JCS canonicalization;
           </li>
           <li>
-            Include the evidence claim in the access token.
+            Include the authorization_evidence authorization details in the access token.
           </li>
         </ol>
-      </section>
-
-      <section title="Storage Requirements">
-        <t>
-          The AS SHOULD retain evidence records for a configurable period to support:
-        </t>
-
-        <ul>
-          <li>Dispute resolution;</li>
-          <li>Regulatory compliance;</li>
-          <li>Audit requests;</li>
-          <li>Token introspection with evidence details.</li>
-        </ul>
-
-        <t>
-          The retention period SHOULD be at least as long as the
-          longest-lived token that references the evidence record,
-          plus a configurable grace period for post-expiration
-          disputes.  For regulated industries (e.g., financial
-          services under PCI-DSS, healthcare under HIPAA), the
-          retention period MUST comply with the applicable regulatory
-          minimums, which typically range from 1 to 7 years.
-          Implementations SHOULD support per-deployment configuration
-          of retention periods and provide automated purging of
-          expired evidence records.
-        </t>
-      </section>
-
-      <section anchor="evidence-token-exchange" title="Evidence in Token Exchange">
-        <t>
-          When a token carrying an <tt>evidence</tt> claim is used as
-          the <tt>subject_token</tt> in a Token Exchange request
-          (<xref target="RFC8693"/>), the AS issuing the exchanged token
-          MUST decide how to handle the original evidence.  Three
-          strategies are defined:
-        </t>
-
-        <dl>
-          <dt>Propagate:</dt>
-          <dd>
-            Copy the original <tt>evidence</tt> claim into the new
-            token.  This preserves the direct link to the original
-            user consent.  The original AS signature remains valid
-            because the evidence fields are not re-signed.  This
-            strategy is RECOMMENDED when the exchanged token's scope
-            is a subset of the original token's scope.  When the
-            exchanging AS is different from the original AS, the
-            exchanging AS MUST verify the original
-            <tt>as_signature</tt> before propagating, and MAY
-            re-sign the evidence with its own key to establish a
-            direct trust chain with the target RS.
-          </dd>
-
-          <dt>Reference:</dt>
-          <dd>
-            Replace the embedded <tt>evidence</tt> object with an
-            <tt>audit_trail</tt> claim containing only the
-            <tt>evidence_ref</tt> pointing to the original evidence
-            record.  This reduces token size while maintaining
-            traceability.  Implementations using this strategy MUST
-            ensure the referenced evidence record is retrievable by
-            the target RS (e.g., via introspection).
-          </dd>
-
-          <dt>Omit:</dt>
-          <dd>
-            Do not include evidence in the exchanged token.  This is
-            appropriate only when the exchanged token's scope does not
-            require consent evidence (e.g., service-to-service calls
-            within the originally authorized boundary).
-          </dd>
-        </dl>
-
-        <t>
-          When using the Propagate strategy with delegation chains
-          (<xref target="I-D.liu-oauth-chain-delegation"/>), the
-          <tt>root_evidence_ref</tt> in the delegation chain entry
-          SHOULD reference the same evidence record, creating an
-          unbroken audit trail from the original user consent through
-          all delegation hops.
-        </t>
-      </section>
-
-      <section title="Evidence in Token Refresh">
-        <t>
-          When an access token carrying an <tt>evidence</tt> claim
-          expires and the client obtains a new access token using a
-          refresh token, the AS MUST decide whether to include
-          evidence in the refreshed token.  The same three strategies
-          defined in <xref target="evidence-token-exchange"/>
-          (Propagate, Reference, Omit) apply, with the following
-          additional considerations:
-        </t>
-
-        <ul>
-          <li>
-            The <tt>user_confirmation.timestamp</tt> in the
-            propagated evidence reflects the original consent time,
-            which may be significantly earlier than the refreshed
-            token's <tt>iat</tt> claim.  The RS SHOULD evaluate
-            evidence freshness
-            (<xref target="security"/>) against the original
-            consent time, not the refresh time.
-          </li>
-          <li>
-            If the refresh request narrows the token's scope, the
-            Propagate strategy is RECOMMENDED to maintain the
-            audit trail.  If the refresh request broadens the
-            scope beyond what the original consent covered, the AS
-            MUST NOT propagate the evidence and SHOULD initiate a
-            new consent interaction instead.
-          </li>
-          <li>
-            When the refresh token itself was issued alongside the
-            original access token, the evidence record remains
-            valid for the lifetime of the refresh token.  The AS
-            SHOULD retain the evidence record (per the Storage
-            Requirements) for at least as long as any refresh
-            token that references it.
-          </li>
-        </ul>
       </section>
     </section>
 
     <section anchor="rs-processing" title="Resource Server Processing">
       <section title="Evidence Verification">
         <t>
-          Resource Servers MAY verify the evidence claim by:
+          Resource Servers MAY verify the evidence object by:
         </t>
 
         <ol>
@@ -1010,10 +941,6 @@ AI Agent          External AS                      User
             Confirming that the evidence <tt>id</tt> and timestamp are
             consistent with the token's <tt>iat</tt> claim (i.e., the
             user confirmation occurred before or at token issuance);
-          </li>
-          <li>
-            Checking the timestamp is within acceptable bounds based on
-            the deployment's evidence freshness policy.
           </li>
         </ol>
 
@@ -1067,7 +994,7 @@ AI Agent          External AS                      User
 
       <section title="Evidence Tampering and Trust in the AS">
         <t>
-          The evidence claim is protected by the access token's signature. However,
+          The evidence object is protected by the access token's signature. However,
           the <tt>as_signature</tt> field provides an additional layer of protection
           specifically for the user confirmation record.
         </t>
@@ -1096,23 +1023,9 @@ AI Agent          External AS                      User
         </t>
       </section>
 
-      <section title="Token Size Considerations">
-        <t>
-          Including evidence and audit_trail claims increases access token size.
-          Implementations SHOULD consider:
-        </t>
-
-        <ul>
-          <li>HTTP header size limits when tokens are passed in Authorization headers;</li>
-          <li>Using token introspection <xref target="RFC7662"/> to retrieve evidence
-              details rather than embedding all data in the token;</li>
-          <li>Limiting displayed_content length to essential information.</li>
-        </ul>
-      </section>
-
       <section title="Token-Evidence Binding">
         <t>
-          The <tt>evidence</tt> claim is embedded in a signed access
+          The <tt>evidence</tt> object is embedded in a signed access
           token (<xref target="RFC9068"/>), which provides
           integrity protection at the token level.  The inner
           <tt>as_signature</tt> provides a second, independent integrity
@@ -1138,7 +1051,7 @@ AI Agent          External AS                      User
         </ul>
 
         <t>
-          Implementations MUST NOT copy an <tt>evidence</tt> claim from
+          Implementations MUST NOT copy an <tt>evidence</tt> object from
           one access token into another without re-validating the
           <tt>as_signature</tt> and confirming that the evidence
           <tt>id</tt> and <tt>timestamp</tt> are consistent with the
@@ -1148,7 +1061,7 @@ AI Agent          External AS                      User
         <t>
           The dual-signature design described above applies to signed
           JWT access tokens (<xref target="RFC9068"/>).  When opaque
-          (reference) tokens are used, the <tt>evidence</tt> claim is
+          (reference) tokens are used, the <tt>evidence</tt> object is
           not embedded in the token itself and MUST be retrieved by
           the RS via token introspection (<xref target="RFC7662"/>)
           or a dedicated evidence retrieval endpoint.  In this case,
@@ -1156,37 +1069,6 @@ AI Agent          External AS                      User
           protection for the evidence record, and implementations
           MUST ensure that the transport between the RS and the
           introspection or retrieval endpoint is protected with TLS.
-        </t>
-      </section>
-
-      <section title="Evidence Freshness">
-        <t>
-          An evidence record captures user consent at a specific point
-          in time.  Deployments SHOULD define an evidence freshness
-          policy that specifies:
-        </t>
-
-        <ul>
-          <li>
-            The maximum acceptable age of an evidence record (measured
-            from the <tt>user_confirmation.timestamp</tt> to the
-            current time);
-          </li>
-          <li>
-            Whether evidence freshness is evaluated relative to the
-            token's <tt>iat</tt> claim or the current request time;
-          </li>
-          <li>
-            Actions to take when evidence is stale (e.g., reject the
-            request, require re-consent).
-          </li>
-        </ul>
-
-        <t>
-          For high-sensitivity operations (e.g., financial transactions),
-          a short freshness window (e.g., minutes) is RECOMMENDED.  For
-          lower-sensitivity operations, a longer window (e.g., hours)
-          may be acceptable.
         </t>
       </section>
 
@@ -1221,123 +1103,38 @@ AI Agent          External AS                      User
           or explicit key distribution mechanism.
         </t>
       </section>
-    </section>
 
-    <section anchor="privacy" title="Privacy Considerations">
-      <t>
-        The privacy considerations in this section are informed by the
-        Internet protocol privacy analysis framework described in
-        <xref target="RFC6973"/>.
-      </t>
-
-      <section title="Displayed Content">
+      <section title="Privacy Considerations">
         <t>
-          The <tt>displayed_content</tt> field may contain sensitive information about 
-          the user's intent. Implementations SHOULD:
-        </t>
-
-        <ul>
-          <li>Minimize information in displayed_content to what is necessary;</li>
-          <li>Avoid including personal data unless required;</li>
-          <li>Consider encryption for highly sensitive content.</li>
-        </ul>
-      </section>
-
-      <section title="Evidence Retention">
-        <t>
-          Evidence records may be subject to data protection regulations.
-          Implementations MUST:
-        </t>
-
-        <ul>
-          <li>Define retention periods appropriate to regulatory requirements;</li>
-          <li>Provide mechanisms for evidence deletion when required;</li>
-          <li>Limit access to evidence records to authorized parties.</li>
-        </ul>
-      </section>
-
-      <section title="Right to Erasure and Audit Retention">
-        <t>
-          Data protection regulations such as GDPR and CCPA grant
-          individuals the right to request deletion of their personal
-          data.  Evidence records, which may contain
-          <tt>displayed_content</tt> reflecting user intent,
-          can constitute personal data.
-        </t>
-
-        <t>
-          However, evidence records also serve as audit artifacts
-          required by financial, healthcare, and other regulated
-          industries.  Implementations SHOULD resolve this tension by:
-        </t>
-
-        <ul>
-          <li>
-            Minimizing personal data in evidence fields at creation
-            time (e.g., using operation identifiers rather than
-            natural-language descriptions that may contain PII);
-          </li>
-          <li>
-            Defining separate retention policies for the evidence
-            record (which may be retained longer for audit) and the
-            personal data within it (which may need to be redacted
-            earlier).
-          </li>
-        </ul>
-
-        <t>
-          Note on redaction and signature integrity: The
-          <tt>as_signature</tt> covers the <tt>id</tt> and
-          <tt>user_confirmation</tt>
-          fields as an inseparable unit.  Redacting any field within
-          these objects (e.g., removing <tt>displayed_content</tt>)
-          invalidates the <tt>as_signature</tt>.  Implementations
-          that require redaction of personal data from evidence
-          records SHOULD use the Reference strategy defined in
-          <xref target="evidence-token-exchange"/> (Evidence in Token Exchange):
-          issue tokens that carry only an <tt>audit_trail</tt> claim
-          with the <tt>evidence_ref</tt>, and perform redaction in
-          the AS's evidence store.  The RS then retrieves the
-          (potentially redacted) evidence record via token
-          introspection (<xref target="RFC7662"/>) rather than
-          reading it directly from the token.
+          Evidence records contain information about user consent interactions,
+          including what was displayed to the user and how they responded.
+          Implementations should consider applicable data protection requirements
+          when storing and processing evidence records.
         </t>
       </section>
     </section>
 
     <section anchor="iana" title="IANA Considerations">
-      <section title="JWT Claims Registration">
+      <section title="OAuth Authorization Details Type Registration">
         <t>
-          This specification registers the following claims in the 
-          "JSON Web Token Claims" registry:
+          This specification registers the following authorization details type
+          in the "OAuth Authorization Details Types" registry established by
+          <xref target="RFC9396"/>:
         </t>
 
         <dl>
-          <dt>Claim Name:</dt>
-          <dd>evidence</dd>
-          <dt>Claim Description:</dt>
+          <dt>Type:</dt>
+          <dd>authorization_evidence</dd>
+          <dt>Description:</dt>
           <dd>
-            User confirmation evidence with AS signature for authorization 
-            proof and audit purposes.
+            Authorization evidence and audit trail information using the
+            enriched response pattern, providing cryptographic proof of user
+            consent for authorization proof and audit purposes.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
-          <dd><xref target="evidence-claim" format="counter"/> of this document</dd>
-        </dl>
-
-        <dl>
-          <dt>Claim Name:</dt>
-          <dd>audit_trail</dd>
-          <dt>Claim Description:</dt>
-          <dd>
-            Semantic traceability metadata linking user intent to authorized
-            operations.
-          </dd>
-          <dt>Change Controller:</dt>
-          <dd>IETF</dd>
-          <dt>Specification Document:</dt>
-          <dd><xref target="audit-trail-claim" format="counter"/> of this document</dd>
+          <dd><xref target="evidence-claim"/> of this document</dd>
         </dl>
       </section>
     </section>
@@ -1351,22 +1148,19 @@ AI Agent          External AS                      User
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7515.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7517.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6819.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6973.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8259.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
       </references>
 
       <references>
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7523.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
 
         <reference anchor="I-D.liu-oauth-rego-policy">
           <front>
@@ -1375,15 +1169,6 @@ AI Agent          External AS                      User
             <date year="2026" month="June"/>
           </front>
           <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
-        </reference>
-
-        <reference anchor="I-D.liu-oauth-chain-delegation">
-          <front>
-            <title>Chain Delegation for OAuth 2.0</title>
-            <author initials="D." surname="Liu"/>
-            <date year="2026" month="June"/>
-          </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-01"/>
         </reference>
 
         <reference anchor="I-D.parecki-oauth-jwt-grant-interaction-response">
@@ -1411,16 +1196,17 @@ AI Agent          External AS                      User
 
     <section title="Complete Example">
       <t>
-        The following shows a complete access token with both evidence and
-        audit_trail claims:
+        The following shows a complete access token with authorization_details
+        containing both <tt>authorization_evidence</tt> and <tt>rego_policy</tt>
+        authorization details types:
       </t>
 
       <t>
-        This example also illustrates how the <tt>evidence</tt> claim
-        complements the <tt>rego_policy</tt> authorization data type
+        This example illustrates how the <tt>authorization_evidence</tt> type
+        complements the <tt>rego_policy</tt> type
         (<xref target="I-D.liu-oauth-rego-policy"/>).  While the Rego
         policy defines <strong>what operations are permitted</strong>
-        (the behavioral constraint contract), the evidence claim records
+        (the behavioral constraint contract), the authorization evidence records
         <strong>why those operations were authorized</strong> (the user's
         explicit consent).  Together, they enable a Resource Server to
         enforce fine-grained policy while maintaining a verifiable audit
@@ -1445,28 +1231,28 @@ AI Agent          External AS                      User
   "exp": 1731369540,
   "iat": 1731320700,
   "jti": "urn:uuid:token-abc-123",
-  
+
   "act": {
     "sub": "wit://myassistant.example/sha256.abc123..."
   },
-  
-  "evidence": {
-    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "user_confirmation": {
-      "displayed_content": "Add items under $50 to cart",
-      "user_action": "confirmed_via_button_click",
-      "timestamp": 1731320595
-    },
-    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
-  },
-  
-  "audit_trail": {
-    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "semantic_expansion_level": "medium",
-    "proposal_ref": "urn:uuid:proposal-xyz"
-  },
-  
+
   "authorization_details": [
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
+    },
     {
       "type": "rego_policy",
       "policy": {
