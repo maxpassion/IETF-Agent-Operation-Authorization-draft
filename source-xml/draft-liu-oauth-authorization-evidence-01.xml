@@ -10,7 +10,7 @@
 <rfc
   xmlns:xi="http://www.w3.org/2001/XInclude"
   category="std"
-  docName="draft-liu-oauth-authorization-evidence-00"
+  docName="draft-liu-oauth-authorization-evidence-01"
   ipr="trust200902"
   submissionType="IETF"
   xml:lang="en"
@@ -18,7 +18,7 @@
 
   <front>
     <title abbrev="OAuth Authorization Evidence">Authorization Evidence and Audit Trail for OAuth 2.0 Access Tokens</title>
-    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-00"/>
+    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-01"/>
 
     <author fullname="Dapeng Liu" initials="D." surname="Liu">
       <organization>Alibaba Group</organization>
