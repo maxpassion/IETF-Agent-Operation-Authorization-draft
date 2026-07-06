@@ -1,0 +1,1960 @@
+
+
+
+
+Web Authorization Protocol                                        D. Liu
+Internet-Draft                                                    H. Zhu
+Intended status: Informational                             Alibaba Group
+Expires: 7 January 2027                                      S. Krishnan
+                                                                   Cisco
+                                                              A. Parecki
+                                                                    Okta
+                                                                  H. Xue
+                                                           Alibaba Group
+                                                             6 July 2026
+
+
+              AI Agent Authorization Integration Framework
+            draft-liu-ai-agent-authorization-integration-00
+
+Abstract
+
+   This document describes how to integrate multiple OAuth 2.0
+   extensions to enable secure authorization for AI agents acting on
+   behalf of users.  It combines cross-domain identity, policy-based
+   authorization, user consent evidence, and multi-hop delegation into a
+   cohesive framework for autonomous agent authorization.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 7 January 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 1]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Requirements Language . . . . . . . . . . . . . . . . . .   4
+     1.2.  Component Specifications  . . . . . . . . . . . . . . . .   4
+   2.  Authorization Model: Policy vs Scope  . . . . . . . . . . . .   5
+     2.1.  Rego Policy as Primary Authorization Mechanism  . . . . .   6
+     2.2.  Scope as Optional Supplement  . . . . . . . . . . . . . .   6
+     2.3.  Complete Authorization Mechanism  . . . . . . . . . . . .   7
+   3.  Architecture  . . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.1.  Participants  . . . . . . . . . . . . . . . . . . . . . .   8
+     3.2.  Token Structure . . . . . . . . . . . . . . . . . . . . .  10
+   4.  Authorization Workflow  . . . . . . . . . . . . . . . . . . .  12
+     4.1.  Overview  . . . . . . . . . . . . . . . . . . . . . . . .  12
+     4.2.  Step-by-Step Description  . . . . . . . . . . . . . . . .  13
+   5.  Agent-to-Agent Delegation . . . . . . . . . . . . . . . . . .  15
+   6.  User Consent Modes  . . . . . . . . . . . . . . . . . . . . .  17
+     6.1.  Redirect-Based Consent  . . . . . . . . . . . . . . . . .  17
+     6.2.  CIBA-Based Consent  . . . . . . . . . . . . . . . . . . .  17
+     6.3.  Consent-Only Flow . . . . . . . . . . . . . . . . . . . .  17
+   7.  Progressive Deployment  . . . . . . . . . . . . . . . . . . .  18
+     7.1.  Identity Deployment Levels  . . . . . . . . . . . . . . .  18
+       7.1.1.  Level 0: Self-Issued Identity . . . . . . . . . . . .  18
+       7.1.2.  Level 1: WIMSE Workload Identity  . . . . . . . . . .  18
+       7.1.3.  Level 2: Enterprise Identity  . . . . . . . . . . . .  18
+     7.2.  Token Deployment Levels . . . . . . . . . . . . . . . . .  18
+       7.2.1.  Level A: Pre-configured Tokens  . . . . . . . . . . .  18
+       7.2.2.  Level B: Admin-Assigned Tokens  . . . . . . . . . . .  18
+       7.2.3.  Level C: Runtime Authorization Tokens . . . . . . . .  19
+     7.3.  Deployment Matrix . . . . . . . . . . . . . . . . . . . .  19
+   8.  Reverse-Guided Authorization  . . . . . . . . . . . . . . . .  19
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  20
+     9.1.  Trust Boundaries  . . . . . . . . . . . . . . . . . . . .  20
+     9.2.  Threat Mitigations  . . . . . . . . . . . . . . . . . . .  20
+     9.3.  LLM Threat Model  . . . . . . . . . . . . . . . . . . . .  21
+     9.4.  Token Size  . . . . . . . . . . . . . . . . . . . . . . .  21
+     9.5.  Evidence Freshness  . . . . . . . . . . . . . . . . . . .  21
+     9.6.  Policy Injection and Server-Side Request Forgery  . . . .  22
+     9.7.  Cross-Domain Trust  . . . . . . . . . . . . . . . . . . .  22
+     9.8.  Delegation Depth and Privilege Escalation . . . . . . . .  22
+   10. Privacy Considerations  . . . . . . . . . . . . . . . . . . .  23
+     10.1.  Cross-Domain Identity Correlation  . . . . . . . . . . .  23
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 2]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+     10.2.  Agent Observability  . . . . . . . . . . . . . . . . . .  23
+     10.3.  Displayed Content Sensitivity  . . . . . . . . . . . . .  24
+     10.4.  Delegation Chain Privacy . . . . . . . . . . . . . . . .  24
+   11. Relationship to Other Specifications  . . . . . . . . . . . .  24
+     11.1.  Relationship to Identity Assertion Grant (ID-JAG)  . . .  24
+     11.2.  Relationship to JWT Grant Interaction Response . . . . .  25
+     11.3.  Relationship to Token Exchange (RFC 8693)  . . . . . . .  25
+     11.4.  Relationship to Transaction Tokens . . . . . . . . . . .  26
+     11.5.  Relationship to CIBA . . . . . . . . . . . . . . . . . .  26
+     11.6.  Relationship to Rich Authorization Requests (RAR)  . . .  27
+     11.7.  Relationship to SPIFFE Client Authentication . . . . . .  27
+     11.8.  Implementation Requirements  . . . . . . . . . . . . . .  28
+   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  29
+   13. References  . . . . . . . . . . . . . . . . . . . . . . . . .  29
+     13.1.  Normative References . . . . . . . . . . . . . . . . . .  29
+     13.2.  Informative References . . . . . . . . . . . . . . . . .  31
+   Appendix A.  Complete Example . . . . . . . . . . . . . . . . . .  31
+     A.1.  Token Request . . . . . . . . . . . . . . . . . . . . . .  31
+     A.2.  Interaction Required Response . . . . . . . . . . . . . .  32
+     A.3.  Access Token  . . . . . . . . . . . . . . . . . . . . . .  32
+     A.4.  Polling (after user consent)  . . . . . . . . . . . . . .  34
+     A.5.  API Request to Resource Server  . . . . . . . . . . . . .  34
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  34
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  35
+
+1.  Introduction
+
+   AI agents increasingly need to access protected resources on behalf
+   of users across different trust domains.  Traditional OAuth 2.0
+   [RFC6749] provides basic delegation mechanisms, but AI agent
+   scenarios require additional capabilities:
+
+   *  Cross-domain user identity verification;
+
+   *  Fine-grained, policy-based authorization;
+
+   *  Verifiable user consent evidence;
+
+   *  Secure multi-agent delegation chains.
+
+   This document describes how to combine several OAuth 2.0 extensions
+   into an integrated framework for AI agent authorization.  It does not
+   define new protocol mechanisms, but rather profiles existing
+   specifications for this use case.
+
+   Two key design principles guide this framework:
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 3]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  *Progressive Deployment*: Organizations can adopt the framework's
+      capabilities gradually through a two-dimensional deployment
+      matrix, starting with simple configurations and upgrading to full
+      runtime authorization as requirements evolve (see Section 7).
+
+   *  *Reverse-Guided Authorization*: Resource servers can guide agents
+      toward appropriate authorization by returning structured error
+      responses that specify required policies and constraints, enabling
+      AI agents to adaptively construct valid authorization requests
+      (see Section 8).
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals.
+
+1.2.  Component Specifications
+
+   This framework integrates the following specifications.  The first
+   two (Agent Authentication and Identity Assertion Grant) are external
+   OAuth Working Group specifications that this framework profiles.  The
+   remaining four are companion specifications developed alongside this
+   framework:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 4]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   +==============+==================================================+============+
+   |Component     |Specification                                     |Purpose     |
+   +==============+==================================================+============+
+   |Agent         |[I-D.ietf-oauth-spiffe-client-auth]               |Agent       |
+   |Authentication|                                                  |workload    |
+   |              |                                                  |identity via|
+   |              |                                                  |SPIFFE/WIT- |
+   |              |                                                  |SVID        |
+   +--------------+--------------------------------------------------+------------+
+   |Identity      |[I-D.ietf-oauth-identity-assertion-authz-grant]   |JWT-based   |
+   |Assertion     |                                                  |cross-domain|
+   |Grant         |                                                  |identity    |
+   |              |                                                  |assertion   |
+   +--------------+--------------------------------------------------+------------+
+   |User          |[I-D.parecki-oauth-jwt-grant-interaction-response]|User consent|
+   |Interaction & |                                                  |via JWT     |
+   |Consent       |                                                  |grant       |
+   |              |                                                  |interaction |
+   |              |                                                  |flow        |
+   +--------------+--------------------------------------------------+------------+
+   |Policy        |[I-D.liu-oauth-rego-policy]                       |Fine-grained|
+   |Authorization |                                                  |Rego policy |
+   |              |                                                  |support     |
+   +--------------+--------------------------------------------------+------------+
+   |Consent       |[I-D.liu-oauth-authorization-evidence]            |User        |
+   |Evidence      |                                                  |confirmation|
+   |              |                                                  |records,    |
+   |              |                                                  |audit trail,|
+   |              |                                                  |and consent-|
+   |              |                                                  |to-evidence |
+   |              |                                                  |pipeline    |
+   +--------------+--------------------------------------------------+------------+
+   |Multi-hop     |[I-D.liu-oauth-chain-delegation]                  |Agent-to-   |
+   |Delegation    |                                                  |agent       |
+   |              |                                                  |delegation  |
+   |              |                                                  |chains      |
+   +--------------+--------------------------------------------------+------------+
+
+                       Table 1: Framework Components
+
+2.  Authorization Model: Policy vs Scope
+
+   This framework uses a policy-based authorization model that replaces
+   traditional OAuth 2.0 scopes with fine-grained Rego policies.  This
+   section clarifies the relationship between scopes and policies in
+   this framework.
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 5]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+2.1.  Rego Policy as Primary Authorization Mechanism
+
+   In this framework, the primary authorization mechanism is Rego policy
+   carried via Rich Authorization Requests (RAR, [RFC9396]), not OAuth
+   2.0 scopes.  The rego_policy authorization data type defined in
+   [I-D.liu-oauth-rego-policy] carries the authorization logic within
+   the authorization_details parameter:
+
+   *  *Authorization Request:* Clients submit authorization_details
+      containing a rego_policy type with Rego policy that defines
+      permitted operations (e.g., "allow add_to_cart if amount <= 50").
+
+   *  *Access Token:* AS returns an enriched authorization_details
+      response per RFC 9396 Section 7.1, including the evaluated policy
+      reference.
+
+   *  *Resource Server:* RS evaluates the policy at runtime using a
+      Rego-compatible policy engine (e.g., Open Policy Agent [OPA]) with
+      request context.
+
+   This approach enables dynamic, context-aware authorization that goes
+   beyond static scope lists.
+
+2.2.  Scope as Optional Supplement
+
+   Traditional OAuth 2.0 scope parameter is OPTIONAL in this framework
+   and serves different purposes:
+
+   *  *When to use scope:* For coarse-grained resource categorization
+      (e.g., "read", "write") or backward compatibility with existing
+      OAuth deployments.
+
+   *  *When NOT to use scope:* When fine-grained, conditional
+      authorization is required.  In this case, Rego policy provides all
+      necessary authorization logic.
+
+   *  *Relationship:* If both scope and policy are present, the policy
+      takes precedence.  Scope acts as an outer boundary, while policy
+      defines specific conditions.
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 6]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   +-----------------------------------------------------------+
+   |  Authorization Boundary                                   |
+   +-----------------------------------------------------------+
+   |  +-----------------------------------------------------+  |
+   |  |  Scope (Traditional OAuth)                          |  |
+   |  |  +-----------------------------------------------+  |  |
+   |  |  |  Policy via RAR (Primary)                     |  |  |
+   |  |  |  authorization_details: rego_policy           |  |  |
+   |  |  |  "allow if amount <= 50 AND time < 6pm"       |  |  |
+   |  |  +-----------------------------------------------+  |  |
+   |  +-----------------------------------------------------+  |
+   +-----------------------------------------------------------+
+
+                                  Figure 1
+
+2.3.  Complete Authorization Mechanism
+
+   The complete authorization mechanism comprises six integrated
+   components:
+
+   1.  *Agent Authentication* ([I-D.ietf-oauth-spiffe-client-auth]):
+       Proves "who the agent is" through cryptographic workload
+       identity.
+
+   2.  *Cross-Domain Identity*
+       ([I-D.ietf-oauth-identity-assertion-authz-grant]): Proves "who
+       the user is" across trust domains via JWT assertion.
+
+   3.  *User Interaction & Consent*
+       ([I-D.parecki-oauth-jwt-grant-interaction-response]): Obtains
+       explicit user consent through structured interaction flow.
+
+   4.  *Rego Policy* ([I-D.liu-oauth-rego-policy]): Defines "what
+       operations are allowed" with fine-grained conditions.
+
+   5.  *Authorization Evidence*
+       ([I-D.liu-oauth-authorization-evidence]): Provides cryptographic
+       proof of "what the user agreed to".
+
+   6.  *Chain Delegation* ([I-D.liu-oauth-chain-delegation]): Enables
+       secure "agent-to-agent transfer" of authorization.
+
+   Together, these components provide end-to-end authorization for AI
+   agents:
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 7]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   +------------------------------------------------------------+
+   |  Integration Framework (This Draft)                        |
+   |  "How to combine all components"                           |
+   +------------------------------------------------------------+
+   |  +------------+ +------------+ +------------+ +----------+  |
+   |  |  Agent     | |  Identity  | |  Consent   | | Delegat. |  |
+   |  |  Authn     | |  (ID-JAG)  | |  (JAG-IR)  | | (Chain)  |  |
+   |  | (SPIFFE)   | +------------+ +------------+ +----------+  |
+   |  +------------+                                             |
+   |  +------------------------------------------------------+  |
+   |  |     Policy Engine via RAR (rego_policy)              |  |
+   |  |         "Under what conditions allow"                |  |
+   |  +------------------------------------------------------+  |
+   |  +------------------------------------------------------+  |
+   |  |     Authorization Evidence (consent + audit trail)   |  |
+   |  |         "What did the user agree to"                 |  |
+   |  +------------------------------------------------------+  |
+   +------------------------------------------------------------+
+   |        OAuth 2.0 Core + RAR (RFC 9396)                     |
+   +------------------------------------------------------------+
+
+                                  Figure 2
+
+3.  Architecture
+
+3.1.  Participants
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 8]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
++------------------+     +------------------+     +------------------+
+|    Home IdP      |     |   AI Agent       |     |   External AS    |
+|                  |     |                  |     |                  |
+| - User authn     |     | - SPIFFE identity|     | - Policy engine  |
+| - ID Token issue |     | - JWT Grant clnt |     | - Token issuance |
++------------------+     +------------------+     +------------------+
+        |                        |                        |
+        |   ID Token             |                        |
+        |----------------------->|                        |
+        |                        |                        |
+        |                        | JWT Grant + authz_det  |
+        |                        |----------------------->|
+        |                        |                        |
+        |                        | interaction_required   |
+        |                        |<-----------------------|
+        |                        |                        |
+        |  interaction_uri       |                        |
+        |<-----------------------|                        |
+        |  (user consent)        |                        |
+        |----------------------->|                        |
+        |                        | Poll token endpoint    |
+        |                        |----------------------->|
+        |                        |                        |
+        |                        |   Access Token         |
+        |                        |<-----------------------|
+        |                        |                        |
+        |                        |                  +-------------------+
+        |                        |                  | Resource Server   |
+        |                        |                  |                   |
+        |                        |   API Request    | - Token validation|
+        |                        |----------------->| - Policy engine   |
+        |                        |                  +-------------------+
+
+                               Figure 3
+
+   Home Identity Provider (Home IdP):  Authenticates the user and issues
+      ID Tokens.  This is the user's trusted identity service.
+
+   AI Agent:  An autonomous software agent acting on behalf of the user.
+      Has its own workload identity (SPIFFE/WIT-SVID).
+
+   External Authorization Server (AS):  Issues access tokens for
+      resources in its domain.  Validates JWT assertions, evaluates
+      authorization_details, and manages user interaction.
+
+   Resource Server (RS):  Hosts protected resources.  Validates access
+      tokens and enforces policies using a Rego-compatible policy
+      engine.
+
+
+
+Liu, et al.              Expires 7 January 2027                 [Page 9]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+3.2.  Token Structure
+
+   The framework uses JWT access tokens ([RFC7519], [RFC9068]) following
+   OAuth 2.0 standards.  Key claim semantics:
+
+   *  *sub (Subject)*: MUST contain the user's identifier at the
+      Resource Application (third-party app), NOT the Agent's internal
+      user identifier.  This enables the Resource Server to immediately
+      identify the resource owner without additional identity mapping
+      lookups.  The AS maps the Home IdP subject to the resource-domain
+      identifier through account linking, federation metadata, or
+      additional identity claims (e.g., email) present in the JWT
+      assertion.
+
+   *  *act (Actor)*: Identifies the entity exercising delegated
+      authority.  Contains:
+
+      -  sub: The Agent's WIT URI, identifying which agent is acting on
+         behalf of the user;
+
+      -  agent_user_id (OPTIONAL): The user's identifier at the Agent
+         system, enabling audit trail correlation at the Agent side.
+         Note: This is a non-registered extension field within the act
+         claim structure.
+
+   *  *authorization_details*: Carries multiple authorization data types
+      via Rich Authorization Requests ([RFC9396]):
+
+      -  rego_policy type: The Rego policy defining what operations the
+         agent is permitted to perform.  Defined in
+         [I-D.liu-oauth-rego-policy].
+
+      -  authorization_evidence type: The signed record of the user's
+         confirmation action during authorization, including what was
+         displayed to the user, how the user confirmed, a cryptographic
+         signature from the AS, and the audit_trail sub-object for
+         semantic traceability.  Defined in
+         [I-D.liu-oauth-authorization-evidence].
+
+   *  *delegation_chain*: Records the chain of delegation hops when
+      authorization is transferred between agents, with cryptographic
+      signatures for each hop.  Only present in delegated scenarios.
+      Defined in [I-D.liu-oauth-chain-delegation].
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 10]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+{
+  "iss": "https://as.external.example",
+  "sub": "user_12345",
+  "aud": "https://api.external.example",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-abc-123",
+
+  "act": {
+    "sub": "wit://agent.example/sha256.abc123...",
+    "agent_user_id": "agent_user_001"
+  },
+
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "uri": "https://as.external.example/policies/policy-abc123",
+        "entry_point": "allow"
+      },
+      "context": {
+        "user": { "id": "user_12345" },
+        "action": "add_to_cart"
+      }
+    },
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
+    }
+  ],
+
+  "delegation_chain": [
+    {
+      "delegator_id": "wit://agent-a.example/sha256.aaa111...",
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 11]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+      "delegatee_id": "wit://agent-b.example/sha256.bbb222...",
+      "as_id": "https://as.external.example",
+      "delegation_timestamp": 1731320800,
+      "root_evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+      "delegated_policy": {
+        "type": "rego",
+        "uri": "https://as.external.example/policies/policy-delegated-456",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD...",
+      "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    }
+  ]
+}
+
+                               Figure 4
+
+4.  Authorization Workflow
+
+4.1.  Overview
+
++-------+    +-------+    +--------+    +-------+    +-------+    +------+
+| User  |    | Home  |    |  AI    |    |External |    |  RS   |    |Policy|
+|       |    |  IdP  |    | Agent  |    |   AS    |    |       |    |      |
++-------+    +-------+    +--------+    +-------+    +-------+    +------+
+    |            |             |            |            |           |
+(1) | Authn      |             |            |            |           |
+    |----------->|             |            |            |           |
+    |            |             |            |            |           |
+(2) |  ID Token (aud=External AS)           |            |           |
+    |<------------------------->            |            |           |
+    |            |             |            |            |           |
+(3) |            |   Agent builds token req:|            |           |
+    |            |   - JWT assertion        |            |           |
+    |            |   - authorization_details|            |           |
+    |            |     (rego_policy type)   |            |           |
+    |            |             |            |            |           |
+(4) |            |   Token Request          |            |           |
+    |            |   + SPIFFE client auth   |            |           |
+    |            |             |----------->|            |           |
+    |            |             |            |            |           |
+(5) |            |             |  Validate: |            |           |
+    |            |             |  - SPIFFE  |            |           |
+    |            |             |  - JWT     |            |           |
+    |            |             |  - policy  |            |           |
+    |            |             |            |            |           |
+(6) |            |             |  interaction_required   |           |
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 12]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+    |            |             |  + interaction_uri      |           |
+    |            |             |<-----------|            |           |
+    |            |             |            |            |           |
+(7) | User interaction via browser          |            |           |
+    |<--------------------------------------|            |           |
+    |            |             |            |            |           |
+(8) | User confirms            |            |            |           |
+    |-------------------------------------->|            |           |
+    |            |             |            |            |           |
+(9) |            |             |  Poll token endpoint    |           |
+    |            |             |----------->|            |           |
+    |            |             |            |            |           |
+(10)|            |             |  Issue token with:      |           |
+    |            |             |  - act                  |           |
+    |            |             |  - authorization_details|           |
+    |            |             |  - evidence             |           |
+    |            |             |  - audit_trail          |           |
+    |            |             |<-----------|            |           |
+    |            |             |            |            |           |
+(11)|            |             | API Request|            |           |
+    |            |             |------------------------>|           |
+    |            |             |            |            |           |
+(12)|            |             |            |  Validate  |           |
+    |            |             |            |  token     |           |
+    |            |             |            |            |           |
+(13)|            |             |            |  Policy    |           |
+    |            |             |            |  eval      |---------->|
+    |            |             |            |            |           |
+(14)|            |             |            |  Decision  |           |
+    |            |             |            |            |<----------|
+    |            |             |            |            |           |
+(15)|            |             | Response   |            |           |
+    |            |             |<------------------------|           |
+
+                               Figure 5
+
+4.2.  Step-by-Step Description
+
+   1.   *User Authentication at Agent:* User authenticates with the
+        Agent's Identity Provider (Home IdP).  The Agent requests an ID
+        Token suitable for cross-domain assertion, containing:
+
+        *  sub: The user's identifier at the Agent system (e.g.,
+           agent_user_001);
+
+        *  aud: The External AS's identifier, binding this assertion to
+           the target authorization server per
+           [I-D.ietf-oauth-identity-assertion-authz-grant].
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 13]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   2.   *ID Token as JWT Assertion:* The Agent uses the ID Token as the
+        JWT assertion in the token request per
+        [I-D.ietf-oauth-identity-assertion-authz-grant].  The AS
+        validates the Home IdP's signature and extracts the user's
+        identity claims.
+
+   3.   Token Request Construction: Agent builds a token request
+        including:
+
+        *  grant_type: urn:ietf:params:oauth:grant-type:jwt-bearer;
+
+        *  assertion: The user's ID Token (JWT);
+
+        *  authorization_details: Containing rego_policy type with
+           policy and context.
+
+   4.   Token Request Submission: Agent sends the token request to
+        External AS with SPIFFE client authentication (WIT-SVID in
+        headers).
+
+   5.   AS Validation: AS validates:
+
+        *  SPIFFE client credentials;
+
+        *  JWT assertion signature, audience (aud), and expiration (exp)
+           from Home IdP;
+
+        *  Policy syntax and safety in authorization_details.
+
+   6.   Interaction Required: AS determines user interaction is needed
+        and returns an interaction_required error response per
+        [I-D.parecki-oauth-jwt-grant-interaction-response] containing an
+        interaction_uri for user consent.
+
+   7.   User Interaction: The agent launches the interaction_uri in the
+        user's browser.  The AS presents the consent UI showing the
+        interpreted operation.
+
+   8.   User Confirmation: User reviews and approves (or denies) the
+        operation.
+
+   9.   Polling: Agent polls the token endpoint (re-sending its original
+        request with a fresh SPIFFE client attestation) until the AS
+        completes user interaction.  If the user denies consent, the AS
+        returns an access_denied error to subsequent polling requests.
+
+   10.  Token Issuance: AS issues access token containing:
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 14]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+        *  act: Agent's SPIFFE ID;
+
+        *  authorization_details: Enriched response per RFC 9396
+           Section 7.1, including both rego_policy and
+           authorization_evidence types;
+
+        *  delegation_chain: (only in delegation scenarios).
+
+   11.  API Request: Agent presents token to Resource Server.
+
+   12.  Token Validation: RS validates token signature and claims.
+
+   13.  Policy Evaluation: RS sends policy and request context to the
+        policy engine.
+
+   14.  Authorization Decision: Policy engine returns allow/deny
+        decision.
+
+   15.  Response: RS executes (or denies) the operation and returns
+        response.
+
+5.  Agent-to-Agent Delegation
+
+   When Agent A needs to delegate operations to Agent B, the framework
+   extends the basic workflow:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 15]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   +---------+       +---------+       +--------+       +---------+
+   | Agent A |       |   AS    |       | Agent B|       |   RS    |
+   +---------+       +---------+       +--------+       +---------+
+        |                 |                 |                |
+        | (has token)     |                 |                |
+        |                 |                 |                |
+        | Token Exchange  |                 |                |
+        | - subject_token |                 |                |
+        | - delegatee_id  |                 |                |
+        | - authorization |                 |                |
+        |   _details      |                 |                |
+        | - delegator_sig |                 |                |
+        |   (over deleg.  |                 |                |
+        |    record)      |                 |                |
+        |---------------->|                 |                |
+        |                 |                 |                |
+        |                 | Validate:       |                |
+        |                 | - Token A valid |                |
+        |                 | - Policy subset |                |
+        |                 | - Agent B auth  |                |
+        |                 | - delegator_sig |                |
+        |                 |                 |                |
+        |                 | AS countersigns |                |
+        |                 | (as_signature)  |                |
+        |                 |                 |                |
+        |                 | Issue Token B   |                |
+        |                 | with delegation_chain            |
+        |                 | (del_sig+as_sig)|                |
+        |                 |---------------->|                |
+        |                 |                 |                |
+        |                 |                 | API Request    |
+        |                 |                 |--------------->|
+        |                 |                 |                |
+        |                 |                 |     Validate   |
+        |                 |                 |     chain      |
+        |                 |                 |  (dual sig)    |
+        |                 |                 |                |
+        |                 |                 | Response       |
+        |                 |                 |<---------------|
+
+                                  Figure 6
+
+   The resulting token for Agent B includes a delegation_chain recording
+   the delegation hop, as defined in [I-D.liu-oauth-chain-delegation].
+   Each delegation chain entry carries a dual signature: the delegator's
+   signature (delegator_signature) over the delegation record and the
+   AS's countersignature (as_signature), ensuring non-repudiation and
+   preventing unilateral scope escalation.
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 16]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   The AS MUST also decide how to handle the original
+   authorization_evidence entry from Agent A's token.  Three strategies
+   are defined in [I-D.liu-oauth-authorization-evidence]: *Propagate*
+   (copy the original authorization_evidence entry into Agent B's
+   token), *Reference* (replace the embedded evidence with an
+   audit_trail sub-object containing only the evidence_ref), or *Omit*
+   (do not include evidence).  The Propagate strategy is RECOMMENDED
+   when the delegated policy is a subset of the original token's policy.
+   When using delegation chains, the root_evidence_ref in the delegation
+   chain entry SHOULD reference the same evidence record, creating an
+   unbroken audit trail from the original user consent through all
+   delegation hops.
+
+6.  User Consent Modes
+
+   The framework supports multiple consent mechanisms:
+
+6.1.  Redirect-Based Consent
+
+   Traditional OAuth redirect flow where the agent redirects the user to
+   the AS's consent page.  This is the most common consent mechanism and
+   is suitable for web-based agents that can launch a browser for user
+   interaction.
+
+6.2.  CIBA-Based Consent
+
+   Client-Initiated Backchannel Authentication (CIBA) [CIBA] for out-of-
+   band consent, useful when the agent cannot redirect the user.
+   Typical scenarios include voice assistants, IoT devices, and mobile
+   applications where the user completes consent on a separate device.
+
+6.3.  Consent-Only Flow
+
+   When the user has a valid, non-expired session at the AS and the
+   agent's identity is already trusted, the AS MAY skip re-
+   authentication and only prompt for consent to the specific operation.
+   This is a deployment-level optimization that does not change the
+   protocol flow; the AS still returns an interaction_required response,
+   but the consent interface presented to the user omits the
+   authentication step.  This mode reduces user friction for repeat
+   operations while maintaining explicit consent for each authorized
+   action.
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 17]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+7.  Progressive Deployment
+
+   This framework supports progressive deployment through a two-
+   dimensional matrix, allowing organizations to adopt capabilities
+   gradually based on their security requirements and operational
+   maturity.
+
+7.1.  Identity Deployment Levels
+
+   Implementations MAY deploy agent identity at three progressive
+   levels:
+
+7.1.1.  Level 0: Self-Issued Identity
+
+   The agent generates its own key pair and self-issues identity
+   assertions.  Suitable for development, testing, and low-trust
+   scenarios such as personal or small-team agents.
+
+7.1.2.  Level 1: WIMSE Workload Identity
+
+   The agent obtains workload identity tokens through WIMSE
+   infrastructure [I-D.ietf-wimse-workload-creds].  Provides cross-
+   domain verifiability without requiring full enterprise IdP
+   deployment.  This level can be enhanced with optional trusted
+   execution environment verification using WIT attestation
+   [I-D.ietf-wimse-arch].
+
+7.1.3.  Level 2: Enterprise Identity
+
+   The agent's identity is managed by an enterprise IdP with full X.509
+   or SAML/OIDC trust chains.  Required for high-assurance enterprise
+   deployments.
+
+7.2.  Token Deployment Levels
+
+   Authorization tokens can be deployed at three levels:
+
+7.2.1.  Level A: Pre-configured Tokens
+
+   Static tokens configured at deployment time.  No runtime AS
+   interaction required.  Suitable for internal services and well-known
+   agents.
+
+7.2.2.  Level B: Admin-Assigned Tokens
+
+   Tokens assigned by administrators through a management interface.
+   Policy binding without end-user consent.  Suitable for enterprise
+   automation scenarios.
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 18]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+7.2.3.  Level C: Runtime Authorization Tokens
+
+   The full framework flow with user consent, policy evaluation, and
+   evidence recording.  Required for high-sensitivity operations and
+   cross-domain access.  This level utilizes the JWT Grant Interaction
+   Response mechanism for user consent.
+
+7.3.  Deployment Matrix
+
+   The combination of identity and token levels creates a deployment
+   matrix:
+
+   +=============+====================+==================+=============+
+   |Identity \   | A (Pre-            | B (Admin-        |C (Runtime   |
+   |Token        | configured)        | assigned)        |Authz)       |
+   +=============+====================+==================+=============+
+   |0 (Self-     | Personal agents,   | Small team       |Dynamic      |
+   |Issued)      | IoT                | automation       |authorization|
+   +-------------+--------------------+------------------+-------------+
+   |1 (WIMSE)    | Trusted            | Enterprise       |Cross-domain |
+   |             | lightweight        | operations       |access       |
+   |             | agents             |                  |             |
+   +-------------+--------------------+------------------+-------------+
+   |2            | High-trust         | Compliance       |Full         |
+   |(Enterprise) | static auth        | scenarios        |framework    |
+   |             |                    |                  |enterprise   |
+   +-------------+--------------------+------------------+-------------+
+
+                         Table 2: Deployment Matrix
+
+   Organizations typically progress through the matrix as their
+   requirements evolve, starting from lower levels (e.g., 0A) and
+   upgrading to higher levels (e.g., 2C) based on security needs.
+
+8.  Reverse-Guided Authorization
+
+   Traditional OAuth error responses indicate authorization failure
+   without guidance on how to obtain valid authorization.  In AI agent
+   scenarios, where agents may autonomously navigate authorization
+   requirements, resource servers can provide structured guidance
+   through error responses.
+
+   When an agent's request lacks sufficient authorization, the resource
+   server returns a 403 Forbidden response with a rego_profile object
+   that specifies:
+
+   *  Required scopes or authorization details;
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 19]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  Policy constraints that must be satisfied;
+
+   *  Whether user consent is required;
+
+   *  Reference to the authorization server capable of issuing
+      appropriate tokens.
+
+   The AI agent parses this guidance and constructs a new authorization
+   request that satisfies the specified requirements.  This enables
+   agents to "learn" authorization requirements dynamically rather than
+   requiring pre-programmed knowledge of each resource server's
+   policies.
+
+   Detailed specification of the Rego Profile format and agent adaptive
+   behavior is defined in [I-D.liu-oauth-rego-policy].
+
+9.  Security Considerations
+
+9.1.  Trust Boundaries
+
+   The framework establishes clear trust boundaries:
+
+   *  Home IdP → Agent: ID Token with agent in audience;
+
+   *  Agent → External AS: SPIFFE authentication + JWT assertion
+      (Identity Assertion Grant, ID-JAG);
+
+   *  External AS → RS: Signed access token with policy reference (JWS
+      [RFC7515]);
+
+   *  Delegation: AS-signed delegation chain entries.
+
+9.2.  Threat Mitigations
+
+         +====================+==================================+
+         | Threat             | Mitigation                       |
+         +====================+==================================+
+         | Token substitution | JWT assertion audience binding   |
+         |                    | (assertion.aud == AS identifier) |
+         +--------------------+----------------------------------+
+         | Privilege          | Scope subset validation in       |
+         | escalation         | delegation                       |
+         +--------------------+----------------------------------+
+         | Unauthorized       | Rego policy enforcement at RS    |
+         | actions            |                                  |
+         +--------------------+----------------------------------+
+         | Consent forgery    | AS-signed evidence records       |
+         +--------------------+----------------------------------+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 20]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+         | Delegation chain   | AS signature on each chain entry |
+         | tampering          |                                  |
+         +--------------------+----------------------------------+
+
+                        Table 3: Threat Mitigations
+
+9.3.  LLM Threat Model
+
+   This framework assumes the agent implementation (including
+   authorization logic) is trusted, while the Large Language Model (LLM)
+   used to derive operations is NOT trusted.  The policy-based
+   authorization ensures:
+
+   *  LLM cannot directly control authorization decisions;
+
+   *  All operations are bounded by user-approved policies;
+
+   *  Audit trails enable post-hoc verification.
+
+9.4.  Token Size
+
+   A full access token in this framework may carry multiple claims
+   beyond the standard JWT fields: act, authorization_details (with
+   embedded Rego policy and authorization evidence), and
+   delegation_chain (for multi-hop scenarios).  The combined size of
+   these claims can exceed typical HTTP header limits when the token is
+   passed in an Authorization header.
+
+   Implementations SHOULD consider:
+
+   *  Using token introspection ([RFC7662]) to retrieve detailed
+      evidence and policy information rather than embedding all data in
+      the token;
+
+   *  Using policy references (URIs) instead of inline Rego policy in
+      authorization_details;
+
+   *  Applying the Reference strategy for evidence in token exchange
+      scenarios, as defined in [I-D.liu-oauth-authorization-evidence].
+
+9.5.  Evidence Freshness
+
+   In this framework, evidence records capture user consent at a
+   specific point in time.  When tokens are exchanged or refreshed
+   across delegation hops, the original consent timestamp may become
+   significantly older than the current request time.  Deployments
+   SHOULD define an evidence freshness policy that specifies the maximum
+   acceptable age of an evidence record and the actions to take when
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 21]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   evidence is stale (e.g., reject the request, require re-consent).
+   See [I-D.liu-oauth-authorization-evidence] for detailed guidance.
+
+9.6.  Policy Injection and Server-Side Request Forgery
+
+   When agents submit Rego policy via authorization_details, the AS must
+   validate the policy before evaluation.  Malicious or compromised
+   agents could attempt to inject policies that exploit the policy
+   engine (e.g., resource exhaustion, data exfiltration via external
+   calls).  The AS SHOULD enforce policy size limits, restrict available
+   Rego built-in functions (particularly those that perform network I/
+   O), and validate policy syntax before evaluation.  See
+   [I-D.liu-oauth-rego-policy] for the complete threat model and
+   mitigation strategies.
+
+9.7.  Cross-Domain Trust
+
+   This framework operates across multiple trust domains (Home IdP,
+   Agent domain, External AS, Resource Server).  Trust establishment
+   between these domains relies on:
+
+   *  The External AS trusting the Home IdP's JWT assertions (ID-JAG),
+      which requires either a pre-established trust relationship or
+      federation;
+
+   *  The Resource Server trusting the External AS's signing keys for
+      both token validation and evidence signature verification;
+
+   *  Cross-domain delegation requiring trust in each intermediate AS's
+      signing key for delegation chain verification.
+
+   Deployments SHOULD establish explicit trust frameworks or federation
+   agreements that define key distribution, revocation, and liability
+   across participating domains.
+
+9.8.  Delegation Depth and Privilege Escalation
+
+   Multi-hop delegation chains introduce the risk of unbounded
+   delegation depth and privilege escalation at intermediate hops.  The
+   framework mitigates these risks through:
+
+   *  AS-enforced maximum delegation depth limits;
+
+   *  Scope subset validation ensuring each delegation hop can only
+      narrow (never broaden) the authorized scope;
+
+   *  Cryptographic chain integrity via per-hop AS signatures in the
+      delegation_chain claim.
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 22]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   See [I-D.liu-oauth-chain-delegation] for the complete delegation
+   security model and validation checklist.
+
+10.  Privacy Considerations
+
+   The privacy considerations in this section are informed by the
+   Internet protocol privacy analysis framework described in [RFC6973].
+   This section addresses privacy considerations specific to the
+   integrated framework; implementers MUST also consult the privacy
+   considerations in each component specification.
+
+10.1.  Cross-Domain Identity Correlation
+
+   This framework inherently links user identities across multiple trust
+   domains: the Home IdP (where the user authenticates), the Agent
+   domain (where the user interacts with the AI agent), and the External
+   AS/RS domain (where resources are accessed).  The act.agent_user_id
+   field and the evidence record within the authorization_evidence
+   authorization details type both carry identifiers that could be used
+   to correlate a user's activities across these domains.
+
+   Implementations SHOULD minimize cross-domain correlation by:
+
+   *  Using domain-specific subject identifiers in the access token's
+      sub claim rather than globally unique identifiers;
+
+   *  Treating agent_user_id as optional and including it only when
+      required for audit correlation;
+
+   *  Avoiding inclusion of stable, globally correlatable identifiers in
+      the evidence record's displayed_content field.
+
+10.2.  Agent Observability
+
+   AI agents acting on behalf of users can observe resource contents,
+   policy evaluation outcomes, and error responses (including reverse-
+   guided authorization hints).  A compromised or malicious agent could
+   accumulate sensitive information about the user's access patterns,
+   resource contents, and organizational policy structure.
+
+   Mitigations include:
+
+   *  Applying the principle of least privilege to agent capabilities
+      via Rego policy constraints;
+
+   *  Using the semantic_expansion_level in the audit_trail sub-object
+      to flag operations where significant interpretation was applied,
+      enabling post-hoc review of agent behavior;
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 23]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  Limiting the information exposed in reverse-guided authorization
+      error responses to what is necessary for constructing a valid
+      request.
+
+10.3.  Displayed Content Sensitivity
+
+   The displayed_content field in the evidence record (within the
+   authorization_evidence authorization details type) records the human-
+   readable description shown to the user during consent.  This field
+   may contain sensitive information about the user's intent, financial
+   parameters, health-related operations, or personal data.  Since the
+   evidence record is included in the access token and may be logged by
+   resource servers, implementations MUST minimize personal data in this
+   field and SHOULD use operation identifiers rather than natural-
+   language descriptions that may contain PII.
+
+   See [I-D.liu-oauth-authorization-evidence] for detailed guidance on
+   displayed content minimization, evidence retention, and the tension
+   between audit retention and the right to erasure under GDPR and CCPA.
+
+10.4.  Delegation Chain Privacy
+
+   Delegation chains record the identity of each intermediate agent in
+   the delegation_chain claim.  In multi-hop scenarios, this creates a
+   record of all agents involved in a transaction, which may reveal
+   organizational structure or agent relationships that participants
+   consider sensitive.  Implementations SHOULD evaluate whether the full
+   delegation chain needs to be visible to the final resource server, or
+   whether a summarized view is sufficient.
+
+   See [I-D.liu-oauth-chain-delegation] for delegation chain privacy
+   considerations.
+
+11.  Relationship to Other Specifications
+
+   This section clarifies the relationship between this framework and
+   other OAuth 2.0 specifications.  Understanding these relationships is
+   essential for implementers to determine which specifications are
+   required for their specific use cases.
+
+11.1.  Relationship to Identity Assertion Grant (ID-JAG)
+
+   This framework builds on the Identity Assertion Authorization Grant
+   ([I-D.ietf-oauth-identity-assertion-authz-grant]) as the base grant
+   type for cross-domain identity assertion.  ID-JAG enables AI agents
+   to present a JWT assertion (e.g., an ID Token from the user's Home
+   IdP) to an external authorization server as proof of user identity.
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 24]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   This framework extends ID-JAG with:
+
+   *  The JWT Grant Interaction Response
+      ([I-D.parecki-oauth-jwt-grant-interaction-response]) for obtaining
+      explicit user consent when the AS requires user interaction;
+
+   *  RAR-based policy authorization via the rego_policy authorization
+      data type in authorization_details;
+
+   *  Evidence recording of user consent decisions.
+
+   Implementations of this framework MUST implement ID-JAG as the base
+   grant type.
+
+11.2.  Relationship to JWT Grant Interaction Response
+
+   The JWT Grant Interaction Response
+   ([I-D.parecki-oauth-jwt-grant-interaction-response]) defines an
+   extension to the JWT Authorization Grant that enables an
+   authorization server to indicate that user interaction is required.
+   Instead of immediately returning an access token or error, the AS
+   returns an interaction_uri where the user can provide consent, along
+   with a polling interval.
+
+   This framework uses JWT Grant Interaction Response for:
+
+   *  Obtaining explicit user consent for AI agent operations without
+      requiring a traditional OAuth redirect flow;
+
+   *  Enabling the agent to launch a browser for user interaction and
+      then poll for completion;
+
+   *  Supporting both polling-based and redirect-based notification of
+      interaction completion.
+
+   Implementations MUST support JWT Grant Interaction Response for user
+   consent in AI agent authorization scenarios.
+
+11.3.  Relationship to Token Exchange (RFC 8693)
+
+   This framework uses Token Exchange ([RFC8693]) as the base delegation
+   mechanism and extends it with the delegation_chain claim for complete
+   auditability.  While RFC 8693 provides point-to-point token exchange,
+   this framework enables end-to-end delegation chain tracking.
+
+   Key extensions:
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 25]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  delegation_chain claim records all delegation hops with
+      cryptographic signatures;
+
+   *  Policy subset validation ensures privilege escalation prevention
+      across delegation hops;
+
+   *  Evidence records provide cryptographic proof of the original user
+      consent, propagated across delegation hops via root_evidence_ref;
+
+   Implementations SHOULD support RFC 8693 for token exchange operations
+   and MAY implement the delegation chain extension for multi-hop
+   scenarios.
+
+11.4.  Relationship to Transaction Tokens
+
+   Transaction Tokens ([I-D.ietf-oauth-transaction-tokens]) focus on
+   short-lived service-to-service authorization in microservices
+   architectures.  This framework focuses on longer-lived user-to-agent
+   delegation with explicit human consent.
+
+   Comparison:
+
+      +=====================+====================+==================+
+      | Aspect              | Transaction Tokens | This Framework   |
+      +=====================+====================+==================+
+      | Primary use case    | Service-to-service | User-to-agent    |
+      +---------------------+--------------------+------------------+
+      | Human consent       | Not required       | Required         |
+      +---------------------+--------------------+------------------+
+      | Token lifetime      | Minutes            | Minutes to hours |
+      +---------------------+--------------------+------------------+
+      | Authorization model | Capability-based   | Policy-based     |
+      +---------------------+--------------------+------------------+
+
+               Table 4: Transaction Tokens vs This Framework
+
+   The two specifications can be combined: this framework for initial
+   user authorization, Transaction Tokens for subsequent service-to-
+   service calls within the authorized scope.
+
+11.5.  Relationship to CIBA
+
+   This framework profiles the OpenID Connect Client-Initiated
+   Backchannel Authentication (CIBA) [CIBA] specification for out-of-
+   band user consent.  While CIBA focuses on user authentication, this
+   framework uses it for authorization and consent collection.
+
+   CIBA is used in this framework for:
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 26]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  Scenarios where the agent cannot redirect the user to a browser
+      (e.g., voice assistants, IoT devices);
+
+   *  High-security scenarios requiring out-of-band consent
+      verification;
+
+   *  Mobile scenarios where the user completes consent on a separate
+      device.
+
+   The framework extends CIBA by adding policy presentation to the
+   consent interface and evidence recording of the consent decision.
+
+11.6.  Relationship to Rich Authorization Requests (RAR)
+
+   This framework uses Rich Authorization Requests ([RFC9396]) as the
+   mechanism for carrying Rego policy in authorization requests via the
+   authorization_details parameter.  The rego_policy authorization data
+   type defined in [I-D.liu-oauth-rego-policy] enables fine-grained,
+   policy-based authorization within the RAR framework.
+
+   RAR integration provides:
+
+   *  A standardized container (authorization_details) for carrying Rego
+      policy and evaluation context;
+
+   *  Enriched token responses (RFC 9396 Section 7.1) that include the
+      evaluated policy in the access token;
+
+   *  Compatibility with other RAR types, enabling combined
+      authorization scenarios.
+
+   Implementations MUST support RAR (RFC 9396) with the rego_policy
+   authorization data type.
+
+11.7.  Relationship to SPIFFE Client Authentication
+
+   This framework uses OAuth SPIFFE Client Authentication
+   ([I-D.ietf-oauth-spiffe-client-auth]) for agent authentication.
+   SPIFFE provides workload identity through WIT-SVID (Workload Identity
+   Token with SPIFFE Verifiable Identity Document).
+
+   The relationship is:
+
+   *  SPIFFE Client Auth proves "who the agent is" through cryptographic
+      workload identity;
+
+   *  This framework proves "what the agent is allowed to do" through
+      user consent and policy authorization;
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 27]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   *  Together, they provide complete agent identity and authorization.
+
+   Implementations using Identity Level 1 or Level 2 (Section 7.1) MUST
+   support SPIFFE Client Authentication for agent identification.
+   Deployments using Identity Level 0 (self-issued identity) MAY use
+   alternative client authentication mechanisms.
+
+11.8.  Implementation Requirements
+
+   The following table summarizes the implementation requirements for
+   different components of this framework:
+
+    +======================+===================+======================+
+    | Specification        | Requirement Level | Component            |
+    +======================+===================+======================+
+    | OAuth 2.0 (RFC 6749) | MUST              | All                  |
+    +----------------------+-------------------+----------------------+
+    | PAR ([RFC9126])      | MAY               | Agent, AS            |
+    +----------------------+-------------------+----------------------+
+    | RAR (RFC 9396)       | MUST              | Agent, AS, RS        |
+    +----------------------+-------------------+----------------------+
+    | ID-JAG               | MUST              | Agent, AS            |
+    +----------------------+-------------------+----------------------+
+    | JWT Grant            | MUST              | Agent, AS            |
+    | Interaction Response |                   |                      |
+    +----------------------+-------------------+----------------------+
+    | SPIFFE Client Auth   | SHOULD (see note) | Agent, AS            |
+    +----------------------+-------------------+----------------------+
+    | Rego Policy          | MUST              | Agent, AS, RS        |
+    +----------------------+-------------------+----------------------+
+    | Authorization        | SHOULD            | AS, RS               |
+    | Evidence             |                   |                      |
+    +----------------------+-------------------+----------------------+
+    | Chain Delegation     | MAY               | AS (if supporting    |
+    |                      |                   | delegation)          |
+    +----------------------+-------------------+----------------------+
+    | Token Exchange (RFC  | SHOULD            | AS                   |
+    | 8693)                |                   |                      |
+    +----------------------+-------------------+----------------------+
+    | CIBA                 | MAY               | AS (if supporting    |
+    |                      |                   | out-of-band consent) |
+    +----------------------+-------------------+----------------------+
+
+                    Table 5: Implementation Requirements
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 28]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   Note: SPIFFE Client Authentication is required for Identity Levels 1
+   and 2 (Section 7.1).  Identity Level 0 deployments (self-issued
+   identity) MAY use alternative client authentication mechanisms such
+   as client_secret_post or private_key_jwt.
+
+12.  IANA Considerations
+
+   This document has no IANA actions.  All claims and parameters are
+   defined in the referenced component specifications.
+
+13.  References
+
+13.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/info/rfc6749>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/info/rfc8693>.
+
+   [RFC9396]  Lodderstedt, T., Richer, J., and B. Campbell, "OAuth 2.0
+              Rich Authorization Requests", RFC 9396,
+              DOI 10.17487/RFC9396, May 2023,
+              <https://www.rfc-editor.org/info/rfc9396>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/info/rfc7515>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/info/rfc7519>.
+
+   [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
+              Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
+              2021, <https://www.rfc-editor.org/info/rfc9068>.
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 29]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   [RFC6973]  Cooper, A., Tschofenig, H., Aboba, B., Peterson, J.,
+              Morris, J., Hansen, M., and R. Smith, "Privacy
+              Considerations for Internet Protocols", RFC 6973,
+              DOI 10.17487/RFC6973, July 2013,
+              <https://www.rfc-editor.org/info/rfc6973>.
+
+   [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
+              RFC 7662, DOI 10.17487/RFC7662, October 2015,
+              <https://www.rfc-editor.org/info/rfc7662>.
+
+   [I-D.ietf-oauth-identity-assertion-authz-grant]
+              Ying, K. and B. Campbell, "OAuth 2.0 Identity Assertion
+              Authorization Grant", Work in Progress, Internet-Draft,
+              draft-ietf-oauth-identity-assertion-authz-grant, January
+              2026, <https://datatracker.ietf.org/doc/html/draft-ietf-
+              oauth-identity-assertion-authz-grant>.
+
+   [I-D.parecki-oauth-jwt-grant-interaction-response]
+              Parecki, A., Campbell, B., and D. Liu, "JWT Authorization
+              Grant with Interaction Response", Work in Progress,
+              Internet-Draft, draft-parecki-oauth-jwt-grant-interaction-
+              response-00, June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-parecki-
+              oauth-jwt-grant-interaction-response-00>.
+
+   [I-D.ietf-oauth-spiffe-client-auth]
+              Schwenkschuster, A., "OAuth SPIFFE Client Authentication",
+              Work in Progress, Internet-Draft, draft-ietf-oauth-spiffe-
+              client-auth, March 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              spiffe-client-auth>.
+
+   [I-D.liu-oauth-rego-policy]
+              Liu, D., Zhu, H., Krishnan, S., Parecki, A., and H. Xue,
+              "Rego Policy Language for OAuth 2.0 Authorization", Work
+              in Progress, Internet-Draft, draft-liu-oauth-rego-policy-
+              00, June 2026, <https://datatracker.ietf.org/doc/html/
+              draft-liu-oauth-rego-policy-00>.
+
+   [I-D.liu-oauth-authorization-evidence]
+              Liu, D., Zhu, H., Krishnan, S., and A. Parecki,
+              "Authorization Evidence and Audit Trail for OAuth 2.0
+              Access Tokens", Work in Progress, Internet-Draft, draft-
+              liu-oauth-authorization-evidence-01, June 2026,
+              <https://datatracker.ietf.org/doc/html/draft-liu-oauth-
+              authorization-evidence-01>.
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 30]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+   [I-D.liu-oauth-chain-delegation]
+              Liu, D., Zhu, H., Krishnan, S., and A. Parecki,
+              "Delegation Chain for OAuth 2.0", Work in Progress,
+              Internet-Draft, draft-liu-oauth-chain-delegation-00, June
+              2026, <https://datatracker.ietf.org/doc/html/draft-liu-
+              oauth-chain-delegation-00>.
+
+13.2.  Informative References
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/info/rfc9126>.
+
+   [I-D.ietf-oauth-transaction-tokens]
+              Tulshibagwale, A., Fletcher, G., and P. Kasselman,
+              "Transaction Tokens", Work in Progress, Internet-Draft,
+              draft-ietf-oauth-transaction-tokens, 2024,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              transaction-tokens>.
+
+   [CIBA]     OpenID Foundation, "OpenID Connect CIBA Core", 2021,
+              <https://openid.net/specs/openid-client-initiated-
+              backchannel-authentication-core-1_0.html>.
+
+   [OPA]      CNCF, "Open Policy Agent", 2024,
+              <https://www.openpolicyagent.org/>.
+
+   [I-D.ietf-wimse-arch]
+              Salowey, J., "Workload Identity in Multi System
+              Environments (WIMSE) Architecture", Work in Progress,
+              Internet-Draft, draft-ietf-wimse-arch, 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
+              arch>.
+
+   [I-D.ietf-wimse-workload-creds]
+              Salowey, J., "WIMSE Workload Identity Token", Work in
+              Progress, Internet-Draft, draft-ietf-wimse-workload-creds,
+              2026, <https://datatracker.ietf.org/doc/html/draft-ietf-
+              wimse-workload-creds>.
+
+Appendix A.  Complete Example
+
+A.1.  Token Request
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 31]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+POST /token HTTP/1.1
+Host: as.shop.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
+OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
+  %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
+
+                               Figure 7
+
+A.2.  Interaction Required Response
+
+   HTTP/1.1 400 Bad Request
+   Content-Type: application/json
+
+   {
+     "error": "interaction_required",
+     "interaction_uri": "https://as.shop.example/interact/abc123",
+     "interval": 5,
+     "expires_in": 600
+   }
+
+                                  Figure 8
+
+A.3.  Access Token
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 32]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+{
+  "iss": "https://as.shop.example",
+  "sub": "user_12345",
+  "aud": "https://api.shop.example",
+  "exp": 1731369540,
+  "iat": 1731320700,
+  "jti": "urn:uuid:token-shop-123",
+
+  "act": {
+    "sub": "wit://myassistant.example/sha256.xyz789...",
+    "agent_user_id": "agent_user_001"
+  },
+
+  "authorization_details": [
+    {
+      "type": "rego_policy",
+      "policy": {
+        "type": "rego",
+        "uri": "https://as.shop.example/policies/policy-cart-50",
+        "entry_point": "allow"
+      },
+      "context": {
+        "user": { "id": "user_12345" },
+        "action": "add_to_cart"
+      }
+    },
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
+    }
+  ]
+}
+
+                               Figure 9
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 33]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+A.4.  Polling (after user consent)
+
+POST /token HTTP/1.1
+Host: as.shop.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
+OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
+  %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
+
+                              Figure 10
+
+   The agent re-sends the original request with a fresh SPIFFE client
+   attestation at the interval specified in the interaction response.
+   Upon successful user consent, the AS returns the access token shown
+   above.
+
+A.5.  API Request to Resource Server
+
+   POST /cart/add HTTP/1.1
+   Host: api.shop.example
+   Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL...
+   Content-Type: application/json
+
+   {
+     "item_id": "SKU-789",
+     "quantity": 1,
+     "price": 42.99
+   }
+
+                                 Figure 11
+
+   The Resource Server validates the access token, extracts the
+   rego_policy from authorization_details, and evaluates it against the
+   request context (action, item price, user identity) using a Rego-
+   compatible policy engine.
+
+Acknowledgments
+
+   The authors would like to thank Brian Campbell for his valuable
+   feedback and insightful discussions on OAuth extension design.  His
+   contributions helped shape key aspects of this framework.
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 34]
+
+Internet-Draft           AI Agent Authorization                July 2026
+
+
+Authors' Addresses
+
+   Dapeng Liu
+   Alibaba Group
+   Email: max.ldp@alibaba-inc.com
+
+
+   Hongru Zhu
+   Alibaba Group
+   Email: hongru.zhr@alibaba-inc.com
+
+
+   Suresh Krishnan
+   Cisco
+   Email: suresh.krishnan@gmail.com
+
+
+   Aaron Parecki
+   Okta
+   Email: aaron@parecki.com
+
+
+   Hui Xue
+   Alibaba Group
+   Email: hui.xueh@alibaba-inc.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Liu, et al.              Expires 7 January 2027                [Page 35]

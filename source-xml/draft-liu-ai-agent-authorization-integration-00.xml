@@ -55,7 +55,7 @@
       </address>
     </author>
 
-    <date year="2026" month="June" day="10"/>
+    <date year="2026" month="July" day="6"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -105,7 +105,7 @@
 
       <ul>
         <li>
-          <strong>Progressive Deployment</strong>: Organizations can adopt AOA 
+          <strong>Progressive Deployment</strong>: Organizations can adopt the framework's
           capabilities gradually through a two-dimensional deployment matrix, 
           starting with simple configurations and upgrading to full runtime 
           authorization as requirements evolve (see <xref target="progressive-deployment"/>).
@@ -130,7 +130,11 @@
 
       <section title="Component Specifications">
         <t>
-          This framework integrates the following specifications:
+          This framework integrates the following specifications. The first
+          two (Agent Authentication and Identity Assertion Grant) are
+          external OAuth Working Group specifications that this framework
+          profiles. The remaining four are companion specifications
+          developed alongside this framework:
         </t>
 
         <table anchor="tbl-components">
@@ -150,7 +154,7 @@
             </tr>
             <tr>
               <td>Identity Assertion Grant</td>
-              <td><xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/> (ID-JAG)</td>
+              <td><xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/></td>
               <td>JWT-based cross-domain identity assertion</td>
             </tr>
             <tr>
@@ -181,14 +185,14 @@
 
     <section anchor="authorization-model" title="Authorization Model: Policy vs Scope">
       <t>
-        AOA uses a policy-based authorization model that replaces traditional OAuth 2.0 
+        This framework uses a policy-based authorization model that replaces traditional OAuth 2.0 
         scopes with fine-grained Rego policies. This section clarifies the relationship 
-        between scopes and policies in AOA.
+        between scopes and policies in this framework.
       </t>
 
       <section title="Rego Policy as Primary Authorization Mechanism">
         <t>
-          In AOA, the primary authorization mechanism is Rego policy carried via 
+          In this framework, the primary authorization mechanism is Rego policy carried via 
           Rich Authorization Requests (RAR, <xref target="RFC9396"/>), not OAuth 2.0 scopes. 
           The <tt>rego_policy</tt> authorization data type defined in 
           <xref target="I-D.liu-oauth-rego-policy"/> carries the authorization logic 
@@ -222,7 +226,7 @@
 
       <section title="Scope as Optional Supplement">
         <t>
-          Traditional OAuth 2.0 <tt>scope</tt> parameter is OPTIONAL in AOA and serves 
+          Traditional OAuth 2.0 <tt>scope</tt> parameter is OPTIONAL in this framework and serves 
           different purposes:
         </t>
 
@@ -263,29 +267,39 @@
 
       <section title="Complete Authorization Mechanism">
         <t>
-          AOA's complete authorization mechanism comprises four integrated components:
+          The complete authorization mechanism comprises six integrated components:
         </t>
 
         <ol>
           <li>
-            <strong>Cross-Domain Identity</strong> 
-            (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>): 
+            <strong>Agent Authentication</strong>
+            (<xref target="I-D.ietf-oauth-spiffe-client-auth"/>):
+            Proves "who the agent is" through cryptographic workload identity.
+          </li>
+          <li>
+            <strong>Cross-Domain Identity</strong>
+            (<xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>):
             Proves "who the user is" across trust domains via JWT assertion.
           </li>
           <li>
-            <strong>Consent Evidence</strong> 
-            (<xref target="I-D.liu-oauth-authorization-evidence"/>): 
+            <strong>User Interaction &amp; Consent</strong>
+            (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>):
+            Obtains explicit user consent through structured interaction flow.
+          </li>
+          <li>
+            <strong>Rego Policy</strong>
+            (<xref target="I-D.liu-oauth-rego-policy"/>):
+            Defines "what operations are allowed" with fine-grained conditions.
+          </li>
+          <li>
+            <strong>Authorization Evidence</strong>
+            (<xref target="I-D.liu-oauth-authorization-evidence"/>):
             Provides cryptographic proof of "what the user agreed to".
           </li>
           <li>
-            <strong>Chain Delegation</strong> 
-            (<xref target="I-D.liu-oauth-chain-delegation"/>): 
+            <strong>Chain Delegation</strong>
+            (<xref target="I-D.liu-oauth-chain-delegation"/>):
             Enables secure "agent-to-agent transfer" of authorization.
-          </li>
-          <li>
-            <strong>Rego Policy</strong> 
-            (<xref target="I-D.liu-oauth-rego-policy"/>): 
-            Defines "what operations are allowed" with fine-grained conditions.
           </li>
         </ol>
 
@@ -294,23 +308,27 @@
         </t>
 
         <figure>
-          <artwork name="AOA Authorization Stack" type=""><![CDATA[
-+---------------------------------------------------------+
-|  Integration Framework (This Draft)                     |
-|  "How to combine all components"                        |
-+---------------------------------------------------------+
-|  +-------------+  +-------------+  +-------------+      |
-|  |  Identity   |  |  Consent    |  | Delegation  |      |
-|  |  (ID-JAG)   |  | (Interact) |  | (Transfer)  |       |
-|  +-------------+  +-------------+  +-------------+      |
-|                                                         |
-|  +---------------------------------------------------+  |
-|  |     Policy Engine via RAR (rego_policy)           |  |
-|  |         "Under what conditions allow"             |  |
-|  +---------------------------------------------------+  |
-+---------------------------------------------------------+
-|        OAuth 2.0 Core + RAR + ID-JAG                    |
-+---------------------------------------------------------+
+          <artwork name="Authorization Stack" type="ascii-art"><![CDATA[
++------------------------------------------------------------+
+|  Integration Framework (This Draft)                        |
+|  "How to combine all components"                           |
++------------------------------------------------------------+
+|  +------------+ +------------+ +------------+ +----------+  |
+|  |  Agent     | |  Identity  | |  Consent   | | Delegat. |  |
+|  |  Authn     | |  (ID-JAG)  | |  (JAG-IR)  | | (Chain)  |  |
+|  | (SPIFFE)   | +------------+ +------------+ +----------+  |
+|  +------------+                                             |
+|  +------------------------------------------------------+  |
+|  |     Policy Engine via RAR (rego_policy)              |  |
+|  |         "Under what conditions allow"                |  |
+|  +------------------------------------------------------+  |
+|  +------------------------------------------------------+  |
+|  |     Authorization Evidence (consent + audit trail)   |  |
+|  |         "What did the user agree to"                 |  |
+|  +------------------------------------------------------+  |
++------------------------------------------------------------+
+|        OAuth 2.0 Core + RAR (RFC 9396)                     |
++------------------------------------------------------------+
           ]]></artwork>
         </figure>
       </section>
@@ -393,12 +411,16 @@
 
         <ul>
           <li>
-            <strong><tt>sub</tt> (Subject)</strong>: MUST contain the user's 
-            identifier at the Resource Application (third-party app), NOT the 
-            Agent's internal user identifier. This enables the Resource Server 
-            to immediately identify the resource owner without additional 
-            identity mapping lookups. The AS extracts this value from the 
-            JWT assertion's subject claims.
+            <t>
+            <strong><tt>sub</tt> (Subject)</strong>: MUST contain the user's
+            identifier at the Resource Application (third-party app), NOT the
+            Agent's internal user identifier. This enables the Resource Server
+            to immediately identify the resource owner without additional
+            identity mapping lookups. The AS maps the Home IdP subject to
+            the resource-domain identifier through account linking,
+            federation metadata, or additional identity claims (e.g.,
+            <tt>email</tt>) present in the JWT assertion.
+            </t>
           </li>
           <li>
             <t>
@@ -419,33 +441,36 @@
             </ul>
           </li>
           <li>
-            <strong><tt>evidence</tt></strong>: Contains a signed record of
-            the user's confirmation action during authorization, including
-            what was displayed to the user, how the user confirmed, and a
-            cryptographic signature from the AS.  Defined in
-            <xref target="I-D.liu-oauth-authorization-evidence"/>.
+            <t>
+            <strong><tt>authorization_details</tt></strong>: Carries
+            multiple authorization data types via Rich Authorization Requests
+            (<xref target="RFC9396"/>):
+            </t>
+            <ul>
+              <li>
+                <tt>rego_policy</tt> type: The Rego policy defining what
+                operations the agent is permitted to perform.  Defined in
+                <xref target="I-D.liu-oauth-rego-policy"/>.
+              </li>
+              <li>
+                <tt>authorization_evidence</tt> type: The signed record of
+                the user's confirmation action during authorization, including
+                what was displayed to the user, how the user confirmed, a
+                cryptographic signature from the AS, and the
+                <tt>audit_trail</tt> sub-object for semantic traceability.
+                Defined in
+                <xref target="I-D.liu-oauth-authorization-evidence"/>.
+              </li>
+            </ul>
           </li>
           <li>
-            <strong><tt>audit_trail</tt></strong>: Provides semantic
-            traceability metadata linking user intent to authorized
-            operations, including a reference to the evidence record and
-            the semantic expansion level.  Defined in
-            <xref target="I-D.liu-oauth-authorization-evidence"/>.
-          </li>
-          <li>
-            <strong><tt>authorization_details</tt></strong>: Carries the
-            Rego policy authorization data (<tt>rego_policy</tt> type)
-            via Rich Authorization Requests
-            (<xref target="RFC9396"/>), defining what operations the
-            agent is permitted to perform.  Defined in
-            <xref target="I-D.liu-oauth-rego-policy"/>.
-          </li>
-          <li>
+            <t>
             <strong><tt>delegation_chain</tt></strong>: Records the
             chain of delegation hops when authorization is transferred
             between agents, with cryptographic signatures for each hop.
             Only present in delegated scenarios.  Defined in
             <xref target="I-D.liu-oauth-chain-delegation"/>.
+            </t>
           </li>
         </ul>
 
@@ -476,26 +501,43 @@
         "user": { "id": "user_12345" },
         "action": "add_to_cart"
       }
+    },
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
     }
   ],
 
-  "evidence": {
-    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "user_confirmation": {
-      "displayed_content": "Add items under $50 to cart",
-      "user_action": "button_click",
-      "timestamp": 1731320595
-    },
-    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
-  },
-
-  "audit_trail": {
-    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "semantic_expansion_level": "medium",
-    "proposal_ref": "urn:uuid:proposal-xyz"
-  },
-
-  "delegation_chain": [ "..." ]
+  "delegation_chain": [
+    {
+      "delegator_id": "wit://agent-a.example/sha256.aaa111...",
+      "delegatee_id": "wit://agent-b.example/sha256.bbb222...",
+      "as_id": "https://as.external.example",
+      "delegation_timestamp": 1731320800,
+      "root_evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+      "delegated_policy": {
+        "type": "rego",
+        "uri": "https://as.external.example/policies/policy-delegated-456",
+        "entry_point": "allow"
+      },
+      "operation_summary": "Delegate cart operations",
+      "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD...",
+      "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
+    }
+  ]
 }
           ]]></artwork>
         </figure>
@@ -506,15 +548,15 @@
       <section title="Overview">
         <figure>
           <artwork name="Complete Authorization Flow" type="ascii-art"><![CDATA[
-+-------+    +-------+    +--------+    +-------+    +-------+    +-----+
-| User  |    | Home  |    |  AI    |    |External    |  RS   |    |Policy|
-|       |    |  IdP  |    | Agent  |    |   AS  |    |       |    |     |
-+-------+    +-------+    +--------+    +-------+    +-------+    +-----+
++-------+    +-------+    +--------+    +-------+    +-------+    +------+
+| User  |    | Home  |    |  AI    |    |External |    |  RS   |    |Policy|
+|       |    |  IdP  |    | Agent  |    |   AS    |    |       |    |      |
++-------+    +-------+    +--------+    +-------+    +-------+    +------+
     |            |             |            |            |           |
 (1) | Authn      |             |            |            |           |
     |----------->|             |            |            |           |
     |            |             |            |            |           |
-(2) |  ID Token (aud=agent)    |            |            |           |
+(2) |  ID Token (aud=External AS)           |            |           |
     |<------------------------->            |            |           |
     |            |             |            |            |           |
 (3) |            |   Agent builds token req:|            |           |
@@ -572,17 +614,19 @@
       <section title="Step-by-Step Description">
         <ol>
           <li>
-            <t><strong>User Authentication at Agent:</strong> User 
-            authenticates with the Agent's Identity Provider (IdP). 
-            The Agent's IdP issues an ID Token containing:</t>
+            <t><strong>User Authentication at Agent:</strong> User
+            authenticates with the Agent's Identity Provider (Home IdP).
+            The Agent requests an ID Token suitable for cross-domain
+            assertion, containing:</t>
             <ul>
               <li>
-                <tt>sub</tt>: The user's identifier at the Agent system 
+                <tt>sub</tt>: The user's identifier at the Agent system
                 (e.g., <tt>agent_user_001</tt>);
               </li>
               <li>
-                <tt>aud</tt>: The agent's SPIFFE ID, binding this token 
-                to the specific agent.
+                <tt>aud</tt>: The External AS's identifier, binding this
+                assertion to the target authorization server per
+                <xref target="I-D.ietf-oauth-identity-assertion-authz-grant"/>.
               </li>
             </ul>
           </li>
@@ -598,8 +642,7 @@
             <ul>
               <li><tt>grant_type</tt>: <tt>urn:ietf:params:oauth:grant-type:jwt-bearer</tt>;</li>
               <li><tt>assertion</tt>: The user's ID Token (JWT);</li>
-              <li><tt>authorization_details</tt>: Containing <tt>rego_policy</tt> type with policy and context;</li>
-              <li><tt>redirect_uri</tt> (OPTIONAL): For interaction completion notification.</li>
+              <li><tt>authorization_details</tt>: Containing <tt>rego_policy</tt> type with policy and context.</li>
             </ul>
           </li>
           <li>
@@ -610,7 +653,8 @@
             <t>AS Validation: AS validates:</t>
             <ul>
               <li>SPIFFE client credentials;</li>
-              <li>JWT assertion signature from Home IdP;</li>
+              <li>JWT assertion signature, audience (<tt>aud</tt>),
+                and expiration (<tt>exp</tt>) from Home IdP;</li>
               <li>Policy syntax and safety in <tt>authorization_details</tt>.</li>
             </ul>
           </li>
@@ -626,21 +670,24 @@
             the interpreted operation.</t>
           </li>
           <li>
-            <t>User Confirmation: User reviews and approves the 
+            <t>User Confirmation: User reviews and approves (or denies) the
             operation.</t>
           </li>
           <li>
-            <t>Polling: Agent polls the token endpoint (re-sending its 
-            original request) until the AS completes user interaction.</t>
+            <t>Polling: Agent polls the token endpoint (re-sending its
+            original request with a fresh SPIFFE client attestation)
+            until the AS completes user interaction.  If the user
+            denies consent, the AS returns an <tt>access_denied</tt>
+            error to subsequent polling requests.</t>
           </li>
           <li>
             <t>Token Issuance: AS issues access token containing:</t>
             <ul>
               <li><tt>act</tt>: Agent's SPIFFE ID;</li>
-              <li><tt>authorization_details</tt>: Enriched response per RFC 9396 Section 7.1;</li>
-              <li><tt>evidence</tt>: Signed user confirmation record;</li>
-              <li><tt>audit_trail</tt>: Semantic traceability metadata
-                linking user intent to authorized operations.</li>
+              <li><tt>authorization_details</tt>: Enriched response per RFC 9396 Section 7.1,
+                including both <tt>rego_policy</tt> and
+                <tt>authorization_evidence</tt> types;</li>
+              <li><tt>delegation_chain</tt>: (only in delegation scenarios).</li>
             </ul>
           </li>
           <li>
@@ -680,17 +727,26 @@
      |                 |                 |                |
      | Token Exchange  |                 |                |
      | - subject_token |                 |                |
-     | - delegatee_wit |                 |                |
-     | - authz_details |                 |                |
+     | - delegatee_id  |                 |                |
+     | - authorization |                 |                |
+     |   _details      |                 |                |
+     | - delegator_sig |                 |                |
+     |   (over deleg.  |                 |                |
+     |    record)      |                 |                |
      |---------------->|                 |                |
      |                 |                 |                |
      |                 | Validate:       |                |
      |                 | - Token A valid |                |
-     |                 | - Scope subset  |                |
+     |                 | - Policy subset |                |
      |                 | - Agent B auth  |                |
+     |                 | - delegator_sig |                |
+     |                 |                 |                |
+     |                 | AS countersigns |                |
+     |                 | (as_signature)  |                |
      |                 |                 |                |
      |                 | Issue Token B   |                |
      |                 | with delegation_chain            |
+     |                 | (del_sig+as_sig)|                |
      |                 |---------------->|                |
      |                 |                 |                |
      |                 |                 | API Request    |
@@ -698,6 +754,7 @@
      |                 |                 |                |
      |                 |                 |     Validate   |
      |                 |                 |     chain      |
+     |                 |                 |  (dual sig)    |
      |                 |                 |                |
      |                 |                 | Response       |
      |                 |                 |<---------------|
@@ -707,20 +764,26 @@
       <t>
         The resulting token for Agent B includes a <tt>delegation_chain</tt>
         recording the delegation hop, as defined in
-        <xref target="I-D.liu-oauth-chain-delegation"/>.
+        <xref target="I-D.liu-oauth-chain-delegation"/>.  Each delegation
+        chain entry carries a dual signature: the delegator's signature
+        (<tt>delegator_signature</tt>) over the delegation record and
+        the AS's countersignature (<tt>as_signature</tt>), ensuring
+        non-repudiation and preventing unilateral scope escalation.
       </t>
 
       <t>
         The AS MUST also decide how to handle the original
-        <tt>evidence</tt> claim from Agent A's token.  Three strategies
-        are defined in <xref target="I-D.liu-oauth-authorization-evidence"/>:
-        <strong>Propagate</strong> (copy the original evidence into
-        Agent B's token), <strong>Reference</strong> (replace the
-        embedded evidence with an <tt>audit_trail</tt> claim containing
-        only the <tt>evidence_ref</tt>), or <strong>Omit</strong> (do
+        <tt>authorization_evidence</tt> entry from Agent A's token.
+        Three strategies are defined in
+        <xref target="I-D.liu-oauth-authorization-evidence"/>:
+        <strong>Propagate</strong> (copy the original
+        <tt>authorization_evidence</tt> entry into Agent B's token),
+        <strong>Reference</strong> (replace the embedded evidence with
+        an <tt>audit_trail</tt> sub-object containing only the
+        <tt>evidence_ref</tt>), or <strong>Omit</strong> (do
         not include evidence).  The Propagate strategy is RECOMMENDED
-        when the delegated token's scope is a subset of the original
-        token's scope.  When using delegation chains, the
+        when the delegated policy is a subset of the original
+        token's policy.  When using delegation chains, the
         <tt>root_evidence_ref</tt> in the delegation chain entry SHOULD
         reference the same evidence record, creating an unbroken audit
         trail from the original user consent through all delegation hops.
@@ -754,18 +817,22 @@
 
       <section title="Consent-Only Flow">
         <t>
-          When the user has a valid, non-expired ID Token and the agent's
-          identity is already trusted, the AS MAY skip re-authentication and
-          only prompt for consent to the specific operation.  This mode
-          reduces user friction for repeat operations while maintaining
-          explicit consent for each authorized action.
+          When the user has a valid, non-expired session at the AS and the
+          agent's identity is already trusted, the AS MAY skip
+          re-authentication and only prompt for consent to the specific
+          operation.  This is a deployment-level optimization that does
+          not change the protocol flow; the AS still returns an
+          <tt>interaction_required</tt> response, but the consent
+          interface presented to the user omits the authentication step.
+          This mode reduces user friction for repeat operations while
+          maintaining explicit consent for each authorized action.
         </t>
       </section>
     </section>
 
     <section anchor="progressive-deployment" title="Progressive Deployment">
       <t>
-        The AOA framework supports progressive deployment through a 
+        This framework supports progressive deployment through a 
         two-dimensional matrix, allowing organizations to adopt capabilities 
         gradually based on their security requirements and operational maturity.
       </t>
@@ -785,10 +852,12 @@
 
         <section title="Level 1: WIMSE Workload Identity">
           <t>
-            The agent obtains workload identity tokens through WIMSE infrastructure. 
+            The agent obtains workload identity tokens through WIMSE infrastructure
+            <xref target="I-D.ietf-wimse-workload-creds"/>. 
             Provides cross-domain verifiability without requiring full enterprise IdP 
             deployment. This level can be enhanced with optional trusted execution 
-            environment verification using WIT Attestation.
+            environment verification using WIT attestation
+            <xref target="I-D.ietf-wimse-arch"/>.
           </t>
         </section>
 
@@ -821,9 +890,9 @@
           </t>
         </section>
 
-        <section title="Level C: Runtime AOA Tokens">
+        <section title="Level C: Runtime Authorization Tokens">
           <t>
-            Full AOA flow with user consent, policy evaluation, and evidence 
+            The full framework flow with user consent, policy evaluation, and evidence 
             recording. Required for high-sensitivity operations and cross-domain 
             access. This level utilizes the JWT Grant Interaction Response 
             mechanism for user consent.
@@ -837,13 +906,13 @@
         </t>
 
         <table anchor="tbl-deployment-matrix">
-          <name>AOA Deployment Matrix</name>
+          <name>Deployment Matrix</name>
           <thead>
             <tr>
               <th>Identity \ Token</th>
               <th>A (Pre-configured)</th>
               <th>B (Admin-assigned)</th>
-              <th>C (Runtime AOA)</th>
+              <th>C (Runtime Authz)</th>
             </tr>
           </thead>
           <tbody>
@@ -863,7 +932,7 @@
               <td>2 (Enterprise)</td>
               <td>High-trust static auth</td>
               <td>Compliance scenarios</td>
-              <td>Full AOA enterprise</td>
+              <td>Full framework enterprise</td>
             </tr>
           </tbody>
         </table>
@@ -921,7 +990,7 @@
             Home IdP → Agent: ID Token with agent in audience;
           </li>
           <li>
-            Agent → External AS: SPIFFE authentication + JWT assertion (ID-JAG);
+            Agent → External AS: SPIFFE authentication + JWT assertion (Identity Assertion Grant, ID-JAG);
           </li>
           <li>
             External AS → RS: Signed access token with policy reference
@@ -983,10 +1052,9 @@
 
       <section title="Token Size">
         <t>
-          A full AOA access token may carry multiple claims beyond the
+          A full access token in this framework may carry multiple claims beyond the
           standard JWT fields: <tt>act</tt>, <tt>authorization_details</tt>
-          (with embedded Rego policy), <tt>evidence</tt> (with signed
-          user confirmation), <tt>audit_trail</tt>, and
+          (with embedded Rego policy and authorization evidence), and
           <tt>delegation_chain</tt> (for multi-hop scenarios).  The
           combined size of these claims can exceed typical HTTP header
           limits when the token is passed in an Authorization header.
@@ -1016,7 +1084,7 @@
 
       <section title="Evidence Freshness">
         <t>
-          In the AOA framework, evidence records capture user consent at
+          In this framework, evidence records capture user consent at
           a specific point in time.  When tokens are exchanged or
           refreshed across delegation hops, the original consent
           timestamp may become significantly older than the current
@@ -1046,7 +1114,7 @@
 
       <section title="Cross-Domain Trust">
         <t>
-          The AOA framework operates across multiple trust domains
+          This framework operates across multiple trust domains
           (Home IdP, Agent domain, External AS, Resource Server).
           Trust establishment between these domains relies on:
         </t>
@@ -1109,19 +1177,21 @@
         The privacy considerations in this section are informed by the
         Internet protocol privacy analysis framework described in
         <xref target="RFC6973"/>.  This section addresses privacy
-        considerations specific to the integrated AOA framework;
+        considerations specific to the integrated framework;
         implementers MUST also consult the privacy considerations in
         each component specification.
       </t>
 
       <section title="Cross-Domain Identity Correlation">
         <t>
-          The AOA framework inherently links user identities across
+          This framework inherently links user identities across
           multiple trust domains: the Home IdP (where the user
           authenticates), the Agent domain (where the user interacts
           with the AI agent), and the External AS/RS domain (where
           resources are accessed).  The <tt>act.agent_user_id</tt> field
-          and the <tt>evidence</tt> claim both carry identifiers that
+          and the evidence record within the
+          <tt>authorization_evidence</tt> authorization details type
+          both carry identifiers that
           could be used to correlate a user's activities across these
           domains.
         </t>
@@ -1142,7 +1212,7 @@
           </li>
           <li>
             Avoiding inclusion of stable, globally correlatable
-            identifiers in the <tt>evidence</tt> claim's
+            identifiers in the evidence record's
             <tt>displayed_content</tt> field.
           </li>
         </ul>
@@ -1169,7 +1239,7 @@
           </li>
           <li>
             Using the <tt>semantic_expansion_level</tt> in the
-            <tt>audit_trail</tt> claim to flag operations where
+            <tt>audit_trail</tt> sub-object to flag operations where
             significant interpretation was applied, enabling
             post-hoc review of agent behavior;
           </li>
@@ -1183,15 +1253,17 @@
 
       <section title="Displayed Content Sensitivity">
         <t>
-          The <tt>displayed_content</tt> field in the <tt>evidence</tt>
-          claim records the human-readable description shown to the user
-          during consent.  This field may contain sensitive information
-          about the user's intent, financial parameters, health-related
-          operations, or personal data.  Since the <tt>evidence</tt>
-          claim is included in the access token and may be logged by
-          resource servers, implementations MUST minimize personal data
-          in this field and SHOULD use operation identifiers rather than
-          natural-language descriptions that may contain PII.
+          The <tt>displayed_content</tt> field in the evidence record
+          (within the <tt>authorization_evidence</tt> authorization
+          details type) records the human-readable description shown to
+          the user during consent.  This field may contain sensitive
+          information about the user's intent, financial parameters,
+          health-related operations, or personal data.  Since the
+          evidence record is included in the access token and may be
+          logged by resource servers, implementations MUST minimize
+          personal data in this field and SHOULD use operation
+          identifiers rather than natural-language descriptions that
+          may contain PII.
         </t>
 
         <t>
@@ -1346,12 +1418,12 @@
         </t>
 
         <table anchor="tbl-txn-compare">
-          <name>Transaction Tokens vs AOA Framework</name>
+          <name>Transaction Tokens vs This Framework</name>
           <thead>
             <tr>
               <th>Aspect</th>
               <th>Transaction Tokens</th>
-              <th>AOA Framework</th>
+              <th>This Framework</th>
             </tr>
           </thead>
           <tbody>
@@ -1379,7 +1451,7 @@
         </table>
 
         <t>
-          The two specifications can be combined: AOA for initial user authorization, 
+          The two specifications can be combined: this framework for initial user authorization, 
           Transaction Tokens for subsequent service-to-service calls within the 
           authorized scope.
         </t>
@@ -1479,8 +1551,11 @@
         </ul>
 
         <t>
-          Implementations MUST support SPIFFE Client Authentication for agent 
-          identification.
+          Implementations using Identity Level 1 or Level 2
+          (<xref target="identity-levels"/>) MUST support SPIFFE Client
+          Authentication for agent identification.  Deployments using
+          Identity Level 0 (self-issued identity) MAY use alternative
+          client authentication mechanisms.
         </t>
       </section>
 
@@ -1527,7 +1602,7 @@
             </tr>
             <tr>
               <td>SPIFFE Client Auth</td>
-              <td>MUST</td>
+              <td>SHOULD (see note)</td>
               <td>Agent, AS</td>
             </tr>
             <tr>
@@ -1557,6 +1632,14 @@
             </tr>
           </tbody>
         </table>
+
+        <t>
+          Note: SPIFFE Client Authentication is required for Identity
+          Levels 1 and 2 (<xref target="identity-levels"/>).  Identity
+          Level 0 deployments (self-issued identity) MAY use alternative
+          client authentication mechanisms such as <tt>client_secret_post</tt>
+          or <tt>private_key_jwt</tt>.
+        </t>
       </section>
     </section>
 
@@ -1582,6 +1665,7 @@
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6973.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
 
         <reference anchor="I-D.ietf-oauth-identity-assertion-authz-grant">
           <front>
@@ -1635,7 +1719,7 @@
             <author initials="A." surname="Parecki"/>
             <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-00"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence-01"/>
         </reference>
 
         <reference anchor="I-D.liu-oauth-chain-delegation">
@@ -1647,14 +1731,13 @@
             <author initials="A." surname="Parecki"/>
             <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-01"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation-00"/>
         </reference>
       </references>
 
       <references>
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9126.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
 
         <reference anchor="I-D.ietf-oauth-transaction-tokens">
           <front>
@@ -1686,6 +1769,24 @@
             <date year="2024"/>
           </front>
         </reference>
+
+        <reference anchor="I-D.ietf-wimse-arch">
+          <front>
+            <title>Workload Identity in Multi System Environments (WIMSE) Architecture</title>
+            <author initials="J." surname="Salowey"/>
+            <date year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-wimse-arch"/>
+        </reference>
+
+        <reference anchor="I-D.ietf-wimse-workload-creds">
+          <front>
+            <title>WIMSE Workload Identity Token</title>
+            <author initials="J." surname="Salowey"/>
+            <date year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-wimse-workload-creds"/>
+        </reference>
       </references>
     </references>
 
@@ -1701,7 +1802,6 @@ OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
-&redirect_uri=https://myassistant.example/callback
 &authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
   %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
   %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
@@ -1735,12 +1835,12 @@ Content-Type: application/json
   "exp": 1731369540,
   "iat": 1731320700,
   "jti": "urn:uuid:token-shop-123",
-  
+
   "act": {
     "sub": "wit://myassistant.example/sha256.xyz789...",
     "agent_user_id": "agent_user_001"
   },
-  
+
   "authorization_details": [
     {
       "type": "rego_policy",
@@ -1753,34 +1853,82 @@ Content-Type: application/json
         "user": { "id": "user_12345" },
         "action": "add_to_cart"
       }
-    }
-  ],
-  
-  "evidence": {
-    "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "user_confirmation": {
-      "displayed_content": "Add items under $50 to cart",
-      "user_action": "button_click",
-      "timestamp": 1731320595
     },
-    "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
-  },
-
-  "audit_trail": {
-    "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-    "semantic_expansion_level": "medium",
-    "proposal_ref": "urn:uuid:proposal-xyz"
-  }
+    {
+      "type": "authorization_evidence",
+      "evidence": {
+        "id": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+        "user_confirmation": {
+          "displayed_content": "Add items under $50 to cart",
+          "user_action": "confirmed_via_button_click",
+          "timestamp": 1731320595
+        },
+        "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
+        "audit_trail": {
+          "evidence_ref": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+          "semantic_expansion_level": "medium",
+          "proposal_ref": "urn:uuid:proposal-xyz"
+        }
+      }
+    }
+  ]
 }
           ]]></artwork>
         </figure>
+      </section>
+
+      <section title="Polling (after user consent)">
+        <figure>
+          <artwork name="Poll Token Endpoint" type="http"><![CDATA[
+POST /token HTTP/1.1
+Host: as.shop.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJ0eXAiOiJ3aXQrand0IiwiYWxnIjoiRVMyNTYifQ...
+OAuth-Client-Attestation-PoP: eyJ0eXAiOiJvYXV0aC1jbGllbnQtYXR0ZXN0...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
+&assertion=eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2lkc...
+&authorization_details=%5B%7B%22type%22%3A%22rego_policy%22%2C%22policy%22%3A%7B%22type%22%3A%22rego%22%2C
+  %22content%22%3A%22package+agent...%22%2C%22entry_point%22%3A%22allow%22%7D%2C
+  %22context%22%3A%7B%22user%22%3A%7B%22id%22%3A%22user_12345%22%7D%2C%22action%22%3A%22add_to_cart%22%7D%7D%5D
+          ]]></artwork>
+        </figure>
+        <t>
+          The agent re-sends the original request with a fresh SPIFFE
+          client attestation at the <tt>interval</tt> specified in the
+          interaction response.  Upon successful user consent, the AS
+          returns the access token shown above.
+        </t>
+      </section>
+
+      <section title="API Request to Resource Server">
+        <figure>
+          <artwork name="API Request" type="http"><![CDATA[
+POST /cart/add HTTP/1.1
+Host: api.shop.example
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL...
+Content-Type: application/json
+
+{
+  "item_id": "SKU-789",
+  "quantity": 1,
+  "price": 42.99
+}
+          ]]></artwork>
+        </figure>
+        <t>
+          The Resource Server validates the access token, extracts the
+          <tt>rego_policy</tt> from <tt>authorization_details</tt>, and
+          evaluates it against the request context (action, item price,
+          user identity) using a Rego-compatible policy engine.
+        </t>
       </section>
     </section>
 
     <section title="Acknowledgments" numbered="false">
       <t>
-        The authors would like to thank Brian Campbell for his valuable 
-        feedback and insightful discussions on OAuth extension design. 
+        The authors would like to thank Brian Campbell for his valuable
+        feedback and insightful discussions on OAuth extension design.
         His contributions helped shape key aspects of this framework.
       </t>
     </section>
