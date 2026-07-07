@@ -10,7 +10,7 @@
 <rfc
   xmlns:xi="http://www.w3.org/2001/XInclude"
   category="info"
-  docName="draft-liu-ai-agent-authorization-integration-00"
+  docName="draft-liu-ai-agent-authorization-integration-01"
   ipr="trust200902"
   submissionType="IETF"
   xml:lang="en"
@@ -18,7 +18,7 @@
 
   <front>
     <title abbrev="AI Agent Authorization">AI Agent Authorization Integration Framework</title>
-    <seriesInfo name="Internet-Draft" value="draft-liu-ai-agent-authorization-integration-00"/>
+    <seriesInfo name="Internet-Draft" value="draft-liu-ai-agent-authorization-integration-01"/>
 
     <author fullname="Dapeng Liu" initials="D." surname="Liu">
       <organization>Alibaba Group</organization>
@@ -41,13 +41,6 @@
       </address>
     </author>
 
-    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
-      <organization>Okta</organization>
-      <address>
-        <email>aaron@parecki.com</email>
-      </address>
-    </author>
-
     <author fullname="Hui Xue" initials="H." surname="Xue">
       <organization>Alibaba Group</organization>
       <address>
@@ -55,7 +48,7 @@
       </address>
     </author>
 
-    <date year="2026" month="July" day="6"/>
+    <date year="2026" month="July" day="7"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
@@ -190,9 +183,9 @@
         between scopes and policies in this framework.
       </t>
 
-      <section title="Rego Policy as Primary Authorization Mechanism">
+      <section title="Policy as Primary Authorization Mechanism">
         <t>
-          In this framework, the primary authorization mechanism is Rego policy carried via 
+          In this framework, the primary authorization mechanism is policy carried via 
           Rich Authorization Requests (RAR, <xref target="RFC9396"/>), not OAuth 2.0 scopes. 
           The <tt>rego_policy</tt> authorization data type defined in 
           <xref target="I-D.liu-oauth-rego-policy"/> carries the authorization logic 
@@ -548,16 +541,16 @@
       <section title="Overview">
         <figure>
           <artwork name="Complete Authorization Flow" type="ascii-art"><![CDATA[
-+-------+    +-------+    +--------+    +-------+    +-------+    +------+
++-------+    +-------+    +--------+    +---------+    +-------+    +------+
 | User  |    | Home  |    |  AI    |    |External |    |  RS   |    |Policy|
 |       |    |  IdP  |    | Agent  |    |   AS    |    |       |    |      |
-+-------+    +-------+    +--------+    +-------+    +-------+    +------+
++-------+    +-------+    +--------+    +---------+    +-------+    +------+
     |            |             |            |            |           |
 (1) | Authn      |             |            |            |           |
     |----------->|             |            |            |           |
     |            |             |            |            |           |
 (2) |  ID Token (aud=External AS)           |            |           |
-    |<------------------------->            |            |           |
+    |<------------------------>|            |            |           |
     |            |             |            |            |           |
 (3) |            |   Agent builds token req:|            |           |
     |            |   - JWT assertion        |            |           |
@@ -1707,7 +1700,7 @@
             <author initials="H." surname="Xue"/>
             <date year="2026" month="June"/>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-01"/>
         </reference>
 
         <reference anchor="I-D.liu-oauth-authorization-evidence">

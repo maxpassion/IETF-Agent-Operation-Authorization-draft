@@ -10,7 +10,7 @@
 <rfc
   xmlns:xi="http://www.w3.org/2001/XInclude"
   category="std"
-  docName="draft-liu-oauth-rego-policy-00"
+  docName="draft-liu-oauth-rego-policy-01"
   ipr="trust200902"
   submissionType="IETF"
   xml:lang="en"
@@ -18,7 +18,7 @@
 
   <front>
     <title abbrev="Rego Policy in OAuth">Rego Policy Language for OAuth 2.0 Authorization</title>
-    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-00"/>
+    <seriesInfo name="Internet-Draft" value="draft-liu-oauth-rego-policy-01"/>
 
     <author fullname="Dapeng Liu" initials="D." surname="Liu">
       <organization>Alibaba Group</organization>
@@ -41,13 +41,6 @@
       </address>
     </author>
 
-    <author fullname="Aaron Parecki" initials="A." surname="Parecki">
-      <organization>Okta</organization>
-      <address>
-        <email>aaron@parecki.com</email>
-      </address>
-    </author>
-
     <author fullname="Hui Xue" initials="H." surname="Xue">
       <organization>Alibaba Group</organization>
       <address>
@@ -55,7 +48,7 @@
       </address>
     </author>
 
-    <date year="2026" month="June" day="9"/>
+    <date year="2026" month="July" day="7"/>
     <area>Security</area>
     <workgroup>Web Authorization Protocol</workgroup>
 
