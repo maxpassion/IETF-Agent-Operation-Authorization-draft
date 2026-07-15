@@ -178,6 +178,22 @@
       </t>
 
       <t>
+        <strong>Relationship to Compositional Approaches:</strong>
+        <xref target="I-D.klrc-aiagent-auth"/> demonstrates how
+        existing OAuth mechanisms — Token Exchange, Transaction
+        Tokens, and CIBA — can be composed to address agent
+        authentication and authorization. This specification
+        complements that compositional approach by defining the
+        delegation lineage layer that composition of existing
+        mechanisms alone does not provide: per-hop delegator
+        cryptographic confirmation and verifiable delegation
+        history. The two approaches are designed to coexist —
+        compositional frameworks provide the transport and runtime
+        semantics, while <tt>delegation_chain</tt> provides the
+        structured delegation record and non-repudiation layer.
+      </t>
+
+      <t>
         <strong>Deployment Options:</strong> A minimal deployment
         requires only the <tt>delegation_chain</tt> claim structure
         (<xref target="delegation-chain-claim"/>), the delegation
@@ -485,7 +501,10 @@
             when delegating to a new agent for the first time, when the
             delegation involves high-risk operations, or when the delegation
             crosses trust domain boundaries), the AS returns an
-            <tt>interaction_required</tt> response as defined in
+            <tt>interaction_required</tt> response (see
+            <xref target="delegation-interaction"/>).
+            A similar interaction response mechanism for the JWT
+            Authorization Grant is described in
             <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
             The delegating agent launches the interaction URI so the user can
             review and approve the delegation.  Upon user approval, the agent
@@ -723,11 +742,10 @@
         <t>
           The <tt>as_signature</tt>, and the <tt>delegator_signature</tt> when
           present, MUST be computed over the same set of fields.
-          The signature input is constructed by forming a JSON object
+          The signature is a JWS (<xref target="RFC7515"/>) compact
+          serialization. The JWS payload is a JSON object
           containing exactly the following fields (omitting OPTIONAL
-          fields that are absent), applying the JSON Canonicalization
-          Scheme (JCS) as defined in <xref target="RFC8785"/> to
-          produce a deterministic byte sequence:
+          fields that are absent):
         </t>
 
         <ul>
@@ -742,11 +760,15 @@
         </ul>
 
         <t>
-          Both signature fields MUST be excluded from their respective signature
-          computations. The JCS-canonicalized JSON object serves as
-          the JWS payload in detached JWS format
-          (<xref target="RFC7515"/> Appendix F) with appropriate
-          algorithm identifiers (e.g., RS256, ES256).
+          Both signature fields MUST be excluded from their respective
+          signature computations. The JWS <tt>alg</tt> header MUST
+          be set appropriately (e.g., RS256 for AS signatures, ES256
+          for delegator signatures). The JWS <tt>kid</tt> header
+          SHOULD be included to facilitate key resolution. The
+          resulting compact JWS string is stored as the value of the
+          respective signature field. When verifying, the verifier
+          decodes the JWS payload and confirms that the decoded JSON
+          object matches the delegation record fields.
         </t>
 
         <t>
@@ -825,11 +847,14 @@
       <t>
         This section defines the delegation flow with explicit user
         interaction, used when the Authorization Server determines that
-        user consent is required before delegation. This flow extends the
-        JWT Authorization Grant Interaction Response
-        (<xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>)
-        to OAuth 2.0 Token Exchange requests
+        user consent is required before delegation. It defines
+        the interaction response mechanism for OAuth 2.0 Token Exchange
+        requests
         (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>).
+        A similar mechanism for the JWT Authorization Grant
+        (<xref target="RFC7523"/>, <tt>grant_type=jwt-bearer</tt>) is
+        described in
+        <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
       </t>
 
       <t>
@@ -889,8 +914,10 @@
     |                 |                 | - Scope subset |                 | 
     |                 |                 |                |                 | 
     |                 |                 | (10) Issue Token B               |
-    |                 |                 |--------------->|                 |
-    |                 |                 | with delegation_chain            |
+    |                 |<----------------|                |                 |
+    |                 |  with delegation_chain           |                 |
+    |                 | (10.5) Transfer to Agent B       |                 |
+    |                 |--------------------------------->|                 |
     |                 |                 |                |                 | 
     |                 |                 |                | (11) API Request| 
     |                 |                 |                |---------------->| 
@@ -1014,7 +1041,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <li>
             <tt>interaction_callback_uri</tt> (OPTIONAL): The URI to which the AS will
             redirect the user's browser after a delegation interaction is
-            complete, as defined in
+            complete, as specified in
+            <xref target="when-interaction-required"/>.
+            A similar parameter is described in
             <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
             This parameter is used in conjunction with the
             <tt>interaction_required</tt> response to signal
@@ -1038,12 +1067,14 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </ul>
 
         <t>
-          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/> defines
-          the interaction response mechanism for the JWT Authorization Grant
-          (RFC 7523, <tt>grant_type=jwt-bearer</tt>). This specification extends
-          that interaction response to apply to OAuth 2.0 Token Exchange requests
-          (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>) used for
-          delegation. The same response semantics are applicable to Token Exchange
+          This specification defines
+          the interaction response mechanism for delegation Token Exchange
+          requests
+          (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>). A
+          similar mechanism for the JWT Authorization Grant
+          (RFC 7523, <tt>grant_type=jwt-bearer</tt>) is described in
+          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
+          The response semantics defined here are applicable to Token Exchange
           requests. The AS associates the interaction session with the Token Exchange
           request parameters (including the <tt>subject_token</tt>,
           <tt>delegatee_id</tt>, and requested delegation policy) so that upon
@@ -1251,8 +1282,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
     |                 |                 |   or pre-approved                |
     |                 |                 |                |                 |
     |                 |                 | (5) Issue Token B                |
-    |                 |                 |--------------->|                 |
-    |                 |                 | with delegation_chain            |
+    |                 |<----------------|                |                 |
+    |                 |  with delegation_chain           |                 |
+    |                 | (5.5) Transfer to Agent B        |                 |
+    |                 |--------------------------------->|                 |
     |                 |                 |                |                 | 
     |                 |                 |                |  (6) API Request|
     |                 |                 |                |---------------->| 
@@ -1487,10 +1520,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
      |          |<---------|          |          |              |    
      |          |          |          |          |              |   
      |          | (3.5) Agent A transfers JWT Grant to Agent B  |
-     |          |------------------------------->|              | 
+     |          |-------------------->|          |              |
      |          |          |          |          |              |
-     |          |          |          |          |(4) Present JWT Grant
-     |          |          |          |          |------------->|
+     |          |          |          | (4) Present JWT Grant   |
+     |          |          |          |--------->|              |  
      |          |          |          |          |              |
      |          |          |          |          |(5) Validate  | 
      |          |          |          |          |- JWT signature|
@@ -1516,7 +1549,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             Agent A initiates a delegation Token Exchange with AS-A,
             including the <tt>resource</tt> parameter set to AS-B's
             identifier (as defined in
-            <xref target="I-D.ietf-oauth-identity-chaining"/>). This
+            <xref target="I-D.ietf-oauth-identity-chaining"/>) and the
+            <tt>delegatee_id</tt> parameter identifying Agent B. This
             signals that the delegation targets an agent in Trust Domain B.
           </li>
           <li>
@@ -1529,8 +1563,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <li>
             Agent A transfers the JWT authorization grant to Agent B
             through an out-of-band mechanism (e.g., a secure internal
-            channel).  Agent B presents the JWT authorization grant to
-            AS-B using the JWT Bearer grant type
+            channel).
+          </li>
+          <li>
+            Agent B presents the JWT authorization grant to AS-B
+            using the JWT Bearer grant type
             (<xref target="RFC7523"/>), as defined in
             <xref target="I-D.ietf-oauth-identity-chaining"/>.
           </li>
@@ -1820,8 +1857,8 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <ul>
           <li>
             For each record at index <tt>i</tt> (where <tt>i &gt; 0</tt>),
-            <tt>record[i].delegator_id</tt> MUST equal
-            <tt>record[i-1].delegatee_id</tt>, ensuring that the agent
+            <tt>record[i].delegatee_id</tt> MUST equal
+            <tt>record[i-1].delegator_id</tt>, ensuring that the agent
             who received authorization in one hop is the same agent that
             delegates in the next hop;
           </li>
@@ -2118,13 +2155,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <xref target="delegation-depth-limits"/>) to replace the inline chain with
           an opaque URI, retrieving the full chain via introspection
           (<xref target="RFC7662"/>) over a TLS-protected channel.
-          The RECOMMENDED short token lifetime (5 to 15 minutes, see
-          <xref target="security"/>) limits the exposure window of
+          The RECOMMENDED short token lifetime (5 to 15 minutes,
+          see <xref target="token-protection"/>) limits the exposure window of
           any leaked delegation records.
         </t>
       </section>
 
-      <section title="Token Protection">
+      <section anchor="token-protection" title="Token Protection">
         <t>
           Delegated tokens are subject to replay and theft attacks.
           The following mitigations address both threats.
@@ -2263,7 +2300,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <t>
           Implementers should consider the impact of delegation chain depth
           on token size. Each delegation record typically adds 500 to 1000
-          bytes to the token payload, including one or two detached JWS
+          bytes to the token payload, including one or two JWS
           signatures (approximately 200 bytes each for ES256) and,
           when present, the structured policy
           content. A 5-hop delegation chain may therefore add 2.5 to 5 KB
@@ -2583,18 +2620,31 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd><xref target="step3-delegation-request"/> of this document</dd>
         </dl>
 
+        <dl>
+          <dt>Parameter Name:</dt>
+          <dd>interaction_callback_uri</dd>
+
+          <dt>Parameter Usage Location:</dt>
+          <dd>token request</dd>
+
+          <dt>Change Controller:</dt>
+          <dd>IETF</dd>
+
+          <dt>Reference:</dt>
+          <dd><xref target="step3-delegation-request"/> of this document</dd>
+        </dl>
+
         <t>
           The <tt>interaction_callback_uri</tt> parameter is used in
           the delegation Token Exchange request context
           (<xref target="step3-delegation-request"/>) to receive a
-          redirect callback upon completion of user interaction.  The
-          parameter is defined and registered by
-          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>;
-          this specification extends its usage from the JWT
-          Authorization Grant (<tt>grant_type=jwt-bearer</tt>) to the
+          redirect callback upon completion of user interaction.  A
+          similar parameter for the JWT Authorization Grant
+          (<tt>grant_type=jwt-bearer</tt>) is described in
+          <xref target="I-D.parecki-oauth-jwt-grant-interaction-response"/>.
+          This specification registers the parameter for use with the
           Token Exchange grant type
-          (<tt>grant_type=token-exchange</tt>).  No additional IANA
-          registration is required.
+          (<tt>grant_type=token-exchange</tt>).
         </t>
       </section>
 
@@ -2679,9 +2729,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7523.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8693.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6749.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8785.xml"/>
         <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-ietf-oauth-identity-chaining.xml"/>
-        <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-parecki-oauth-jwt-grant-interaction-response.xml"/>
       </references>
 
       <references>
@@ -2721,6 +2769,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </front>
           <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence"/>
         </reference>
+
+        <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-klrc-aiagent-auth.xml"/>
+        <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-parecki-oauth-jwt-grant-interaction-response.xml"/>
       </references>
     </references>
 
@@ -2854,7 +2905,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             the key of the AS identified by the record's <tt>as_id</tt></li>
         <li>Verify <tt>delegator_signature</tt> when present (SHOULD)</li>
         <li>Check chain continuity:
-            <tt>record[i].delegator_id == record[i-1].delegatee_id</tt></li>
+            <tt>record[i].delegatee_id == record[i-1].delegator_id</tt></li>
         <li>Check <tt>act.sub == record[0].delegatee_id</tt></li>
         <li>Check timestamp ordering (descending, within validity)</li>
         <li>Check scope narrowing (MUST); check policy narrowing when
