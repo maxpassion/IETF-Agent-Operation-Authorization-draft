@@ -58,27 +58,27 @@ jobs:
             </style>
         </head>
         <body>
-            <h1>📄 AOA IETF Internet-Drafts</h1>
+            <h1>AOA IETF Internet-Drafts</h1>
             <ul class="draft-list">
                 <li class="draft-item">
                     <a href="draft-liu-agent-operation-authorization-00.html">draft-liu-agent-operation-authorization-00</a>
                     <div class="format-links"><a href="../txt/draft-liu-agent-operation-authorization-00.txt">TXT</a></div>
                 </li>
                 <li class="draft-item">
-                    <a href="draft-liu-ai-agent-authorization-integration-00.html">draft-liu-ai-agent-authorization-integration-00</a>
-                    <div class="format-links"><a href="../txt/draft-liu-ai-agent-authorization-integration-00.txt">TXT</a></div>
+                    <a href="draft-liu-ai-agent-authorization-integration-01.html">draft-liu-ai-agent-authorization-integration-01</a>
+                    <div class="format-links"><a href="../txt/draft-liu-ai-agent-authorization-integration-01.txt">TXT</a></div>
                 </li>
                 <li class="draft-item">
-                    <a href="draft-liu-oauth-authorization-evidence-00.html">draft-liu-oauth-authorization-evidence-00</a>
-                    <div class="format-links"><a href="../txt/draft-liu-oauth-authorization-evidence-00.txt">TXT</a></div>
+                    <a href="draft-liu-oauth-authorization-evidence-01.html">draft-liu-oauth-authorization-evidence-01</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-authorization-evidence-01.txt">TXT</a></div>
                 </li>
                 <li class="draft-item">
-                    <a href="draft-liu-oauth-chain-delegation-00.html">draft-liu-oauth-chain-delegation-00</a>
-                    <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-00.txt">TXT</a></div>
+                    <a href="draft-liu-oauth-chain-delegation-01.html">draft-liu-oauth-chain-delegation-01</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-chain-delegation-01.txt">TXT</a></div>
                 </li>
                 <li class="draft-item">
-                    <a href="draft-liu-oauth-rego-policy-00.html">draft-liu-oauth-rego-policy-00</a>
-                    <div class="format-links"><a href="../txt/draft-liu-oauth-rego-policy-00.txt">TXT</a></div>
+                    <a href="draft-liu-oauth-policy-binding-01.html">draft-liu-oauth-policy-binding-01</a>
+                    <div class="format-links"><a href="../txt/draft-liu-oauth-policy-binding-01.txt">TXT</a></div>
                 </li>
             </ul>
         </body>
