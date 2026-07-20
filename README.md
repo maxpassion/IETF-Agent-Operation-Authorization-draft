@@ -10,6 +10,19 @@ The AOA (Agent Operation Authorization) framework defines a suite of protocols f
 >
 > **Optional: Trusted Execution Environment Verification**: For deployments requiring hardware-level assurance of agent integrity, [WIT Attestation](https://www.ietf.org/archive/id/draft-liu-wimse-wit-attestation-00.txt) can be used alongside WIMSE to embed remote attestation evidence (e.g., TEE technologies such as TDX and SEV-SNP) in workload identity tokens. This provides cryptographic proof that the agent is running in a trusted environment, complementing AOA's authorization decisions with runtime integrity verification.
 
+### Origin: Agent Operation Authorization Concept Draft
+
+The AOA building blocks in this repository evolved from the concepts defined in the original [draft-liu-agent-operation-authorization-02](https://datatracker.ietf.org/doc/html/draft-liu-agent-operation-authorization-02) (March 2026). That draft introduced the end-to-end Agent Operation Authorization framework as a single specification, covering proposal-based authorization, Rego policy binding, user consent evidence, agent-user identity binding, and delegation chains.
+
+Following presentation at IETF 125 and feedback from OAuth WG experts, the original draft was decomposed into focused building-block specifications, each addressing a specific concern:
+
+- **Policy Binding** (draft-liu-oauth-policy-binding): Language-agnostic policy binding via RAR, extracted from the original Rego-specific proposal mechanism
+- **Authorization Evidence** (draft-liu-oauth-authorization-evidence): User consent evidence and audit trail claims
+- **Chain Delegation** (draft-liu-oauth-chain-delegation): Multi-hop delegation with cryptographic binding
+- **Integration** (draft-liu-ai-agent-authorization-integration): Top-level framework orchestrating all building blocks
+
+The original draft remains available as a conceptual reference for the overall AOA architecture.
+
 
 ## Progressive Deployment
 
