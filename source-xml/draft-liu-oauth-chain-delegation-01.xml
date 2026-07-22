@@ -285,7 +285,11 @@
           record from the current actor back to the original human principal.
           The <tt>delegatee_id</tt> of the most recent delegation record
           (index 0) MUST match the <tt>act.sub</tt> value, ensuring
-          continuity between the two claims.
+          continuity between the two claims.  <tt>delegation_chain</tt>
+          is thus a companion claim that preserves <tt>act</tt>'s
+          original RFC 8693 semantics (current actor identification)
+          while adding multi-hop delegation history as a separate,
+          independently verifiable structure.
         </t>
       </section>
 
