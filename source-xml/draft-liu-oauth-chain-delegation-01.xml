@@ -248,13 +248,13 @@
 
         <t>
           The <tt>delegation_chain</tt> claim complements <tt>act</tt> by
-          recording the delegation lineage as a structured array of signed
-          records.  Each record captures the AS's attestation
-          (<tt>as_signature</tt>), the policy constraints applied at
-          that hop (<tt>scope</tt>, and, when present,
-          <tt>delegated_policy</tt>), and, when present,
-          the delegator's own cryptographic proof
-          (<tt>delegator_signature</tt>).  This enables:
+          recording the delegation lineage as a structured array of
+          records.  Each record captures, when present, the AS's per-hop
+          attestation (<tt>as_signature</tt>), the policy constraints
+          applied at that hop (<tt>scope</tt>, and, when present,
+          <tt>delegated_policy</tt>), and the delegator's own
+          cryptographic proof (<tt>delegator_signature</tt>).  This
+          enables:
         </t>
 
         <ul>
@@ -358,8 +358,9 @@
           representation.  When delegation crosses a trust domain boundary,
           each delegation record captures the transcribed policy
           (when present, <tt>delegated_policy</tt>) and the cryptographic evidence of the
-          transcribing party (the AS via <tt>as_signature</tt>, and, when
-          present, the delegator via <tt>delegator_signature</tt>).  This enables the receiving
+          transcribing parties (the AS via <tt>as_signature</tt> and the
+          delegator via <tt>delegator_signature</tt>, each when present).
+          This enables the receiving
           domain to verify not just <em>what</em> was transcribed but
           <em>who authorized the transcription</em> and under what
           constraints, closing the representation gap left by identity
@@ -676,8 +677,16 @@
             <tr>
               <td>as_signature</td>
               <td>string</td>
-              <td>REQUIRED</td>
-              <td>AS signature over this delegation record.</td>
+              <td>RECOMMENDED</td>
+              <td>
+                AS signature over this delegation record. When all
+                delegation hops occur within a single trust domain under
+                one Authorization Server, the AS's signature over the
+                issued token already attests to the entire chain and this
+                per-hop signature MAY be omitted. It is RECOMMENDED when
+                delegation crosses trust domain boundaries, so the
+                receiving domain can independently verify each hop.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -740,7 +749,7 @@
         </ul>
 
         <t>
-          The <tt>as_signature</tt>, and the <tt>delegator_signature</tt> when
+          The <tt>as_signature</tt> and <tt>delegator_signature</tt>, when
           present, MUST be computed over the same set of fields.
           The signature is a JWS (<xref target="RFC7515"/>) compact
           serialization. The JWS payload is a JSON object
@@ -792,6 +801,22 @@
             <strong>Complete Trust Chain:</strong> User → AS → Delegator → Delegatee.
           </li>
         </ul>
+
+        <t>
+          The need for per-hop signatures depends on deployment scope.
+          When all delegation hops occur within a single trust domain
+          under one Authorization Server, the AS's signature over the
+          issued token already attests to the entire delegation chain,
+          and per-hop <tt>as_signature</tt> and
+          <tt>delegator_signature</tt> MAY be omitted without loss of
+          integrity. Per-hop signatures become valuable when delegation
+          crosses trust domain boundaries — where the receiving domain
+          must independently verify each hop's authorization — or when
+          non-repudiation from the delegator is required for compliance
+          or audit. This scoping keeps the mechanism lightweight for
+          intra-domain deployments while preserving strong guarantees
+          for cross-domain agent delegation.
+        </t>
       </section>
 
       <section title="Key Resolution for Agent Identifiers">
@@ -1700,18 +1725,19 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <section title="Signature Verification">
         <t>
-          For each record in the chain, verify the <tt>as_signature</tt> using
-          the public key of the AS identified by the record's
-          <tt>as_id</tt> field.  In single-domain chains,
-          <tt>as_id</tt> matches the token's <tt>iss</tt> claim.  In
-          cross-domain chains, different records may carry different
-          <tt>as_id</tt> values, and the Resource Server MUST select
-          the corresponding AS public key for each record.  In
-          cross-domain chains, the Resource Server does not need to
-          verify that upstream records' <tt>as_id</tt> values match
-          the current token's <tt>iss</tt> claim; the
+          For each record in the chain, verify the
+          <tt>as_signature</tt>, when present, using the public key of
+          the AS identified by the record's <tt>as_id</tt> field.  In
+          single-domain chains, <tt>as_id</tt> matches the token's
+          <tt>iss</tt> claim.  In cross-domain chains, different records
+          may carry different <tt>as_id</tt> values, and the Resource
+          Server MUST select the corresponding AS public key for each
+          record.  In cross-domain chains, the Resource Server does not
+          need to verify that upstream records' <tt>as_id</tt> values
+          match the current token's <tt>iss</tt> claim; the
           <tt>as_id</tt> is used solely to select the correct public
-          key for <tt>as_signature</tt> verification.  This ensures:
+          key for <tt>as_signature</tt> verification.  When the
+          <tt>as_signature</tt> is present, verification ensures:
         </t>
 
         <ul>
@@ -1719,6 +1745,19 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <li>The record has not been tampered with;</li>
           <li>The delegation metadata is authentic.</li>
         </ul>
+
+        <t>
+          When <tt>as_signature</tt> is omitted on a record, the
+          record's integrity is still protected by the token-level JWT
+          signature, which covers the entire
+          <tt>delegation_chain</tt> claim as a single unit.  Omitting
+          <tt>as_signature</tt> is typical in single-domain
+          deployments where the token issuer's signature already
+          attests to every record; per-record
+          <tt>as_signature</tt> is RECOMMENDED in cross-domain or
+          multi-AS deployments where independent per-hop attestation
+          adds assurance.
+        </t>
       </section>
 
       <section title="Root Authorization Anchor">
@@ -1748,9 +1787,12 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             Relying on the structural integrity of the
             <tt>delegation_chain</tt> itself: the AS that issued the
             delegated token has already verified the root token's
-            validity at issuance time, and the
+            validity at issuance time, and, when present, the
             <tt>as_signature</tt> on each record attests to that
-            verification.
+            verification.  Even without per-record
+            <tt>as_signature</tt>, the token-level JWT signature
+            covers the entire <tt>delegation_chain</tt> array,
+            binding the issuance attestation to the token as a whole.
           </li>
         </ul>
 
@@ -1777,19 +1819,24 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <section title="Dual-Signature Verification">
         <t>
-          For each delegation record, the Resource Server MUST verify
-          the <tt>as_signature</tt> using the Authorization Server's
-          public key.  When the <tt>delegator_signature</tt> field is
+          For each delegation record, when the
+          <tt>as_signature</tt> field is present, the Resource Server
+          SHOULD verify it using the Authorization Server's public
+          key.  When the <tt>delegator_signature</tt> field is
           present, the Resource Server SHOULD additionally verify it
           using the delegating agent's public key (resolved as
-          described in the Key Resolution section above).
+          described in the Key Resolution section above).  In
+          single-domain deployments where the token issuer's JWT
+          signature already covers every record, per-record
+          <tt>as_signature</tt> verification is not required; the
+          token-level signature provides sufficient integrity.
         </t>
 
         <ul>
           <li>
-            <strong>AS Signature (MUST):</strong> Confirms the
-            delegation was authorized by the AS and the record has not
-            been tampered with;
+            <strong>AS Signature (SHOULD when present):</strong>
+            Confirms the delegation was authorized by the AS and the
+            record has not been tampered with;
           </li>
           <li>
             <strong>Delegator Signature (SHOULD when present):</strong>
@@ -1821,6 +1868,19 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           anchor for delegation records.  This is appropriate when the
           AS is operated by a trusted authority and the deployment does
           not require independent delegator non-repudiation.
+        </t>
+
+        <t>
+          Deployments that omit <tt>as_signature</tt> on some or all
+          records rely on the token-level JWT signature as the sole
+          integrity mechanism for the <tt>delegation_chain</tt> array.
+          This is appropriate in single-domain deployments where one
+          AS issues the token and attests to every delegation record
+          through its token-level signature; it is also the minimal
+          configuration that retains chain integrity, tamper
+          detection, record removal detection, and reorder detection,
+          as those properties are enforced by the token-level
+          signature covering the array as a whole.
         </t>
       </section>
 
@@ -2030,25 +2090,31 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <section title="Chain Integrity">
         <t>
-          The <tt>as_signature</tt> on each record, together with the
-          token-level JWT signature, ensures chain integrity through
-          the following mechanisms:
+          Chain integrity is primarily ensured by the token-level JWT
+          signature, which covers the entire
+          <tt>delegation_chain</tt> claim as a single unit.  When the
+          per-record <tt>as_signature</tt> is present, it provides an
+          additional layer of per-hop attestation.  Together, these
+          mechanisms enforce chain integrity through the following
+          properties:
         </t>
 
         <ul>
           <li>
             <strong>Forgery prevention:</strong> Agents cannot forge
-            delegation records because the <tt>as_signature</tt>
-            requires the AS's private signing key, which agents do not
-            possess.
+            delegation records.  The token-level JWT signature
+            requires the AS's private signing key, which agents do
+            not possess; when <tt>as_signature</tt> is present, it
+            adds an independent per-record attestation that also
+            requires the AS's key.
           </li>
           <li>
             <strong>Tamper detection:</strong> Agents cannot modify
             existing records because any change to the signed fields
             (including <tt>delegator_id</tt>, <tt>delegatee_id</tt>,
-            <tt>scope</tt>, and <tt>delegated_policy</tt>) invalidates
-            both the record-level <tt>as_signature</tt> and the
-            token-level JWT signature.
+            <tt>scope</tt>, and <tt>delegated_policy</tt>)
+            invalidates the token-level JWT signature, and, when
+            present, the record-level <tt>as_signature</tt> as well.
           </li>
           <li>
             <strong>Record removal detection:</strong> Agents cannot
@@ -2064,6 +2130,16 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
             form; any reordering invalidates the token signature.
           </li>
         </ul>
+
+        <t>
+          The four properties above hold for every deployment,
+          including the minimal single-domain configuration in which
+          <tt>as_signature</tt> is omitted on all records.  Adding
+          per-record <tt>as_signature</tt> in cross-domain or
+          multi-AS deployments strengthens forgery prevention and
+          tamper detection by providing independent per-hop
+          attestation that survives token re-issuance.
+        </t>
 
         <t>
           Additionally, the Resource Server SHOULD verify that the
@@ -2901,8 +2977,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
       </t>
       <ol>
         <li>Verify token-level JWT signature against <tt>iss</tt></li>
-        <li>Verify <tt>as_signature</tt> on each delegation record using
-            the key of the AS identified by the record's <tt>as_id</tt></li>
+        <li>Verify <tt>as_signature</tt> on each delegation record, when
+            present, using the key of the AS identified by the record's
+            <tt>as_id</tt> (SHOULD; in single-domain deployments the
+            token-level signature suffices)</li>
         <li>Verify <tt>delegator_signature</tt> when present (SHOULD)</li>
         <li>Check chain continuity:
             <tt>record[i].delegatee_id == record[i-1].delegator_id</tt></li>
