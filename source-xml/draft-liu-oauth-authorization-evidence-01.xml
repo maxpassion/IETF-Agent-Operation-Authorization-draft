@@ -57,6 +57,7 @@
     <keyword>Audit</keyword>
     <keyword>Consent</keyword>
     <keyword>User Confirmation</keyword>
+    <keyword>Revocation</keyword>
 
     <abstract>
       <t>
@@ -100,6 +101,15 @@
           questions arise about what was authorized;
         </li>
         <li>
+          Consent withdrawal: A standardized, user-initiated mechanism
+          to revoke previously granted consent.  Withdrawal of consent
+          is a first-class operation in autonomous agent scenarios,
+          where consent is given asynchronously and may need to be
+          withdrawn long after it was granted.  Regulations in some
+          jurisdictions further require that withdrawing consent be as
+          easy as granting it;
+        </li>
+        <li>
           Regulatory compliance: Documentation required by applicable
           regulations.
         </li>
@@ -111,7 +121,11 @@
         to convey authorization evidence. When a client includes an
         <tt>authorization_evidence</tt> authorization details object in its
         request, the Authorization Server enriches it during the consent process
-        with cryptographic proof of user confirmation.
+        with cryptographic proof of user confirmation. This specification also
+        defines a consent revocation mechanism
+        (<xref target="consent-revocation"/>) that allows the user to withdraw
+        previously granted consent, completing the consent lifecycle from
+        grant through revocation.
       </t>
 
       <t>
@@ -205,6 +219,22 @@
         <dd>
           The process of translating user intent (e.g., natural language) into 
           concrete system operations.
+        </dd>
+
+        <dt>Consent Record:</dt>
+        <dd>
+          An Authorization Server-side entity created at the moment of
+          consent, capturing the consent event and its lifecycle state.
+          The consent record exists independently of any access token
+          and is the anchor for revocation (see
+          <xref target="consent-revocation"/>).
+        </dd>
+
+        <dt>Revocation Handle:</dt>
+        <dd>
+          A URI under the Authorization Server's control through which
+          the user can initiate revocation of a specific consent
+          record. The handle is a lookup key, not a credential.
         </dd>
       </dl>
     </section>
@@ -346,6 +376,16 @@
               <td>REQUIRED</td>
               <td>AS signature over the confirmation record.</td>
             </tr>
+            <tr>
+              <td>revocation</td>
+              <td>object</td>
+              <td>OPTIONAL</td>
+              <td>Revocation information for the consent recorded by
+                this evidence, as defined in
+                <xref target="revocation-member"/>. This member is not
+                covered by the <tt>as_signature</tt> (see
+                <xref target="revocation-member"/>).</td>
+            </tr>
           </tbody>
         </table>
 
@@ -463,7 +503,11 @@
           <tt>id</tt>, <tt>user_confirmation</tt>,
           and <tt>as_signature</tt>
           MUST NOT be included in the JCS input and therefore
-          are not covered by the signature.
+          are not covered by the signature.  In particular, the
+          OPTIONAL <tt>revocation</tt> member defined in
+          <xref target="revocation-member"/> is not covered by the
+          <tt>as_signature</tt>; in signed JWT access tokens its
+          integrity is provided by the token signature.
         </t>
 
         <t>
@@ -643,6 +687,15 @@
             <td>
               Enables post-hoc analysis to determine responsibility for 
               erroneous transactions.
+            </td>
+          </tr>
+          <tr>
+            <td>Consent Withdrawal</td>
+            <td>
+              Provides the revocation handle and status entry points
+              (<xref target="consent-revocation"/>) that allow the user
+              to withdraw previously granted consent and allow auditors
+              to resolve the current state of a consent.
             </td>
           </tr>
         </tbody>
@@ -924,6 +977,269 @@ AI Agent          External AS                      User
       </section>
     </section>
 
+    <section anchor="consent-revocation" title="Consent Revocation">
+      <t>
+        This section defines the revocation half of the consent
+        lifecycle.  Evidence collection (<xref target="as-processing"/>)
+        records the grant of consent; the mechanism defined in this
+        section records and enforces its withdrawal.  The mechanism
+        applies regardless of the OAuth grant type through which
+        consent was obtained.
+      </t>
+
+      <section anchor="consent-record" title="Consent Record and Evidence Artifact">
+        <t>
+          Two related but distinct concepts are used in this section:
+        </t>
+
+        <dl newline="true">
+          <dt>Consent record:</dt>
+          <dd>
+            An Authorization Server-side entity created at the moment
+            of consent.  It captures the consent event (what was
+            displayed, what the user did, when) and carries the
+            lifecycle state of the consent.  The consent record exists
+            independently of any access token and is the anchor for
+            revocation.
+          </dd>
+
+          <dt>Evidence artifact:</dt>
+          <dd>
+            The signed evidence object defined in
+            <xref target="evidence-claim"/>, delivered in the token
+            response at credential issuance and consumed by Resource
+            Servers.
+          </dd>
+        </dl>
+
+        <t>
+          Because the consent record is created at consent time,
+          revocation is possible during the window after the user has
+          approved an authorization but before the resulting credential
+          has been issued.
+        </t>
+      </section>
+
+      <section anchor="revocation-handle" title="Revocation Handle">
+        <t>
+          When the AS records a consent event, it SHOULD associate a
+          revocation handle with the consent record.  The revocation
+          handle is a URI under the AS's control through which the user
+          can initiate revocation of that specific consent record.  A
+          non-normative example:
+        </t>
+
+        <figure>
+          <artwork type="example"><![CDATA[
+https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+          ]]></artwork>
+        </figure>
+
+        <t>
+          The handle identifier MUST contain at least 128 bits of
+          entropy so that valid handles cannot be enumerated.  The
+          handle is a lookup key, not a credential: possession of the
+          URI does not by itself authorize revocation
+          (<xref target="principal-revocation"/>).
+        </t>
+
+        <t>
+          The AS SHOULD present the revocation handle to the user over
+          the front channel at or shortly after the consent
+          interaction, for example on the consent confirmation page or
+          in a consent record view.  This is the primary delivery
+          channel and the only channel that places the revocation
+          capability in the user's hands.  The OPTIONAL
+          <tt>revocation</tt> member defined in
+          <xref target="revocation-member"/> additionally conveys the
+          handle in the token response; that copy reaches the client
+          rather than the user, and MAY support client-provided consent
+          management interfaces or agent-initiated self-revocation.
+        </t>
+      </section>
+
+      <section anchor="revocation-member" title="The revocation Member">
+        <t>
+          The OPTIONAL <tt>revocation</tt> member of the
+          <tt>evidence</tt> object conveys revocation information for
+          the consent recorded by the evidence:
+        </t>
+
+        <figure>
+          <artwork name="revocation member" type="json"><![CDATA[
+{
+  "revocation": {
+    "handle": "https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+    "status_uri": "https://as.example.com/status/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
+  }
+}
+          ]]></artwork>
+        </figure>
+
+        <table anchor="tbl-revocation-fields">
+          <name>revocation Member Fields</name>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Requirement</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>handle</td>
+              <td>URI</td>
+              <td>REQUIRED</td>
+              <td>The revocation handle for the consent recorded by
+                this evidence (<xref target="revocation-handle"/>).</td>
+            </tr>
+            <tr>
+              <td>status_uri</td>
+              <td>URI</td>
+              <td>OPTIONAL</td>
+              <td>A URI where the current revocation status of the
+                consent can be resolved, for example an entry in a
+                token status list <xref target="RFC9727"/>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <t>
+          The <tt>revocation</tt> member is an extension field with
+          respect to the signature algorithm defined in the AS
+          Signature subsection of <xref target="evidence-claim"/> and
+          therefore is not covered by the <tt>as_signature</tt>.  In
+          signed JWT access tokens its integrity is provided by the
+          token signature.
+        </t>
+      </section>
+
+      <section anchor="principal-revocation" title="Principal-Initiated Revocation">
+        <t>
+          When the user follows a revocation handle, the AS MUST apply
+          three validation layers before executing the revocation:
+        </t>
+
+        <ol>
+          <li>
+            Record lookup: the handle identifier resolves to a single
+            consent record.  The identifier locates the record but
+            confers no authority by itself.
+          </li>
+          <li>
+            Principal authentication: the AS MUST authenticate the
+            user.  If the user has an active session with the AS, that
+            session MAY be used; otherwise the AS authenticates the
+            user through its standard authentication flow.  The AS MAY
+            require step-up authentication.  The authentication method
+            is a matter of AS policy and is not defined by this
+            specification.
+          </li>
+          <li>
+            Ownership verification: the AS MUST verify that the
+            authenticated user is the owner of the referenced consent
+            record.  If the check fails, the AS MUST reject the
+            request.
+          </li>
+        </ol>
+
+        <t>
+          Before executing the revocation, the AS MUST present the user
+          with a confirmation view summarizing the consent being
+          revoked (for example, which client was authorized, which
+          scopes were granted, and when).  Retrieving the revocation
+          handle with HTTP GET MUST only render this confirmation view
+          and MUST NOT perform the revocation.  The revocation MUST be
+          executed by an explicit user action (for example, an HTTP
+          POST request) protected against cross-site request forgery.
+        </t>
+
+        <t>
+          In summary, the authorization server MUST authenticate the
+          user before honoring a revocation request, and MUST verify
+          that the authenticated user is the owner of the referenced
+          consent record.
+        </t>
+      </section>
+
+      <section anchor="revocation-semantics" title="Revocation Semantics by Phase">
+        <t>
+          The effect of a revocation depends on the lifecycle phase of
+          the consent:
+        </t>
+
+        <dl newline="true">
+          <dt>Before consent:</dt>
+          <dd>
+            There is no consent record to revoke.  The user refuses the
+            request through the consent interface presented during the
+            authorization flow.
+          </dd>
+
+          <dt>After consent, before credential issuance:</dt>
+          <dd>
+            The AS invalidates the pending authorization by applying
+            the cancellation semantics defined by the host protocol.
+            For example, in the Deferred Token Response flow
+            <xref target="I-D.gerber-oauth-deferred-token-response"/>,
+            the deferral code is invalidated and subsequent polling
+            requests return <tt>access_denied</tt>.  Where issuance and
+            revocation can race, the AS MUST evaluate the revocation
+            state atomically with credential issuance.
+          </dd>
+
+          <dt>After credential issuance:</dt>
+          <dd>
+            The AS revokes the issued tokens as appropriate per
+            <xref target="RFC7009"/>, SHOULD reflect the revocation in
+            a status mechanism such as a token status list
+            <xref target="RFC9727"/>, and MAY propagate the revocation
+            event to downstream subscribers using a shared signals
+            mechanism such as CAEP
+            <xref target="I-D.ietf-secevent-caep"/>.
+          </dd>
+        </dl>
+
+        <t>
+          This specification defines the revocation trigger and the
+          consent record state.  It does not redefine the cancellation
+          or token revocation semantics of any host protocol; those
+          semantics are applied as defined by the respective protocol.
+        </t>
+      </section>
+
+      <section anchor="consent-record-status" title="Consent Record Status">
+        <t>
+          Upon revocation, the AS SHOULD update the consent record
+          with:
+        </t>
+
+        <ul>
+          <li>
+            <tt>revoked_at</tt>: the timestamp of the revocation;
+          </li>
+          <li>
+            <tt>revocation_method</tt>: how the revocation was
+            initiated.  Implementations SHOULD use values from the
+            following set: <tt>principal</tt> (the user revoked
+            through the mechanism defined in this section),
+            <tt>client</tt> (the client cancelled or revoked through
+            its own channel), <tt>expired</tt> (the consent lapsed),
+            or <tt>administrator</tt> (revoked by an operator of the
+            AS).
+          </li>
+        </ul>
+
+        <t>
+          These fields are maintained on the AS and are not included in
+          access tokens.  They support audit and dispute resolution,
+          including the question of whether a contested operation
+          occurred before or after consent was withdrawn.
+        </t>
+      </section>
+    </section>
+
     <section anchor="rs-processing" title="Resource Server Processing">
       <section title="Evidence Verification">
         <t>
@@ -1104,12 +1420,88 @@ AI Agent          External AS                      User
         </t>
       </section>
 
+      <section title="Revocation Handle Security">
+        <t>
+          A revocation handle grants no authority: it is a lookup key
+          for a consent record, not a credential.  Nevertheless,
+          implementations MUST protect against the following threats:
+        </t>
+
+        <ul>
+          <li>
+            Enumeration: handles MUST contain at least 128 bits of
+            entropy so that an attacker cannot discover consent records
+            by guessing handle values;
+          </li>
+          <li>
+            Insecure direct object reference: possession of a handle
+            MUST NOT be sufficient to revoke the associated consent
+            record.  The AS MUST authenticate the principal and verify
+            that the authenticated principal owns the consent record
+            before executing any revocation
+            (<xref target="principal-revocation"/>);
+          </li>
+          <li>
+            Cross-site request forgery: a GET request to the revocation
+            endpoint MUST only render the confirmation interface and
+            MUST NOT trigger revocation.  Revocation MUST be executed
+            through a POST (or equivalent non-idempotent method)
+            protected against cross-site request forgery.
+          </li>
+        </ul>
+
+        <t>
+          When a revocation handle is delivered through a token
+          response (in addition to, or instead of, the front channel),
+          clients MUST treat it as sensitive data and MUST NOT expose
+          it in URLs, logs, or user agents beyond what is necessary to
+          present the revocation option to the user.
+        </t>
+      </section>
+
+      <section title="Revocation Enforcement Boundary">
+        <t>
+          Revocation under this specification is enforced by the AS and
+          by downstream token revocation and status mechanisms; it is
+          not purely cryptographic.  A token issued before revocation
+          remains cryptographically valid until it expires, is revoked
+          via the token revocation mechanisms of the host protocol
+          (e.g., <xref target="RFC7009"/>), or is rejected based on
+          status information such as token status lists
+          (<xref target="RFC9727"/>) or shared signals
+          (<xref target="I-D.ietf-secevent-caep"/>).  Deployments with
+          short-lived tokens reduce the window during which a revoked
+          consent is not yet enforced; deployments requiring timely
+          propagation of revocation SHOULD combine token revocation
+          with status lists or event-based propagation.
+        </t>
+
+        <t>
+          This specification does not require resource servers to
+          consult consent state.  Whether an RS enforces consent
+          revocation directly, or relies on the AS to revoke the
+          associated tokens, is a deployment decision.
+        </t>
+      </section>
+
       <section title="Privacy Considerations">
         <t>
           Evidence records contain information about user consent interactions,
           including what was displayed to the user and how they responded.
           Implementations should consider applicable data protection requirements
           when storing and processing evidence records.
+        </t>
+
+        <t>
+          Consent records and revocation state
+          (<xref target="consent-record"/>) extend these
+          considerations: the revocation timestamp and method are part
+          of the user's consent history.  Access to the revocation
+          endpoint MUST require principal authentication so that the
+          consent history of one user cannot be inspected by another,
+          and retention of consent records after revocation SHOULD
+          follow the same data protection policies that apply to the
+          evidence records themselves.
         </t>
       </section>
     </section>
@@ -1155,12 +1547,14 @@ AI Agent          External AS                      User
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8259.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9068.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9396.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7009.xml"/>
       </references>
 
       <references>
         <name>Informative References</name>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7523.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9727.xml"/>
 
         <reference anchor="I-D.liu-oauth-rego-policy">
           <front>
@@ -1190,6 +1584,30 @@ AI Agent          External AS                      User
             <date year="2026" month="January"/>
           </front>
           <seriesInfo name="Internet-Draft" value="draft-ietf-oauth-identity-assertion-authz-grant"/>
+        </reference>
+
+        <reference anchor="I-D.gerber-oauth-deferred-token-response">
+          <front>
+            <title>OAuth 2.0 Deferred Token Response</title>
+            <author initials="M." surname="Gerber"/>
+            <author initials="G." surname="de Oliveira Niero"/>
+            <author initials="D." surname="Liu"/>
+            <date year="2026" month="July"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-gerber-oauth-deferred-token-response"/>
+          <format type="HTML" target="https://maxgerber.com/deferred-token-response/draft-gerber-oauth-deferred-token-response.html"/>
+        </reference>
+
+        <reference anchor="I-D.ietf-secevent-caep">
+          <front>
+            <title>Consent and Account Event Profile</title>
+            <author initials="A." surname="Sannikov"/>
+            <author initials="M." surname="Scurtescu"/>
+            <author initials="A." surname="Backman"/>
+            <author initials="M." surname="Jones"/>
+            <date year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-secevent-caep"/>
         </reference>
       </references>
     </references>
@@ -1250,6 +1668,10 @@ AI Agent          External AS                      User
         "audit_trail": {
           "semantic_expansion_level": "medium",
           "proposal_ref": "urn:uuid:proposal-xyz"
+        },
+        "revocation": {
+          "handle": "https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+          "status_uri": "https://as.example.com/status/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
         }
       }
     },
