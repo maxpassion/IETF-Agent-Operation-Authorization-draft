@@ -306,6 +306,7 @@
           "user_action": "confirmed_via_button_click",
           "timestamp": 1731320595
         },
+        "content_hash": "uU0nuZNNPgilLlLX2YNrNmHQoFu66dKfLq3Ln4AXCR0",
         "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
         "audit_trail": {
           "semantic_expansion_level": "medium",
@@ -335,6 +336,7 @@
       "user_action": "confirmed_via_button_click",
       "timestamp": 1731320595
     },
+    "content_hash": "uU0nuZNNPgilLlLX2YNrNmHQoFu66dKfLq3Ln4AXCR0",
     "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx..."
   }
 }
@@ -369,6 +371,22 @@
               <td>object</td>
               <td>REQUIRED</td>
               <td>Details of the user's confirmation action.</td>
+            </tr>
+            <tr>
+              <td>content_hash</td>
+              <td>string</td>
+              <td>REQUIRED</td>
+              <td>The base64url-encoded SHA-256 digest computed
+                over the same JCS-canonicalized JSON object used
+                as the <tt>as_signature</tt> input
+                (<xref target="evidence-claim"/> AS Signature).
+                It enables content-addressed identification of
+                evidence records: any party holding the record can
+                recompute the digest and detect tampering without
+                the AS's public key; identical records deduplicate
+                naturally in audit stores; and references to an
+                evidence record (e.g., <tt>evidence_ref</tt>) can
+                be bound to its content.</td>
             </tr>
             <tr>
               <td>as_signature</td>
@@ -484,6 +502,13 @@
             previous step, producing a deterministic byte string.
           </li>
           <li>
+            Compute the SHA-256 digest of the JCS output from
+            Step 2, encode it in base64url, and store the result
+            in the <tt>content_hash</tt> field of the
+            <tt>evidence</tt> object.  The <tt>content_hash</tt>
+            field itself is not part of the signature input.
+          </li>
+          <li>
             Compute a detached JWS (Compact Serialization) over
             the JCS output from Step 2 using the AS's private
             signing key.  The resulting value
@@ -498,10 +523,16 @@
           reconstructs the JCS input by performing Steps 1 and 2 above
           on the received <tt>evidence</tt> object (excluding the
           <tt>as_signature</tt> field), then verifies the detached
-          JWS using the AS's public key.  Any extension fields
+          JWS using the AS's public key.  The <tt>content_hash</tt>
+          can be verified in the same pass: the verifier recomputes
+          the digest over the reconstructed JCS output and compares
+          it with the received <tt>content_hash</tt>.  Hash
+          verification requires no key material and therefore
+          provides integrity checking that is independent of trust
+          in the AS.  Any extension fields
           present in the <tt>evidence</tt> object beyond
           <tt>id</tt>, <tt>user_confirmation</tt>,
-          and <tt>as_signature</tt>
+          <tt>content_hash</tt>, and <tt>as_signature</tt>
           MUST NOT be included in the JCS input and therefore
           are not covered by the signature.  In particular, the
           OPTIONAL <tt>revocation</tt> member defined in
@@ -571,7 +602,9 @@
               <td>Reference to a related evidence record by ID.
                 Can be used to link this audit trail to another
                 evidence record, such as the original consent in a
-                delegation chain.</td>
+                delegation chain.  References SHOULD include the
+                <tt>content_hash</tt> of the referenced record so
+                that the reference is bound to its content.</td>
             </tr>
             <tr>
               <td>semantic_expansion_level</td>
@@ -967,6 +1000,10 @@ AI Agent          External AS                      User
             Generate a unique evidence identifier;
           </li>
           <li>
+            Compute the <tt>content_hash</tt> (Step 3 of the
+            AS Signature algorithm in <xref target="evidence-claim"/>);
+          </li>
+          <li>
             Sign the evidence fields (id and user_confirmation)
             with the AS's private key using JCS canonicalization;
           </li>
@@ -1254,6 +1291,12 @@ https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
             Verifying the signature using the AS's public key;
           </li>
           <li>
+            Recomputing the SHA-256 digest of the JCS-canonicalized
+            signing input and comparing it with the
+            <tt>content_hash</tt>, which detects corruption or
+            tampering without requiring the AS's public key;
+          </li>
+          <li>
             Confirming that the evidence <tt>id</tt> and timestamp are
             consistent with the token's <tt>iat</tt> claim (i.e., the
             user confirmation occurred before or at token issuance);
@@ -1306,6 +1349,37 @@ https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
           <li>Protect AS signing keys appropriately;</li>
           <li>Rotate keys periodically with proper key management.</li>
         </ul>
+      </section>
+
+      <section title="Content Hash">
+        <t>
+          The <tt>content_hash</tt> provides tamper detection that is
+          independent of the <tt>as_signature</tt>: any party holding
+          an evidence record can recompute the digest without key
+          material or trust in the AS, which is useful when evidence
+          records are archived, replicated, or exchanged between
+          audit systems after tokens have expired.  Because identical
+          records yield identical digests, the <tt>content_hash</tt>
+          also enables deduplication in audit stores and allows two
+          parties to confirm they hold the same record by comparing
+          digests.  References to evidence records from other
+          artifacts (e.g., <tt>evidence_ref</tt> in
+          <xref target="audit-trail-claim"/>, or delegation chains)
+          SHOULD include the <tt>content_hash</tt> of the referenced
+          record so that the reference is bound to its content.
+        </t>
+
+        <t>
+          Since the digest is deterministic, evidence records with
+          low-entropy content could in principle serve as
+          correlatable identifiers if the candidate content can be
+          enumerated.  Evidence records in this specification
+          include a unique <tt>id</tt> and a user-confirmation
+          timestamp, which provides sufficient entropy in practice;
+          implementations publishing digests to public stores SHOULD
+          nonetheless consider whether correlation of digests across
+          stores raises privacy concerns for their deployment.
+        </t>
       </section>
 
       <section title="Evidence Tampering and Trust in the AS">
@@ -1664,6 +1738,7 @@ https://as.example.com/revoke/urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
           "user_action": "confirmed_via_button_click",
           "timestamp": 1731320595
         },
+        "content_hash": "uU0nuZNNPgilLlLX2YNrNmHQoFu66dKfLq3Ln4AXCR0",
         "as_signature": "eyJhbGciOiJFUzI1NiJ9..MEUCIQDx...",
         "audit_trail": {
           "semantic_expansion_level": "medium",
