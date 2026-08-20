@@ -17,7 +17,7 @@
   version="3">
 
   <front>
-    <title abbrev="Policy Binding in OAuth">Policy Language Binding for OAuth 2.0 Authorization</title>
+    <title abbrev="Schema Binding in OAuth">Domain-Specific Authorization Schema Binding for OAuth 2.0</title>
     <seriesInfo name="Internet-Draft" value="draft-liu-oauth-policy-binding-01"/>
 
     <author fullname="Dapeng Liu" initials="D." surname="Liu">
@@ -53,31 +53,33 @@
     <workgroup>Web Authorization Protocol</workgroup>
 
     <keyword>OAuth</keyword>
-    <keyword>Policy Binding</keyword>
-    <keyword>Policy Language</keyword>
     <keyword>Authorization</keyword>
     <keyword>AI Agent</keyword>
+    <keyword>Domain-Specific Schema</keyword>
     <keyword>Behavioral Authorization</keyword>
+    <keyword>Transaction Authorization</keyword>
 
     <abstract>
       <t>
         AI agents exhibit dynamic, unpredictable behavior that cannot be
         fully described by traditional OAuth 2.0 scopes. This
-        specification defines a behavioral authorization framework that
-        binds behavioral constraint policies to OAuth 2.0
-        access tokens. It defines the authorization_policy authorization
-        data type and the binding mechanism that carries behavioral
-        constraint policies in access tokens via
-        <tt>authorization_details</tt>, shifting the authorization
-        model from static permission sets to runtime behavioral
-        verification. This specification standardizes the binding
-        mechanism between OAuth tokens and policies expressed in any
-        policy language, not any specific policy language. This
-        specification also defines a reverse-guided
-        authorization mechanism allowing resource servers to return
-        structured policy constraints in error responses, enabling
-        agents to dynamically adapt their behavior and construct
-        appropriate authorization requests.
+        specification defines a behavioral authorization framework in
+        which domain-specific authorization schemas are carried in
+        authorization requests and bound to OAuth 2.0 access tokens
+        via <tt>authorization_details</tt>. A domain-specific
+        authorization schema is a structured, machine-verifiable
+        description of the behavioral boundaries approved for an
+        agent, such as transaction limits for an e-commerce domain.
+        Resource servers verify agent behaviors against the approved
+        schema instance at runtime through deterministic constraint
+        evaluation, without a policy engine. Authorization servers
+        review requested schema instances against server-side
+        authorization policies, which MAY be expressed in any policy
+        language as an implementation detail. This specification also
+        defines a reverse-guided authorization mechanism allowing
+        resource servers to return structured schema requirements in
+        error responses, enabling agents to dynamically adapt their
+        behavior and construct appropriate authorization requests.
       </t>
     </abstract>
   </front>
@@ -105,29 +107,34 @@
         This specification builds on OAuth 2.0 <xref target="RFC6749"/>
         and Rich Authorization Requests (RAR) <xref target="RFC9396"/>
         by introducing a <strong>behavioral authorization</strong>
-        framework: a <strong>behavioral constraint policy</strong>
-        (policy) is validated and bound to an access token by the
-        Authorization Server. At runtime, the Resource Server, acting
-        as a <strong>Policy Enforcement Point (PEP)</strong>, enforces
-        the policy; a <strong>Policy Decision Point (PDP)</strong>
-        evaluates each of the agent's behaviors against the approved
-        policy. This shifts the
-        authorization model from "what resources can the client
-        access" to "within what behavioral boundaries can the client
-        operate," enabling the agent to act freely within approved
-        constraints while every individual behavior is verified at
-        execution time.
+        framework based on <strong>domain-specific authorization
+        schemas</strong>. A domain-specific authorization schema is a
+        structured, machine-verifiable description of behavioral
+        boundaries for a particular application domain, such as
+        transaction boundaries for e-commerce operations. An agent
+        requests authorization by submitting a schema instance in the
+        authorization request; the Authorization Server reviews the
+        instance against server-side authorization policies and, upon
+        approval, binds it to the access token. At runtime, the
+        Resource Server verifies each of the agent's behaviors
+        directly against the approved schema instance, without
+        requiring a policy engine. This shifts the authorization
+        model from "what resources can the client access" to "within
+        what behavioral boundaries can the client operate," enabling
+        the agent to act freely within approved constraints while
+        every individual behavior is verified at execution time.
       </t>
 
       <t>
-        The policy also serves as a formal expression of human
-        intent: when a human delegates a task to an agent, the policy
-        encodes the boundaries of that delegation in a machine-verifiable
-        form. The agent retains behavioral autonomy: it decides
-        <em>what</em> to do and <em>when</em>, but every action is
-        constrained by the policy approved by the Authorization Server.
-        This enables a balance between agent autonomy and human oversight
-        that is not achievable with static scope-based authorization.
+        The approved schema instance also serves as a formal
+        expression of human intent: when a human delegates a task to
+        an agent, the instance encodes the boundaries of that
+        delegation in a machine-verifiable form. The agent retains
+        behavioral autonomy: it decides <em>what</em> to do and
+        <em>when</em>, but every action is constrained by the
+        approved schema instance. This enables a balance between
+        agent autonomy and human oversight that is not achievable
+        with static scope-based authorization.
       </t>
 
       <t>
@@ -135,40 +142,47 @@
       </t>
 
       <ul>
-        <li>Authorization Servers to validate, bind, and register
-          behavioral constraint policies in access tokens;</li>
-        <li>Resource Servers (PEP) to enforce the policy at runtime,
-          with a Policy Decision Point (PDP) evaluating each agent
-          behavior using a policy engine appropriate for the declared
-          policy language;</li>
+        <li>Authorization Servers to review requested schema
+          instances against server-side authorization policies and
+          bind approved schema instances to access tokens;</li>
+        <li>Resource Servers to verify each agent behavior against
+          the approved schema instance at runtime through
+          deterministic constraint evaluation, without a policy
+          engine;</li>
         <li>Resource Servers to guide agents toward appropriate
           authorization via structured error responses when behaviors
           exceed approved constraints.</li>
       </ul>
 
       <t>
-        The <tt>authorization_policy</tt> authorization data type can be used in
+        Domain-specific authorization schemas can be used in
         conjunction with the <tt>delegation_chain</tt> claim
-        (<xref target="I-D.liu-oauth-chain-delegation"/>).  When a
-        delegation hop carries a structured policy, the behavioral
-        constraint policy defines the fine-grained authorization
-        constraints that were approved at that hop, complementing the
-        delegation lineage and attestation provided by
-        <tt>delegation_chain</tt>.
+        (<xref target="I-D.liu-oauth-chain-delegation"/>). When a
+        delegation hop carries a schema instance, the instance
+        defines the fine-grained authorization constraints that were
+        approved at that hop, complementing the delegation lineage
+        and attestation provided by <tt>delegation_chain</tt>.
       </t>
 
-      <section title="Language-Agnostic Binding">
+      <section title="Domain-Specific Authorization Schemas">
         <t>
-          This specification standardizes the <strong>binding
-          mechanism</strong> between OAuth tokens and policies
-          expressed in any policy language, not any specific policy
-          language. The binding defines how
-          the Authorization Server validates and binds a policy to an
-          access token, and how the Resource Server (PEP) retrieves
-          and enforces it at runtime, with evaluation by a Policy
-          Decision Point (PDP). The choice of policy language is an
-          implementation decision: different deployments may use
-          different languages through the same binding interface.
+          This specification defines a framework for
+          <strong>domain-specific authorization schemas</strong>:
+          structured definitions of behavioral boundaries for a
+          particular application domain. Each schema is identified
+          by an authorization details type registered per
+          <xref target="RFC9396"/>, and schema instances are carried
+          in authorization requests and access tokens via
+          <tt>authorization_details</tt>. Schema instances are
+          structured data, not executable code: Resource Servers
+          verify agent behaviors against them through deterministic
+          constraint evaluation. How the Authorization Server
+          reviews requested instances is an implementation decision:
+          server-side authorization policies MAY be expressed in any
+          policy language (e.g., Rego <xref target="Rego"/>), but no
+          policy language constructs are carried in authorization
+          requests or access tokens (see
+          <xref target="as-policy-review"/>).
         </t>
       </section>
 
@@ -183,10 +197,11 @@
 
       <section title="RAR Integration">
         <t>
-          This specification defines the <tt>authorization_policy</tt>
-          authorization data type for use with Rich Authorization Requests (RAR)
-          <xref target="RFC9396"/>. The behavioral constraint policy is carried within the
-          <tt>authorization_details</tt> parameter as the primary mechanism.
+          This specification defines a framework for domain-specific
+          authorization schemas used with Rich Authorization Requests
+          (RAR) <xref target="RFC9396"/>. Schema instances are carried
+          within the <tt>authorization_details</tt> parameter as the
+          primary mechanism.
         </t>
 
         <t>
@@ -195,92 +210,101 @@
 
         <ul>
           <li>
-            <strong>Authorization Data Type</strong>: The
-            <tt>authorization_policy</tt> type is defined for use with the
-            <tt>authorization_details</tt> parameter per RFC 9396.
-            It contains the behavioral constraint policy,
-            entry point, and optional context.
+            <strong>Authorization Data Types</strong>: Each
+            domain-specific authorization schema is identified by a
+            distinct authorization details type registered per
+            RFC 9396. This specification defines the
+            <tt>transaction_authority</tt> type as the initial
+            registration (see <xref target="schema-framework"/>) and
+            the requirements that additional domain schema types MUST
+            satisfy.
           </li>
           <li>
             <strong>Token Response</strong>: Per RFC 9396 Section 7.1,
             the access token includes enriched
-            <tt>authorization_details</tt> as the primary mechanism for
-            carrying the behavioral constraint policy.
+            <tt>authorization_details</tt> as the primary mechanism
+            for carrying the approved schema instance.
           </li>
           <li>
-            <strong>Complementary Use</strong>: RAR enables structured
-            authorization requests with type-specific details, while the
-            policy binding enables expressive declarative policy
-            definitions. Implementations MAY combine
-            <tt>authorization_policy</tt> with other RAR types.
+            <strong>Complementary Use</strong>: Implementations MAY
+            combine domain-specific authorization schemas with other
+            RAR types in a single request.
           </li>
         </ul>
 
         <t>
-          Resource Servers MAY advertise supported authorization details
-          types via the <tt>authorization_details_types_supported</tt>
-          attribute in Protected Resource Metadata
-          (<xref target="RFC9728"/>), enabling clients to discover which
-          authorization details types are accepted before constructing
-          <tt>authorization_policy</tt> authorization requests. This discovery
-          mechanism is particularly valuable in multi-tenant or federated
+          Resource Servers MAY advertise supported authorization
+          details types via the
+          <tt>authorization_details_types_supported</tt> attribute in
+          Protected Resource Metadata (<xref target="RFC9728"/>),
+          enabling clients to discover which domain-specific
+          authorization schemas are accepted before constructing
+          authorization requests. This discovery mechanism is
+          particularly valuable in multi-tenant or federated
           environments where different resource servers may require
-          different policy structures.
+          different schema structures.
         </t>
 
         <t>
           The <tt>authorization_details</tt> parameter provides one
-          mechanism for carrying the policy in the authorization
-          request; this specification standardizes the binding of the
-          approved policy to the access token, not the specific input
-          channel by which the policy reaches the Authorization Server.
+          mechanism for carrying a schema instance in the
+          authorization request; this specification standardizes the
+          binding of the approved schema instance to the access
+          token, not the specific input channel by which the
+          instance reaches the Authorization Server.
         </t>
       </section>
     </section>
 
     <section anchor="terminology" title="Terminology">
       <dl>
-        <dt>Policy Language:</dt>
+        <dt>Domain-Specific Authorization Schema:</dt>
         <dd>
-          A declarative language used to define authorization policies.
-          Examples include Rego <xref target="Rego"/>, Cedar
-          <xref target="Cedar"/>, and ALFA. The choice of policy
-          language is an implementation decision; this specification
-          does not mandate a specific language.
+          A structured definition of behavioral boundaries for a
+          particular application domain, identified by an
+          authorization details type registered per
+          <xref target="RFC9396"/>. A schema defines constraint
+          fields whose values are machine-verifiable at runtime
+          through deterministic evaluation.
         </dd>
 
-        <dt>Policy Engine:</dt>
+        <dt>Schema Instance:</dt>
         <dd>
-          A software component that evaluates policies written in a
-          specific policy language against structured input data.
-          For example, Open Policy Agent (OPA) <xref target="OPA"/>
-          evaluates Rego policies.
+          A concrete authorization details object conforming to a
+          domain-specific authorization schema, carried in
+          <tt>authorization_details</tt>. When approved by the
+          Authorization Server, the schema instance is bound to the
+          access token and verified by the Resource Server against
+          each agent behavior at runtime.
         </dd>
 
-        <dt>Policy Decision Point (PDP):</dt>
+        <dt>transaction_authority:</dt>
         <dd>
-          The entity that evaluates a policy against runtime input
-          and renders an authorization decision (e.g., allow or
-          deny). In this specification, the PDP role is realized by
-          a policy engine appropriate for the declared policy
-          language.
+          The domain-specific authorization schema defined in this
+          specification for transactional operations, such as
+          e-commerce transactions. It constrains agent behavior
+          through transaction boundaries including amount limits,
+          operations, categories, merchants, and time windows.
+        </dd>
+
+        <dt>AS Review Policy:</dt>
+        <dd>
+          Server-side authorization policies used by the
+          Authorization Server to review requested schema instances
+          before approval. Review policies are managed by the
+          Authorization Server and are never carried in
+          authorization requests or access tokens. They MAY be
+          expressed in any policy language (e.g., Rego
+          <xref target="Rego"/>) as an implementation decision.
         </dd>
 
         <dt>Policy Enforcement Point (PEP):</dt>
         <dd>
-          The entity that enforces the authorization decision
-          rendered by the PDP — allowing, denying, or adapting the
-          agent's request. In this specification, the Resource
-          Server acts as the PEP.
-        </dd>
-
-        <dt>Policy Language Binding:</dt>
-        <dd>
-          The mechanism defined in this specification for binding
-          policies to OAuth access tokens, regardless of the policy
-          language used. The binding includes the RAR authorization
-          data type, the policy reference claim, and the
-          reverse-guided authorization error response format.
+          The entity that enforces authorization decisions,
+          allowing, denying, or adapting the agent's request. In
+          this specification, the Resource Server acts as the PEP,
+          verifying each behavior against the approved schema
+          instance.
         </dd>
 
         <dt>Rich Authorization Requests (RAR):</dt>
@@ -289,50 +313,70 @@
           requirements through the <tt>authorization_details</tt> parameter.
         </dd>
 
-        <dt>authorization_policy:</dt>
+        <dt>Schema Reference:</dt>
         <dd>
-          An authorization data type for RAR that carries a behavioral
-          constraint policy within the
-          <tt>authorization_details</tt> parameter. The policy defines
-          the behavioral boundaries within which the client (agent)
-          is permitted to operate, enforced by the Resource Server
-          (PEP) with evaluation by a Policy Decision Point (PDP)
-          against each runtime behavior.
-        </dd>
-
-        <dt>Policy Reference:</dt>
-        <dd>
-          An identifier for a behavioral constraint policy that has
-          been validated and registered by the Authorization Server,
-          included in JWT <xref target="RFC7519"/> access tokens via
-          the <tt>policy_ref</tt> claim defined in this specification.
+          An identifier for an approved schema instance that has
+          been registered by the Authorization Server, included in
+          JWT <xref target="RFC7519"/> access tokens via the
+          <tt>schema_ref</tt> claim defined in this specification.
         </dd>
       </dl>
     </section>
 
-    <section anchor="authorization-data-type" title="Policy Binding Authorization Data Type">
+    <section anchor="authorization-data-type" title="Domain-Specific Authorization Schema Framework">
       <t>
-        This specification defines the <tt>authorization_policy</tt> authorization
-        data type for use with Rich Authorization Requests (RAR).
+        This specification defines a framework for domain-specific
+        authorization schemas used with Rich Authorization Requests
+        (RAR), and the <tt>transaction_authority</tt> schema as the
+        initial registration. A domain-specific authorization schema
+        is identified by an authorization details type registered per
+        <xref target="RFC9396"/>. Schema instances carried in
+        <tt>authorization_details</tt> are structured data; when
+        approved by the Authorization Server, the instance is bound
+        to the access token and verified by the Resource Server at
+        runtime through deterministic constraint evaluation.
       </t>
 
-      <section anchor="authorization-policy-type" title="authorization_policy">
+      <t>
+        Authorization details types intended for use as
+        domain-specific authorization schemas MUST satisfy the
+        following requirements:
+      </t>
+
+      <ol>
+        <li>Structured Constraints: The type MUST define its
+          constraint fields with unambiguous data types and
+          deterministic verification semantics, such that a Resource
+          Server can verify a behavior against an approved instance
+          without policy interpretation;</li>
+        <li>Deny by Default: Behaviors not explicitly permitted by
+          the approved instance MUST be denied;</li>
+        <li>Common Fields: The type uses the common fields defined
+          in RFC 9396 Section 2 (<tt>actions</tt>,
+          <tt>locations</tt>, <tt>datatypes</tt>,
+          <tt>identifier</tt>) to declare a declarative upper bound
+          on the requested operations and resources;</li>
+        <li>Subset Definition: The type SHOULD define what it means
+          for one instance to be a subset of another, to support
+          progressive narrowing in Token Exchange
+          (<xref target="multi-scenario"/>).</li>
+      </ol>
+
+      <section anchor="schema-framework" title="transaction_authority">
         <t>
-          The <tt>authorization_policy</tt> authorization data type
-          defines the structure of a behavioral constraint policy
-          carried within <tt>authorization_details</tt>. When approved
-          by the Authorization Server, the policy is bound to the
-          access token and enforced by the Resource Server (PEP) at
-          runtime, with evaluation by a Policy Decision Point (PDP).
-          The policy language is identified by the
-          <tt>policy.language</tt> field, enabling language-agnostic
-          binding.
+          The <tt>transaction_authority</tt> authorization data
+          type defines transaction boundaries within which an agent
+          is permitted to operate, carried within
+          <tt>authorization_details</tt>. When approved by the
+          Authorization Server, the schema instance is bound to the
+          access token and verified by the Resource Server at
+          runtime.
         </t>
 
         <section title="Type Definition">
           <dl>
             <dt>Type Name:</dt>
-            <dd>authorization_policy</dd>
+            <dd>transaction_authority</dd>
 
             <dt>Data Type:</dt>
             <dd>Object</dd>
@@ -344,23 +388,32 @@
 
         <section title="Structure">
           <t>
-            The following example shows the <tt>authorization_details</tt>
-            request parameter containing an <tt>authorization_policy</tt> object
-            using Rego as the policy language:
+            The following example shows the
+            <tt>authorization_details</tt> request parameter
+            containing a <tt>transaction_authority</tt> instance
+            for an e-commerce transaction:
           </t>
           <figure>
-            <artwork name="authorization_policy in authorization_details" type="json"><![CDATA[
+            <artwork name="transaction_authority in authorization_details" type="json"><![CDATA[
 {
   "authorization_details": [
     {
-      "type": "authorization_policy",
-      "policy": {
-        "language": "rego",
-        "content": "package agent\n\ndefault allow = false\n\nallow if {\n  input.user.tier == \"premium\"\n  input.action in {\"search_products\", \"add_to_cart\"}\n}",
-        "entry_point": "allow"
+      "type": "transaction_authority",
+      "domain": "ecommerce",
+      "transaction_id": "urn:uuid:txn-abc-123",
+      "boundary": {
+        "total_amount_limit": { "value": 50, "currency": "USD" },
+        "operations": ["ecommerce.search", "ecommerce.cart.add"],
+        "category": ["apparel"],
+        "merchant": ["https://shop.example"],
+        "time_window": {
+          "start": "2026-08-20T00:00:00Z",
+          "end": "2026-08-21T00:00:00Z"
+        }
       },
-      "actions": ["search_products", "add_to_cart"],
-      "locations": ["https://api.example.com/products"]
+      "subset_rule": "strict",
+      "actions": ["search", "cart.add"],
+      "locations": ["https://api.shop.example"]
     }
   ]
 }
@@ -371,179 +424,184 @@
             In addition to the common fields defined in RFC 9396
             Section 2 (such as <tt>actions</tt>, <tt>locations</tt>,
             <tt>datatypes</tt>, and <tt>identifier</tt>), the
-            <tt>authorization_policy</tt> authorization data type defines the
-            following type-specific fields:
+            <tt>transaction_authority</tt> authorization data type
+            defines the following type-specific fields:
           </t>
 
           <dl>
-            <dt>policy:</dt>
+            <dt>domain:</dt>
             <dd>
-              REQUIRED. An object containing the policy definition.
+              REQUIRED. A string identifying the application domain
+              the schema instance applies to (e.g., "ecommerce").
+            </dd>
+
+            <dt>transaction_id:</dt>
+            <dd>
+              OPTIONAL. An identifier for the transaction the
+              instance governs. When used together with the
+              authorization evidence mechanism
+              (<xref target="I-D.liu-oauth-authorization-evidence"/>),
+              the <tt>transaction_id</tt> correlates the approved
+              instance with the corresponding consent record.
+            </dd>
+
+            <dt>boundary:</dt>
+            <dd>
+              <t>
+                REQUIRED. An object containing the transaction
+                boundary constraints. All fields are OPTIONAL; only
+                behaviors consistent with every present constraint
+                are permitted:
+              </t>
+
+              <dl>
+                <dt>total_amount_limit:</dt>
+                <dd>An object with <tt>value</tt> (number) and
+                  <tt>currency</tt> (string) members. The aggregate
+                  amount of the agent's transactions MUST NOT exceed
+                  <tt>value</tt> in the given currency.</dd>
+
+                <dt>operations:</dt>
+                <dd>An array of namespaced operation identifiers
+                  (e.g., "ecommerce.cart.add"). Only the listed
+                  operations are permitted.</dd>
+
+                <dt>category:</dt>
+                <dd>An array of product category identifiers the
+                  agent is permitted to operate on.</dd>
+
+                <dt>merchant:</dt>
+                <dd>An array of merchant URIs the agent is permitted
+                  to interact with.</dd>
+
+                <dt>time_window:</dt>
+                <dd>An object with <tt>start</tt> and <tt>end</tt>
+                  members, each a timestamp per RFC 3339. Only
+                  behaviors occurring within the window are
+                  permitted.</dd>
+              </dl>
+            </dd>
+
+            <dt>subset_rule:</dt>
+            <dd>
+              OPTIONAL. Controls progressive narrowing in Token
+              Exchange (<xref target="multi-scenario"/>). The value
+              "strict" (the default) requires a derived instance to
+              be a subset of the original instance; the value
+              "loose" permits the Authorization Server to apply its
+              own review policies when deriving instances.
             </dd>
 
             <dt>context:</dt>
             <dd>
-              OPTIONAL. An object providing additional structured data
-              for behavior verification at resource access time.
+              OPTIONAL. An object providing additional structured
+              data for behavior verification at resource access
+              time (see <xref target="schema-context"/>).
             </dd>
           </dl>
 
           <t>
-            The common RAR fields and the policy serve different
-            consumers at different stages of the authorization flow.
-            The common fields (<tt>actions</tt>, <tt>locations</tt>)
-            provide a declarative upper bound on the requested
-            operations and resources, enabling the Authorization Server
-            to approve or reject the request without parsing the policy.
-            The policy defines the behavioral constraints that the
-            PDP evaluates and the Resource Server (PEP) enforces
-            against each agent behavior at runtime with contextual
-            input. This layered design allows
-            Authorization Server implementations to function without
-            embedding a policy engine, while the Resource Server performs
-            per-behavior verification using the full expressiveness
-            of the policy.
+            The common RAR fields and the boundary constraints
+            serve different consumers at different stages of the
+            authorization flow. The common fields
+            (<tt>actions</tt>, <tt>locations</tt>) provide a
+            declarative upper bound on the requested operations and
+            resources, enabling the Authorization Server to approve
+            or reject the request without interpreting the boundary
+            constraints. The <tt>boundary</tt> constraints define
+            the behavioral limits that the Resource Server verifies
+            against each agent behavior at runtime. This layered
+            design allows Authorization Server implementations to
+            review requests declaratively, while the Resource Server
+            performs per-behavior verification through
+            deterministic constraint evaluation.
           </t>
 
           <t>
-            The AS SHOULD verify that the policy does not exceed the
-            scope declared in the common fields
-            (<xref target="as-processing"/>, Step 5). The Resource
-            Server, as the Policy Enforcement Point (PEP), bears
-            responsibility for ensuring the evaluated policy behavior
-            is consistent with the approved authorization scope at
-            runtime.
+            The AS SHOULD verify that the boundary constraints are
+            consistent with the common fields
+            (<xref target="as-processing"/>). The Resource Server
+            bears responsibility for ensuring each verified
+            behavior is consistent with the approved schema
+            instance at runtime.
           </t>
 
           <t>
-            The <tt>policy</tt> object has the following fields:
+            Additional constraint fields and additional
+            domain-specific authorization schemas are expected to be
+            registered through future revisions and follow-up
+            specifications.
           </t>
-
-          <dl>
-            <dt>language:</dt>
-            <dd>
-              REQUIRED. The policy language identifier. Values are
-              registered in the IANA "Policy Language Types" registry
-              (see <xref target="iana-policy-languages"/>). This
-              specification defines "rego" as the initial value. Future
-              specifications MAY register additional language identifiers
-              such as "cedar" or "alfa".
-            </dd>
-
-            <dt>content:</dt>
-            <dd>
-              REQUIRED (if <tt>uri</tt> is not present). The policy
-              as a string in the syntax of the language identified by
-              <tt>language</tt>. The policy MUST be syntactically valid
-              in the declared language. If both <tt>content</tt> and
-              <tt>uri</tt> are present, <tt>content</tt> takes precedence
-              and <tt>uri</tt> is ignored.
-            </dd>
-
-            <dt>uri:</dt>
-            <dd>
-              OPTIONAL. A URI reference to an externally hosted policy.
-              If provided, the AS MAY fetch the policy from this location.
-              The AS MUST apply SSRF protections when fetching from this
-              URI (see <xref target="security"/>).
-            </dd>
-
-            <dt>entry_point:</dt>
-            <dd>
-              OPTIONAL. An identifier that selects the rule, function,
-              or policy within the policy content to be evaluated as
-              the authorization decision. The semantics, naming
-              conventions, and default value of the entry point are
-              defined by the corresponding language profile (see
-              <xref target="rego-profile"/> for Rego). When absent,
-              the language profile's default entry point is used.
-              The entry point MUST evaluate to a boolean value for
-              authorization decisions. Languages that do not require
-              a named entry point (e.g., those that evaluate a policy
-              set as a whole) MAY ignore this field.
-            </dd>
-          </dl>
         </section>
 
-        <section anchor="policy-requirements" title="Policy Requirements">
+        <section anchor="schema-instance-requirements" title="Schema Instance Requirements">
           <t>
-            Policies used with this specification MUST adhere to the following
-            requirements, which are language-agnostic:
+            Schema instances used with this specification MUST adhere to the
+            following requirements:
           </t>
 
           <ol>
             <li>
-              Entry Point: When the binding uses the
-              <tt>entry_point</tt> field (or its language profile's
-              default when the field is absent), the policy MUST
-              define a rule or decision point matching that entry
-              point identifier. For authorization decisions, this
-              rule MUST evaluate to a boolean value.
+              Schema Conformance: Every instance MUST validate against
+              the definition of the schema it instantiates. Unknown
+              fields not defined by the schema MUST be rejected by the
+              Authorization Server.
             </li>
             <li>
-              Input Reference: The policy accesses data via the
-              <tt>input</tt> object. The structure and content of the
-              <tt>input</tt> object are determined by the evaluating
-              party (AS or PDP) and MAY include token claims, API
-              request parameters, resource attributes, and other
-              contextual data as agreed between the client and the
-              resource server.
+              Constraint Values: Constraint values MUST be within the
+              ranges and formats defined by the schema (e.g., monetary
+              amounts as numbers with an ISO 4217 currency, timestamps
+              per RFC 3339).
+            </li>
+            <li>
+              Deny by Default: An instance constrains behavior only
+              through its present fields. Any behavior not consistent
+              with every present constraint is denied; an empty or
+              absent boundary grants no behavior
+              (<xref target="rs-enforcement"/>).
             </li>
           </ol>
 
           <t>
-            Policies are strongly RECOMMENDED to ensure deny-by-default
-            behavior. The mechanism for achieving this is
-            language-specific; see <xref target="rego-profile"/> for
-            the Rego language profile. This recommendation is not
-            listed as a mandatory requirement above because the
-            mechanism for achieving default deny varies by language
-            (e.g., <tt>default allow = false</tt> in Rego), and
-            policies that omit it still evaluate correctly — they
-            simply return undefined for unmatched inputs, which the
-            Resource Server treats as deny per
-            <xref target="rs-enforcement"/>.
-          </t>
-
-          <t>
-            Language-specific requirements, including syntax version,
-              package or namespace conventions, and safety restrictions,
-              are defined in the corresponding language profile
-              appendix. This specification defines the Rego language
-              profile in <xref target="rego-profile"/>.
+            Because instances are structured data rather than executable
+            code, verification at the Resource Server is deterministic
+            constraint evaluation. No policy engine or policy language
+            runtime is required at the Resource Server. Policy languages,
+            where used at all, are confined to the Authorization Server's
+            internal review of instances (<xref target="as-policy-review"/>).
           </t>
         </section>
       </section>
 
-      <section anchor="policy-ref-claim" title="policy_ref Claim">
+      <section anchor="schema-ref-claim" title="schema_ref Claim">
         <t>
-          The <tt>policy_ref</tt> claim is an OPTIONAL shorthand mechanism for
-          referencing a behavioral constraint policy in access tokens. When the
+          The <tt>schema_ref</tt> claim is an OPTIONAL shorthand mechanism for
+          referencing an approved schema instance in access tokens. When the
           AS uses Rich Authorization Requests (RAR), the enriched
           <tt>authorization_details</tt> array in the access token (per RFC 9396
-          Section 7.1) is the primary mechanism for carrying the behavioral
-          constraint policy. The <tt>policy_ref</tt> claim MAY be used as a
+          Section 7.1) is the primary mechanism for carrying the approved
+          schema instance. The <tt>schema_ref</tt> claim MAY be used as a
           lightweight alternative when:
         </t>
 
         <ul>
-          <li>The inline policy content would make the access token exceed
+          <li>The inline instance content would make the access token exceed
             practical size limits (see <xref target="security"/>);</li>
-          <li>The Resource Server already has a cached copy of the policy
+          <li>The Resource Server already has a cached copy of the instance
             and only needs an identifier to look it up;</li>
           <li>The deployment uses opaque (non-JWT) access tokens where
-            token introspection <xref target="RFC7662"/> provides the policy content.</li>
+            token introspection <xref target="RFC7662"/> provides the instance content.</li>
         </ul>
 
         <t>
-          When <tt>policy_ref</tt> is used, the AS performs policy
+          When <tt>schema_ref</tt> is used, the AS performs instance
           registration as described in <xref target="as-processing"/>.
         </t>
 
         <section title="Claim Definition">
           <dl>
             <dt>Claim Name:</dt>
-            <dd>policy_ref</dd>
+            <dd>schema_ref</dd>
 
             <dt>Claim Type:</dt>
             <dd>String</dd>
@@ -557,32 +615,32 @@
 
         <section title="Structure">
           <t>
-            The <tt>policy_ref</tt> claim value is a string containing
-            the unique policy identifier assigned by the Authorization
-            Server during policy registration.
+            The <tt>schema_ref</tt> claim value is a string containing
+            the unique instance identifier assigned by the Authorization
+            Server during instance registration.
           </t>
 
           <figure>
-            <artwork name="policy_ref in a JWT access token" type="json"><![CDATA[
+            <artwork name="schema_ref in a JWT access token" type="json"><![CDATA[
 {
   "iss": "https://as.example.com",
   "sub": "agent-xyz",
-  "policy_ref": "policy-abc123"
+  "schema_ref": "schema-instance-abc123"
 }
             ]]></artwork>
           </figure>
 
           <t>
             The Resource Server uses this identifier to look up the
-            full policy content from a local cache or via token
+            full approved instance from a local cache or via token
             introspection (<xref target="RFC7662"/>).
           </t>
         </section>
       </section>
 
-      <section anchor="policy-context" title="Policy Context">
+      <section anchor="schema-context" title="Schema Context">
         <t>
-          The <tt>context</tt> field within <tt>authorization_policy</tt> provides
+          The <tt>context</tt> field within a schema instance provides
           additional structured data that the client wishes to include
           at authorization request time. Typical context data includes:
         </t>
@@ -593,18 +651,16 @@
         </ul>
 
         <t>
-          The <tt>input</tt> object used for policy evaluation is
-          constructed by the Resource Server (PEP) and is not
-          limited to the <tt>context</tt> field.
-          When the RS constructs the <tt>input</tt> object, it
-          SHOULD merge the <tt>context</tt> data under a
-          <tt>context</tt> key within <tt>input</tt>
-          (e.g., <tt>input.context</tt>) to avoid key collisions
-          with other input categories.
+          The verification data used for constraint evaluation at the
+          Resource Server is assembled by the Resource Server and is not
+          limited to the <tt>context</tt> field. When the Resource
+          Server assembles verification data, it SHOULD keep the
+          <tt>context</tt> data under a distinct <tt>context</tt> key
+          to avoid key collisions with other data categories.
         </t>
 
         <t>
-          The specific <tt>input</tt> structure is determined by
+          The specific verification data structure is determined by
           bilateral agreement between the client and the resource
           server, typically documented in developer integration guides.
         </t>
@@ -613,66 +669,63 @@
 
     <section anchor="protocol-flow" title="Protocol Flow">
       <t>
-        The following figure illustrates the end-to-end policy binding
-        flow. The behavioral constraint policy carried in this flow may
-        be written in any policy language — for example Rego
-        <xref target="Rego"/>, Cedar <xref target="Cedar"/>, or ALFA —
-        using the same language-agnostic binding interface defined in
-        this specification.
+        The following figure illustrates the end-to-end schema binding
+        flow. The client proposes a domain-specific schema instance in
+        the authorization request; the Authorization Server reviews and
+        approves it; and the Resource Server verifies each agent
+        behavior against the approved instance through deterministic
+        constraint evaluation.
       </t>
       <figure>
-        <name>Policy Binding Flow</name>
-        <artwork name="Policy Binding Flow" type="ascii-art"><![CDATA[
-+--------+       +--------+       +--------+       +--------+
-| Client |       |   AS   |       |   RS   |       |Policy  |
-|        |       |        |       |        |       |Engine  |
-+--------+       +--------+       +--------+       +--------+
-    |                |                |                |
-    | (1) AuthZ Req  |                |                |
-    | with           |                |                |
-    | behavioral     |                |                |
-    | constraint     |                |                |
-    | policy         |                |                |
-    | (type=auth_    |                |                |
-    |  policy)       |                |                |
-    |--------------->|                |                |
-    |                |                |                |
-    |                | (2) Validate   |                |
-    |                | policy syntax  |                |
-    |                |                |                |
-    |                | (3) Policy     |                |
-    |                | approval       |                |
-    |                |                |                |
-    | (4) Access     |                |                |
-    |    Token with  |                |                |
-    |    behavioral  |                |                |
-    |    constraint  |                |                |
-    |    policy      |                |                |
-    |<---------------|                |                |
-    |                |                |                |
-    | (5) Agent      |                |                |
-    |    Behavior    |                |                |
-    |    with token  |                |                |
-    |-------------------------------->|                |
-    |                |                |                |
-    |                |                | (6) Extract    |
-    |                |                | behavioral     |
-    |                |                | constraint     |
-    |                |                | policy         |
-    |                |                |                |
-    |                |                | (7) Verify     |
-    |                |                | behavior       |
-    |                |                | against policy |
-    |                |                |--------------->|
-    |                |                |                |
-    |                |                | (8) Allow/Deny |
-    |                |                |<---------------|
-    |                |                |                |
-    |                |                | (9) Enforce    |
-    |                |                | decision       |
-    |                |                |                |
-    | (10) Response  |                |                |
-    |<--------------------------------|                |
+        <name>Schema Binding Flow</name>
+        <artwork name="Schema Binding Flow" type="ascii-art"><![CDATA[
++--------+       +--------+       +--------+
+| Client |       |   AS   |       |   RS   |
+|        |       |        |       |        |
++--------+       +--------+       +--------+
+    |                |                |
+    | (1) AuthZ Req  |                |
+    | with schema    |                |
+    | instance       |                |
+    | (type=         |                |
+    |  transaction_  |                |
+    |  authority)    |                |
+    |--------------->|                |
+    |                |                |
+    |                | (2) Validate   |
+    |                | instance       |
+    |                |                |
+    |                | (3) Review     |
+    |                | and approval   |
+    |                |                |
+    | (4) Access     |                |
+    |    Token with  |                |
+    |    approved    |                |
+    |    schema      |                |
+    |    instance    |                |
+    |<---------------|                |
+    |                |                |
+    | (5) Agent      |                |
+    |    Behavior    |                |
+    |    with token  |                |
+    |-------------------------------->|
+    |                |                |
+    |                |                | (6) Extract
+    |                |                | approved
+    |                |                | schema
+    |                |                | instance
+    |                |                |
+    |                |                | (7) Verify
+    |                |                | behavior
+    |                |                | against
+    |                |                | instance
+    |                |                | constraints
+    |                |                |
+    |                |                | (8) Enforce
+    |                |                | decision
+    |                |                |
+    | (9) Response   |                |
+    |<--------------------------------|
         ]]></artwork>
       </figure>
 
@@ -680,36 +733,36 @@
         <ol>
           <li>
             Authorization Request: The authorization request includes
-            <tt>authorization_details</tt> containing an
-            <tt>authorization_policy</tt> object with the behavioral
-            constraint policy (<tt>policy</tt> and optional
-            <tt>context</tt> fields). This leverages RAR (RFC 9396)
+            <tt>authorization_details</tt> containing a schema instance
+            (e.g., of type <tt>transaction_authority</tt>, with the
+            <tt>boundary</tt> constraints and optional
+            <tt>context</tt> field). This leverages RAR (RFC 9396)
             for structured authorization requests.
           </li>
           <li>
-            Policy Validation: AS validates that the policy
-            is syntactically correct and safe to evaluate
+            Instance Validation: AS validates that the instance
+            conforms to the definition of the declared schema
             (see <xref target="as-processing"/>).
           </li>
           <li>
-            Policy Approval: AS determines whether the proposed
+            Review and Approval: AS determines whether the proposed
             behavioral boundaries are appropriate for the specific
             client and resource owner, based on client registration
-            metadata, organizational authorization policies, resource
+            metadata, organizational review policies, resource
             owner consent, and token binding context
             (see <xref target="as-processing"/>). The AS does not
-            perform full runtime policy evaluation (which occurs at
-            the PDP on a per-behavior basis).
+            perform per-behavior verification (which occurs at the
+            Resource Server).
           </li>
           <li>
             Token Binding: AS issues an access token with enriched
             <tt>authorization_details</tt> array per RFC 9396
-            Section 7.1, binding the approved behavioral constraint
-            policy to the token.
+            Section 7.1, binding the approved schema instance
+            to the token.
             The AS MAY include additional metadata in the
             <tt>authorization_details</tt> object (e.g., server-assigned
-            identifiers or normalized policy content) but MUST NOT
-            alter the semantic meaning of the policy without client
+            identifiers or normalized instance content) but MUST NOT
+            alter the semantic meaning of the instance without client
             consent.
           </li>
           <li>
@@ -717,19 +770,16 @@
             to the Resource Server when performing a behavior.
           </li>
           <li>
-            Policy Extraction: RS extracts the behavioral constraint
-            policy from the enriched <tt>authorization_details</tt>
+            Instance Extraction: RS extracts the approved schema
+            instance from the enriched <tt>authorization_details</tt>
             in the access token.
           </li>
           <li>
-            Behavior Verification: The PDP evaluates the agent's
+            Behavior Verification: The RS verifies the agent's
             current behavior (action, target resource, context)
-            against the policy using a policy engine appropriate for
-            the declared policy language.
-          </li>
-          <li>
-            Decision: The policy engine returns an allow/deny
-            decision for the specific behavior.
+            against the boundary constraints of the approved
+            instance through deterministic constraint evaluation.
+            No policy engine is required.
           </li>
           <li>
             Enforcement: RS enforces the per-behavior decision,
@@ -748,7 +798,7 @@
         providing guidance on how to obtain valid authorization. In behavioral
         authorization, this is particularly important: when an agent encounters
         <strong>behavioral drift</strong> (its next planned behavior falls
-        outside the approved constraint policy), the agent needs structured
+        outside the approved schema instance), the agent needs structured
         guidance to recover autonomously. Resource servers can provide this
         guidance through structured error responses that enable agents to
         construct appropriate authorization requests with updated behavioral
@@ -761,7 +811,7 @@
           server returns an HTTP 403 Forbidden response with a
           <tt>WWW-Authenticate</tt> header containing the
           <tt>insufficient_authorization</tt> error code and a
-          <tt>policy_profile</tt> parameter. This parameter provides machine-readable
+          <tt>schema_profile</tt> parameter. This parameter provides machine-readable
           guidance on the required authorization conditions.
         </t>
 
@@ -771,7 +821,7 @@
 HTTP/1.1 403 Forbidden
 Content-Type: application/json
 WWW-Authenticate: Bearer error="insufficient_authorization",
-  policy_profile="eyJwcm9maWxlX3VyaSI6Imh0dHBzOi8vcmVzb3VyY2UuZXhhbXBsZS9..."
+  schema_profile="eyJwcm9maWxlX3VyaSI6Imh0dHBzOi8vcmVzb3VyY2UuZXhhbXBsZS9..."
 
 {
   "error": "insufficient_authorization",
@@ -785,13 +835,13 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           RFC 6749 <xref target="RFC6749"/> Section 5.2, the error
           response includes both the <tt>WWW-Authenticate</tt> header
           with the <tt>insufficient_authorization</tt> error code and a
-          JSON error body. The <tt>policy_profile</tt> parameter in the
+          JSON error body. The <tt>schema_profile</tt> parameter in the
           <tt>WWW-Authenticate</tt> header provides machine-readable
           guidance on the required authorization conditions.
         </t>
 
         <t>
-          The <tt>policy_profile</tt> parameter value is a base64url-encoded
+          The <tt>schema_profile</tt> parameter value is a base64url-encoded
           JSON object. Implementations SHOULD use base64url encoding
           without padding (no trailing <tt>=</tt> characters) per
           RFC 4648 <xref target="RFC4648"/> Section 5 to avoid
@@ -800,7 +850,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
         </t>
 
         <figure>
-          <name>Decoded policy_profile</name>
+          <name>Decoded schema_profile</name>
           <artwork type="json"><![CDATA[
 {
   "profile_uri": "https://resource.example/policies/purchase",
@@ -832,25 +882,25 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           token lacks the scopes required by the resource server.
           The <tt>insufficient_authorization</tt> error defined in this
           specification addresses a broader condition: the token may
-          include adequate scopes but lack the policy-based authorization
-          structure (e.g., policy constraints or user
+          include adequate scopes but lack the schema-based authorization
+          structure (e.g., boundary constraints or user
           confirmation) required by the resource server.
         </t>
 
         <t>
           For example, consider an agent holding an access token with
           scope <tt>purchase</tt> that attempts to create a $500
-          purchase. The resource server requires a behavioral
-          constraint policy that limits transaction amounts and
+          purchase. The resource server requires a schema
+          instance that limits transaction amounts and
           requires user confirmation for purchases above $200. The
           scope is sufficient, but the token lacks the required
-          policy binding. The <tt>insufficient_scope</tt> error
+          schema binding. The <tt>insufficient_scope</tt> error
           cannot express this condition because the deficiency is
-          structural (missing policy constraints and confirmation
+          structural (missing boundary constraints and confirmation
           signal), not scope-based. The
           <tt>insufficient_authorization</tt> error with a
-          <tt>policy_profile</tt> payload allows the resource server
-          to convey both the missing policy constraints (e.g.,
+          <tt>schema_profile</tt> payload allows the resource server
+          to convey both the missing boundary constraints (e.g.,
           <tt>max_amount: 200</tt>) and the need for user
           confirmation (<tt>confirmation_required: true</tt>) in a
           machine-parseable form that the agent can act on
@@ -861,13 +911,13 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           Resource servers SHOULD use <tt>insufficient_scope</tt> when
           the deficiency is purely scope-based and
           <tt>insufficient_authorization</tt> when the deficiency involves
-          policy constraints that cannot be expressed as additional scopes.
+          boundary constraints that cannot be expressed as additional scopes.
         </t>
       </section>
 
-      <section title="Policy Profile Structure">
+      <section title="Schema Profile Structure">
         <t>
-          The <tt>policy_profile</tt> object contains the following fields:
+          The <tt>schema_profile</tt> object contains the following fields:
         </t>
 
         <dl>
@@ -903,7 +953,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 
           <dt>constraints:</dt>
           <dd>
-            OPTIONAL. Object defining policy constraints that MUST be satisfied.
+            OPTIONAL. Object defining boundary constraint descriptors that MUST be satisfied.
             Each key is a constraint name; the value is an object with the
             following descriptors: <tt>type</tt> (data type),
             <tt>description</tt> (human-readable explanation),
@@ -917,7 +967,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
             is required for the requested behavioral boundaries. If true,
             the agent MUST initiate an OAuth authorization flow to obtain
             the resource owner's explicit consent for the submitted
-            behavioral constraint policy. This does not mean local
+            schema instance. This does not mean local
             user confirmation (e.g., a modal dialog) is sufficient;
             the authorization must be obtained through the AS to produce
             a token with appropriate grants. The specific interaction
@@ -948,7 +998,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 
         <ol>
           <li>
-            Parse the <tt>policy_profile</tt> to understand authorization requirements.
+            Parse the <tt>schema_profile</tt> to understand authorization requirements.
           </li>
           <li>
             Verify that the specified <tt>auth_server</tt> is trusted before
@@ -956,8 +1006,8 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           </li>
           <li>
             Construct a new authorization request including required scopes,
-            a behavioral constraint policy that satisfies the constraints
-            specified in the <tt>policy_profile</tt>, and any additional
+            a schema instance that satisfies the constraints
+            specified in the <tt>schema_profile</tt>, and any additional
             parameters required by the resource server.
           </li>
           <li>
@@ -979,9 +1029,9 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
         <t>
           During multi-step task execution, an agent may encounter
           <strong>behavioral drift</strong>: situations where the next
-          behavior in its plan falls outside the approved policy
+          behavior in its plan falls outside the approved schema
           constraints. When this occurs, the agent has three options:
-          (1) request a new authorization with an updated policy that
+          (1) request a new authorization with an updated schema instance that
           accommodates the new behavior (using the reverse-guided
           authorization mechanism described above); (2) degrade its
           behavior to stay within the approved constraints (e.g.,
@@ -1008,92 +1058,94 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
     </section>
 
     <section anchor="as-processing" title="Authorization Server Processing">
-      <section title="Policy Validation">
+      <section title="Instance Validation">
         <t>
-          Upon receiving an <tt>authorization_details</tt> request containing the
-          <tt>authorization_policy</tt> type, the AS MUST perform the following
+          Upon receiving an <tt>authorization_details</tt> request containing a
+          domain-specific schema instance, the AS MUST perform the following
           validation steps:
         </t>
 
         <ol>
           <li>
-            Language Check: Verify that the <tt>policy.language</tt> field
-            contains a value registered in the IANA "Policy Language Types"
-            registry (see <xref target="iana-policy-languages"/>).
+            Type Check: Verify that the <tt>type</tt> field identifies
+            a domain-specific authorization schema known to the AS
+            (e.g., <tt>transaction_authority</tt>,
+            <xref target="schema-framework"/>).
           </li>
           <li>
-            Syntax Check: Parse the policy and verify it is
-            syntactically valid for the declared language. Language-specific
-            validation rules are defined in the corresponding language
-            profile (see <xref target="rego-profile"/> for Rego).
+            Schema Conformance: Validate the instance against the
+            definition of the declared schema, including required
+            fields, value types, and formats. Unknown fields not
+            defined by the schema MUST be rejected.
           </li>
           <li>
-            Entry Point Check: Verify the policy defines the rule
-            or decision point identified by the <tt>entry_point</tt>
-            field, or by the language profile's default entry point
-            when the field is absent.
-          </li>
-          <li>
-            Safety Check: Ensure the policy does not contain
-            dangerous operations. The specific restrictions are
-            language-specific; see <xref target="rego-profile"/> for
-            Rego-specific safety requirements.
+            Constraint Values: Verify that constraint values are
+            within the ranges and formats defined by the schema
+            (e.g., non-negative monetary amounts, well-formed
+            RFC 3339 timestamps with <tt>start</tt> earlier than
+            <tt>end</tt>).
           </li>
           <li>
             Behavioral Boundary Check: Verify that the RAR common fields
             (<tt>actions</tt>, <tt>locations</tt>) do not exceed the
-            client's registered permissions. This check provides an
-            approximate upper-bound enforcement based on declarative
-            fields rather than full policy AST analysis. The AS MAY
-            perform lightweight static analysis of the policy
-            (e.g., extracting referenced action values) to detect
-            obvious inconsistencies between the policy content and
-            the declared RAR fields.
+            client's registered permissions. The AS SHOULD also verify
+            that the boundary constraints are consistent with the
+            common fields (e.g., every operation listed in
+            <tt>boundary.operations</tt> corresponds to a declared
+            action).
           </li>
         </ol>
+
+        <t>
+          Because the request carries structured data rather than
+          executable code, no syntax parsing, entry point resolution,
+          or safety analysis of program code is required. This
+          eliminates the class of vulnerabilities associated with
+          evaluating client-submitted policy code.
+        </t>
       </section>
 
-      <section title="Policy Registration">
+      <section title="Instance Registration">
         <t>
-          When the AS issues a <tt>policy_ref</tt> claim instead of
-          embedding the full policy in <tt>authorization_details</tt>,
-          the AS MUST register the policy:
+          When the AS issues a <tt>schema_ref</tt> claim instead of
+          embedding the full approved instance in <tt>authorization_details</tt>,
+          the AS MUST register the instance:
         </t>
 
         <ol>
-          <li>Assign a unique policy identifier;</li>
-          <li>Store the policy content;</li>
-          <li>Associate the policy with the authorization session;</li>
-          <li>Optionally, pre-compile the policy for faster evaluation.</li>
+          <li>Assign a unique instance identifier;</li>
+          <li>Store the approved instance content;</li>
+          <li>Associate the instance with the authorization session;</li>
+          <li>Optionally, pre-process the instance for faster verification.</li>
         </ol>
 
         <t>
-          When the AS embeds the validated policy directly in the
+          When the AS embeds the approved instance directly in the
           enriched <tt>authorization_details</tt> (the primary path),
-          explicit registration is not required; the policy travels
+          explicit registration is not required; the instance travels
           with the token.
         </t>
 
         <t>
-          Policy registration in this specification is dynamic and
+          Instance registration in this specification is dynamic and
           on-demand. The Authorization Server does not need to maintain
-          a pre-configured catalog of policies. When a behavioral
-          constraint policy is submitted for binding, the AS
-          evaluates it against pre-established approval principles
+          a pre-configured catalog of instances. When a schema
+          instance is submitted for binding, the AS
+          reviews it against pre-established approval principles
           (see <xref target="policy-approval-basis"/>) and registers it only
           if approved. This eliminates the operational burden of
-          pre-deploying policies for every anticipated agent behavior,
+          pre-deploying instances for every anticipated agent behavior,
           which is impractical given the dynamic and unpredictable
           nature of AI agent workflows.
         </t>
 
         <t>
-          Deployments MAY also pre-register policies for well-known
+          Deployments MAY also pre-register instances for well-known
           agent workflows (e.g., automated reconciliation, scheduled
           reporting) where the behavioral boundaries are stable and
           known in advance. In such cases, the agent can reference
-          the pre-registered policy by identifier rather than
-          submitting the full policy content in each authorization
+          the pre-registered instance by identifier rather than
+          submitting the full instance content in each authorization
           request. Both modes are supported: dynamic registration
           is the default for exploratory agent tasks, while
           pre-registration is an optimization for predictable workflows.
@@ -1102,15 +1154,15 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 
       <section anchor="as-error-taxonomy" title="Error Responses">
         <t>
-          If policy validation or approval fails, the AS MUST return
+          If instance validation or approval fails, the AS MUST return
           an error response per RFC 6749 Section 5.2. The following
-          table consolidates the error taxonomy for policy-related
+          table consolidates the error taxonomy for schema-instance-related
           conditions. The AS selects the error code based on the
           nature of the failure:
         </t>
 
         <table>
-          <name>AS Error Taxonomy for Policy Binding</name>
+          <name>AS Error Taxonomy for Schema Binding</name>
           <thead>
             <tr>
               <th>Condition</th>
@@ -1120,39 +1172,24 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           </thead>
           <tbody>
             <tr>
-              <td>Missing <tt>policy.content</tt> and <tt>policy.uri</tt></td>
+              <td>Unknown <tt>type</tt> (schema not known to the AS)</td>
               <td><tt>invalid_request</tt></td>
-              <td>Required policy source absent</td>
+              <td>Schema identifier not recognized</td>
             </tr>
             <tr>
-              <td>URI fetch failure (timeout, HTTP error)</td>
+              <td>Missing required schema field (e.g., <tt>boundary</tt>)</td>
               <td><tt>invalid_request</tt></td>
-              <td>Policy source unreachable</td>
+              <td>Instance does not conform to the schema</td>
             </tr>
             <tr>
-              <td>URI fetching prohibited by AS policy</td>
+              <td>Unknown field not defined by the schema</td>
               <td><tt>invalid_request</tt></td>
-              <td>Client should use inline <tt>content</tt></td>
+              <td>Instance contains fields outside the schema</td>
             </tr>
             <tr>
-              <td>Unknown <tt>policy.language</tt></td>
+              <td>Constraint value out of range or malformed</td>
               <td><tt>invalid_request</tt></td>
-              <td>Language identifier not in IANA registry</td>
-            </tr>
-            <tr>
-              <td>Policy syntax error</td>
-              <td><tt>invalid_request</tt></td>
-              <td>Policy malformed in declared language</td>
-            </tr>
-            <tr>
-              <td>Missing or invalid entry point</td>
-              <td><tt>invalid_request</tt></td>
-              <td>Policy lacks declared decision rule</td>
-            </tr>
-            <tr>
-              <td>Dangerous language features (e.g., <tt>http.send</tt>, ReDoS patterns)</td>
-              <td><tt>invalid_request</tt></td>
-              <td>Policy violates language-profile safety rules</td>
+              <td>Constraint value violates the schema definition</td>
             </tr>
             <tr>
               <td>RAR common fields exceed client's registered permissions</td>
@@ -1160,7 +1197,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
               <td>Behavioral boundary exceeds pre-approved scope</td>
             </tr>
             <tr>
-              <td>Other policy approval failures (e.g., organizational policy denies this pattern)</td>
+              <td>Other review failures (e.g., organizational review policy denies this pattern)</td>
               <td><tt>invalid_request</tt></td>
               <td>Approval basis not satisfied</td>
             </tr>
@@ -1177,20 +1214,20 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
         </t>
 
         <figure>
-          <artwork name="Policy Error Response" type="json"><![CDATA[
+          <artwork name="Schema Instance Error Response" type="json"><![CDATA[
 {
   "error": "invalid_request",
-  "error_description": "Invalid policy: syntax error at line 5"
+  "error_description": "Invalid schema instance: boundary.total_amount_limit.value must be a non-negative number"
 }
           ]]></artwork>
         </figure>
 
       </section>
 
-      <section anchor="policy-approval-basis" title="Policy Approval Basis">
+      <section anchor="policy-approval-basis" title="Approval Basis">
         <t>
-          The Authorization Server's approval of a behavioral constraint
-          policy is not limited to syntactic validation. The AS
+          The Authorization Server's approval of a schema
+          instance is not limited to conformance validation. The AS
           determines whether the proposed behavioral boundaries are
           appropriate for the specific client and resource owner based
           on the following factors:
@@ -1204,10 +1241,12 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
             <xref target="RFC7591"/> or out-of-band provisioning.
           </li>
           <li>
-            <strong>Organizational authorization policies</strong>:
+            <strong>Organizational review policies</strong>:
             Administrative rules defining which behavioral patterns are
             permitted for specific client types, user roles, or resource
-            classes within the deployment.
+            classes within the deployment. These rules are internal to
+            the AS and are never carried in authorization requests or
+            access tokens (<xref target="as-policy-review"/>).
           </li>
           <li>
             <strong>Resource owner consent</strong>: Explicit authorization
@@ -1222,7 +1261,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
             <strong>Token binding context</strong>: The authorization
             grant type, requested scopes, and other token request
             parameters that establish the context in which the
-            behavioral constraint policy is evaluated.
+            schema instance is reviewed.
           </li>
         </ul>
 
@@ -1230,36 +1269,47 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
           For example, the AS MAY maintain a per-client allowlist of
           approved behavioral patterns (e.g., permitted actions, maximum
           transaction limits, allowed resource classes). When a new
-          behavioral constraint policy is submitted, the AS verifies
+          schema instance is submitted, the AS verifies
           that the declared RAR common fields
-          (<tt>actions</tt>, <tt>locations</tt>) fall within the client's
-          pre-approved boundaries. If the proposed policy exceeds these
+          (<tt>actions</tt>, <tt>locations</tt>) and the boundary
+          constraints fall within the client's
+          pre-approved boundaries. If the proposed instance exceeds these
           boundaries, the AS SHOULD return <tt>invalid_scope</tt> when
           the behavioral boundaries exceed the client's registered
-          permissions, or <tt>invalid_request</tt> for other policy
+          permissions, or <tt>invalid_request</tt> for other review
           violations (see the consolidated taxonomy in
           <xref target="as-error-taxonomy"/>). Alternatively, the AS MAY escalate to the resource
           owner for explicit consent before issuing the token.
         </t>
 
         <t>
-          This layered approval model ensures that the behavioral
-          constraint policy carried in the access token is trusted
-          not only for its syntactic correctness but also for its
-          alignment with the authorization policies governing the
+          Because instances are structured data with schema-defined
+          fields, this review is a comparison of constraint values
+          against the AS's approval principles, rather than analysis of
+          arbitrary program code. The AS MAY implement its review
+          policies in any policy language or rule system of its
+          choosing; such implementation is an AS-internal concern
+          (<xref target="as-policy-review"/>).
+        </t>
+
+        <t>
+          This layered approval model ensures that the schema
+          instance carried in the access token is trusted
+          not only for its schema conformance but also for its
+          alignment with the review policies governing the
           client-resource owner relationship. The Resource Server can
-          rely on this trust when enforcing the approved policy at
+          rely on this trust when enforcing the approved instance at
           runtime.
         </t>
       </section>
 
       <section anchor="refresh-handling" title="Refresh Token Handling">
         <t>
-          When an access token carrying a behavioral constraint
-          policy expires and the client obtains a new access token
+          When an access token carrying an approved schema
+          instance expires and the client obtains a new access token
           via a refresh token, the AS re-binds the same approved
-          policy to the new access token. The client does not
-          resubmit the policy in the refresh request; the AS
+          instance to the new access token. The client does not
+          resubmit the instance in the refresh request; the AS
           retrieves it from the authorization session state
           associated with the refresh token.
         </t>
@@ -1267,7 +1317,7 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
         <t>
           Refresh is a token-renewal operation, not an authorization
           request. A refresh request MUST NOT modify the approved
-          behavioral constraint policy. If the agent's task requires
+          schema instance. If the agent's task requires
           different behavioral boundaries, the agent MUST either
           initiate a new authorization request (using the
           reverse-guided mechanism described in
@@ -1280,8 +1330,8 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
 
         <t>
           The refresh token lifetime SHOULD NOT exceed the validity
-          period of the associated behavioral constraint policy.
-          If the policy has a natural expiration (e.g., a
+          period of the associated schema instance.
+          If the instance has a natural expiration (e.g., a
           time-window constraint), the AS SHOULD align the refresh
           token lifetime accordingly.
         </t>
@@ -1291,32 +1341,34 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
     <section anchor="rs-enforcement" title="Resource Server Enforcement">
       <t>
         The Resource Server acts as the Policy Enforcement Point (PEP)
-        in the behavioral authorization framework. It retrieves the
-        policy from the access token, invokes a Policy Decision Point
-        (PDP) — typically a policy engine — to evaluate each agent
-        behavior, and enforces the resulting decision (allow or deny).
+        in the behavioral authorization framework. It extracts the
+        approved schema instance from the access token, verifies each
+        agent behavior against the boundary constraints through
+        deterministic constraint evaluation, and enforces the resulting
+        decision (allow or deny). No policy engine or policy language
+        runtime is required at the Resource Server.
       </t>
 
-      <section title="Policy Retrieval">
+      <section title="Instance Retrieval">
         <t>
-          The RS obtains the policy from the access token. The
-          primary mechanism is to extract the policy from the enriched
+          The RS obtains the approved instance from the access token. The
+          primary mechanism is to extract the instance from the enriched
           <tt>authorization_details</tt> array included in the token
           per RFC 9396 Section 7.1.
         </t>
 
         <t>
-          The binding between the policy and the access token depends
-          on the token type. For JWT access tokens, the policy content
-          or <tt>policy_ref</tt> claim is integrity-protected by the
+          The binding between the instance and the access token depends
+          on the token type. For JWT access tokens, the instance content
+          or <tt>schema_ref</tt> claim is integrity-protected by the
           token signature. For opaque tokens, the binding is established
           through token introspection <xref target="RFC7662"/> or a
           shared back-channel between the AS and RS.
         </t>
 
         <t>
-          When the token uses the <tt>policy_ref</tt> claim instead
-          of inline policy content, the RS retrieves the policy using
+          When the token uses the <tt>schema_ref</tt> claim instead
+          of inline instance content, the RS retrieves the instance using
           one of the following methods:
         </t>
 
@@ -1326,57 +1378,65 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
             expired.
           </li>
           <li>
-            Introspection: Retrieve the policy content via token
+            Introspection: Retrieve the instance content via token
             introspection <xref target="RFC7662"/>.
           </li>
         </ul>
       </section>
 
-      <section title="Policy Engine Integration">
+      <section title="Constraint Evaluation">
         <t>
-          After extracting the policy from the token, the RS MUST
-          load the policy into a policy engine compatible with the
-          language declared in the <tt>policy.language</tt> field
-          before querying it. The specific integration mechanism
-          depends on the policy language and engine used. For
-          language-specific integration patterns, see the corresponding
-          language profile appendix (e.g., <xref target="rego-profile"/>
-          for Rego and OPA integration).
+          After extracting the approved instance from the token, the RS
+          verifies each agent behavior against every constraint present
+          in the <tt>boundary</tt> object. Each constraint check is a
+          deterministic comparison between the behavior's attributes and
+          the constraint value, for example:
         </t>
 
+        <ul>
+          <li>The behavior's operation identifier is contained in
+            <tt>boundary.operations</tt>;</li>
+          <li>The cumulative transaction amount including the current
+            behavior does not exceed
+            <tt>boundary.total_amount_limit</tt>;</li>
+          <li>The target merchant is contained in
+            <tt>boundary.merchant</tt>;</li>
+          <li>The current time is within
+            <tt>boundary.time_window</tt>.</li>
+        </ul>
+
         <t>
-          Once loaded, the RS queries the policy engine with the
-          request context as input. The input structure is described
-          in <xref target="policy-context"/>.
+          The verification data assembled by the RS for these checks is
+          described in <xref target="schema-context"/>.
         </t>
       </section>
 
       <section title="Enforcement Decision">
         <t>
-          Based on the policy engine's response:
+          Based on the constraint evaluation:
         </t>
 
         <ul>
-          <li>If <tt>result</tt> is <tt>true</tt>: Allow the agent's behavior;</li>
-          <li>If <tt>result</tt> is <tt>false</tt>: Deny the behavior with
-            403 Forbidden;</li>
-          <li>If <tt>result</tt> is undefined (the policy engine returns an
-            empty object with no <tt>result</tt> field): Deny with
-            403 Forbidden. Policies that follow deny-by-default
-            conventions (see <xref target="policy-requirements"/>)
-            will always produce a defined boolean result, so undefined
-            only occurs when the default declaration is omitted;</li>
-          <li>If the policy engine is unreachable or encounters an internal
-            error: Deny with 500 Internal Server Error.</li>
+          <li>If the behavior is consistent with every present
+            constraint: Allow the behavior;</li>
+          <li>If the behavior violates any present constraint, or if
+            the behavior cannot be mapped to the approved instance:
+            Deny with 403 Forbidden. When the denial results from
+            behavioral drift, the RS MAY apply the reverse-guided
+            mechanism (<xref target="reverse-guided"/>) to guide the
+            agent toward a new authorization;</li>
+          <li>If the instance cannot be retrieved or parsed: Deny
+            with 403 Forbidden.</li>
         </ul>
       </section>
     </section>
 
     <section anchor="multi-scenario" title="Applicability to Different Authorization Flows">
       <t>
-        The <tt>authorization_policy</tt> authorization data type defined in this
-        specification can be used with any OAuth 2.0 authorization flow
-        that supports Rich Authorization Requests (RAR)
+        The domain-specific authorization schema types defined in this
+        specification (e.g., <tt>transaction_authority</tt>,
+        <xref target="schema-framework"/>) can be used with any OAuth 2.0
+        authorization flow that supports Rich Authorization Requests (RAR)
         <xref target="RFC9396"/>. This section illustrates usage with
         flows that are particularly relevant to AI agent scenarios.
       </t>
@@ -1394,16 +1454,16 @@ WWW-Authenticate: Bearer error="insufficient_authorization",
         </t>
 
         <t>
-          When combined with policy binding, the agent includes
-          <tt>authorization_details</tt> containing the
-          <tt>authorization_policy</tt> type in the JWT grant request. The AS
-          validates the behavioral constraint policy, performs
+          When combined with schema binding, the agent includes
+          <tt>authorization_details</tt> containing a schema
+          instance in the JWT grant request. The AS
+          validates the instance, performs
           behavioral boundary checks, and determines whether user
           consent is needed before issuing the token.
         </t>
 
         <figure>
-          <name>JWT Grant Request with Policy Binding</name>
+          <name>JWT Grant Request with Schema Binding</name>
           <artwork type="http"><![CDATA[
 POST /token HTTP/1.1
 Host: as.example.com
@@ -1411,11 +1471,9 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJhbGciOiJSUzI1NiJ9...
-&authorization_details=%5B%7B%22type%22%3A%22authorization_policy%22%2C
-  %22policy%22%3A%7B%22language%22%3A%22rego%22%2C
-  %22content%22%3A%22package%20agent%5Cn...
-  %22entry_point%22%3A%22allow%22%7D%2C
-  %22actions%22%3A%5B%22search_products%22%2C%22add_to_cart%22%5D%7D%5D
+&authorization_details=%5B%7B%22type%22%3A%22transaction_authority%22%2C
+  %22domain%22%3A%22ecommerce%22%2C%22boundary%22%3A%7B%22total_...
+  %22actions%22%3A%5B%22search%22%2C%22cart.add%22%5D%7D%5D
           ]]></artwork>
         </figure>
 
@@ -1438,18 +1496,18 @@ Content-Type: application/json
           After the user completes the interaction, the agent retries
           the same JWT grant request. The AS then issues the access
           token with the enriched <tt>authorization_details</tt>
-          containing the validated policy.
+          containing the approved instance.
         </t>
       </section>
 
       <section title="Client Credentials Grant">
         <t>
           In machine-to-machine scenarios using client credentials,
-          the behavioral constraint policy can be included in the token request:
+          a schema instance can be included in the token request:
         </t>
 
         <figure>
-          <artwork name="Client Credentials with Policy" type="http"><![CDATA[
+          <artwork name="Client Credentials with Schema Instance" type="http"><![CDATA[
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
@@ -1458,22 +1516,21 @@ grant_type=client_credentials
 &client_id=spiffe%3A%2F%2Fagent.example%2Fagent
 &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer
 &client_assertion=eyJhbGciOiJSUzI1NiIs...
-&authorization_details=%5B%7B%22type%22%3A%22authorization_policy%22%2C
-  %22policy%22%3A%7B%22language%22%3A%22rego%22%2C%22content%22%3A%22...%22%2C
-  %22entry_point%22%3A%22allow%22%7D%7D%5D
+&authorization_details=%5B%7B%22type%22%3A%22transaction_authority%22%2C
+  %22domain%22%3A%22ecommerce%22%2C%22boundary%22%3A%7B...%7D%7D%5D
           ]]></artwork>
         </figure>
       </section>
 
       <section title="Token Exchange (RFC 8693)">
         <t>
-          When exchanging tokens <xref target="RFC8693"/>, a new behavioral constraint
-          policy can be provided to refine or restrict the approved
+          When exchanging tokens <xref target="RFC8693"/>, a new schema
+          instance can be provided to refine or restrict the approved
           behavioral boundaries:
         </t>
 
         <figure>
-          <artwork name="Token Exchange with Policy" type="http"><![CDATA[
+          <artwork name="Token Exchange with Schema Instance" type="http"><![CDATA[
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
@@ -1481,31 +1538,38 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 &subject_token=eyJhbGciOiJSUzI1NiJ9...
 &subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token
-&authorization_details=%5B%7B%22type%22%3A%22authorization_policy%22%2C
-  %22policy%22%3A%7B%22language%22%3A%22rego%22%2C%22content%22%3A%22...%22%2C
-  %22entry_point%22%3A%22allow%22%7D%7D%5D
+&authorization_details=%5B%7B%22type%22%3A%22transaction_authority%22%2C
+  %22domain%22%3A%22ecommerce%22%2C%22boundary%22%3A%7B...%7D%7D%5D
           ]]></artwork>
         </figure>
 
         <t>
-          The resulting access token MUST include the new behavioral
-          constraint policy. The AS SHOULD verify that the new policy does
-          not appear to grant permissions exceeding those of the
-          original token. The AS MAY use the RAR common fields
-          (<tt>actions</tt>, <tt>locations</tt>) as an approximation,
-          since comparing two policies for semantic subset
-          containment is undecidable in the general case.
+          The resulting access token MUST include the new approved
+          schema instance. Unlike policies written in a general-purpose
+          policy language, structured schema instances make subset
+          verification decidable: each constraint in the new instance
+          can be compared field-by-field against the corresponding
+          constraint of the original instance (e.g., a lower
+          <tt>total_amount_limit</tt>, a subset of
+          <tt>operations</tt>, or a narrower <tt>time_window</tt>).
+          When <tt>subset_rule</tt> is "strict"
+          (<xref target="schema-framework"/>), the AS MUST verify that
+          the derived instance is a subset of the original instance and
+          reject the exchange otherwise. When <tt>subset_rule</tt> is
+          "loose", the AS MAY apply its own review policies
+          (<xref target="as-policy-review"/>) when deriving the new
+          instance.
         </t>
 
         <t>
           Token Exchange is a common trigger for <strong>behavioral
           drift</strong>: when an agent's next planned behavior falls
-          outside the approved policy constraints, the Resource Server
+          outside the approved schema constraints, the Resource Server
           can return an <tt>insufficient_authorization</tt> error with
-          a <tt>policy_profile</tt> (as defined in
+          a <tt>schema_profile</tt> (as defined in
           <xref target="reverse-guided"/>), guiding the agent toward
           constructing an appropriate Token Exchange request with an
-          updated behavioral constraint policy.  This enables
+          updated schema instance.  This enables
           multi-hop delegation scenarios where each hop progressively
           refines the behavioral boundaries to match the delegatee's
           specific task requirements.
@@ -1524,9 +1588,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <ul>
           <li>
             <strong>AS-to-RS trust</strong>: The Resource Server
-            trusts the Authorization Server to validate, approve,
-            and bind behavioral constraint policies to access
-            tokens. The RS enforces the policy approved by the AS
+            trusts the Authorization Server to validate, review,
+            and bind approved schema instances to access
+            tokens. The RS enforces the instance approved by the AS
             and does not re-evaluate the AS's approval decision at
             runtime. This trust relationship is consistent with
             the OAuth 2.0 trust model in which the RS trusts the
@@ -1534,34 +1598,34 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </li>
           <li>
             <strong>Client-to-AS trust</strong>: The client (agent)
-            trusts the AS to validate its submitted behavioral
-            constraint policy and issue a token reflecting the
+            trusts the AS to validate its submitted schema
+            instance and issue a token reflecting the
             approved behavioral boundaries. The client MUST NOT
-            trust policies received from other parties (including
-            resource servers) without AS approval.
+            trust instances or profiles received from other parties
+            (including resource servers) without AS approval.
           </li>
           <li>
             <strong>AS/RS-to-client distrust</strong>: Neither the
             AS nor the RS trusts the client to act within its
             approved behavioral boundaries without verification.
-            The AS performs static validation and approval; the RS
-            performs per-behavior runtime evaluation.
+            The AS performs validation and review; the RS
+            performs per-behavior runtime verification.
           </li>
         </ul>
 
         <t>
           A compromised or malicious AS could embed a wildly
-          permissive policy in an access token, causing the RS to
+          permissive instance in an access token, causing the RS to
           allow behaviors that the RS operator did not intend. To
           mitigate this risk, the RS MAY impose overlay constraints
-          on top of the token-bound policy, such as:
+          on top of the token-bound instance, such as:
         </t>
 
         <ul>
           <li>A hard deny list of dangerous or privileged actions
-            that cannot be authorized by any token-bound policy;</li>
+            that cannot be authorized by any token-bound instance;</li>
           <li>Rate limiting or transaction caps that apply regardless
-            of the approved policy;</li>
+            of the approved instance;</li>
           <li>Restriction of trusted ASes to a pre-registered
             allowlist, discoverable via Protected Resource Metadata
             (<xref target="RFC9728"/>).</li>
@@ -1578,110 +1642,86 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
       </section>
 
-      <section title="Policy Injection">
+      <section title="No Executable Content">
         <t>
-          Policies submitted by clients are evaluable policy
-          definitions. Although policy languages used with this
-          specification are declarative, they may support features
-          such as recursive rules, regular expressions, and built-in
-          functions that could lead to non-terminating or
-          resource-intensive evaluations. Maliciously crafted policies
-          can exploit language-specific features to cause denial of
-          service at the Resource Server's policy engine. The AS and
-          RS MUST:
+          Schema instances carried in authorization requests and access
+          tokens are structured data conforming to registered schema
+          definitions; they contain no executable code. This eliminates
+          the class of attacks associated with client-submitted policy
+          code, including non-terminating or resource-intensive
+          evaluations, catastrophic regular-expression backtracking,
+          and built-in functions with side effects (e.g., outbound HTTP
+          requests from within a policy evaluation). Neither the AS nor
+          the RS executes client-supplied content at any point in the
+          flow.
         </t>
 
-        <ul>
-          <li>Validate policy syntax before registration;</li>
-          <li>Evaluate policies in sandboxed environments;</li>
-          <li>Limit policy evaluation time and resource usage;</li>
-          <li>Restrict dangerous language-specific features (e.g.,
-            external HTTP calls, unrestricted file access);</li>
-          <li>Restrict or sanitize regular expressions in policies to
-            prevent catastrophic backtracking (ReDoS);</li>
-          <li>Enforce recursion depth limits and set size bounds.</li>
-        </ul>
-
         <t>
-          Language-specific safety restrictions are defined in the
-          corresponding language profile. For Rego-specific
-          restrictions, see <xref target="rego-profile"/>.
+          To preserve this property, the AS MUST reject instances
+          containing fields not defined by the declared schema, and the
+          RS MUST ignore or reject instances containing unknown fields.
+          Policy languages, where used at all, are confined to the
+          Authorization Server's internal review of instances
+          (<xref target="as-policy-review"/>) and are never supplied by
+          clients.
         </t>
       </section>
 
-      <section title="Policy Integrity">
+      <section title="Instance Integrity">
         <t>
-          The <tt>policy_ref</tt> claim in access tokens MUST reference
-          policies registered and stored securely by the AS. When the
+          The <tt>schema_ref</tt> claim in access tokens MUST reference
+          instances registered and stored securely by the AS. When the
           access token is opaque, the Resource Server
-          retrieves the policy through token introspection
+          retrieves the instance through token introspection
           (<xref target="RFC7662"/>). The introspection response
-          SHOULD include the behavioral constraint policy using
+          SHOULD include the approved schema instance using
           the same mechanisms as the access token: either the
           enriched <tt>authorization_details</tt> array containing
-          the <tt>authorization_policy</tt> object (the primary
-          mechanism), or the <tt>policy_ref</tt> claim (the
+          the approved instance (the primary
+          mechanism), or the <tt>schema_ref</tt> claim (the
           lightweight alternative). When a JWT access token is
           introspected, the introspection response SHOULD reflect
           the claims present in the JWT, including
-          <tt>authorization_details</tt> and <tt>policy_ref</tt>,
+          <tt>authorization_details</tt> and <tt>schema_ref</tt>,
           per RFC 7662 Section 2.2.
         </t>
 
         <t>
-          Resource Servers SHOULD invalidate cached policy content
+          Resource Servers SHOULD invalidate cached instance content
           when the associated access token expires. If the AS
-          revokes a registered policy before the token expires, the
+          revokes a registered instance before the token expires, the
           AS SHOULD also revoke the associated access token,
           causing subsequent introspection calls to return
           <tt>active: false</tt> per RFC 7662. Resource servers
           that observe <tt>active: false</tt> (or that are
-          otherwise notified of policy revocation through a
+          otherwise notified of instance revocation through a
           deployment-specific mechanism) MUST treat subsequent
-          policy evaluations for the token as failed
+          verifications for the token as failed
           (deny-by-default).
         </t>
       </section>
 
-      <section title="Policy URI Fetching">
+      <section title="Instance Size Limits">
         <t>
-          When the <tt>uri</tt> field within the <tt>policy</tt> object
-          is present, the AS fetches
-          policy content from a client-provided URI. This introduces
-          Server-Side Request Forgery (SSRF) risks. The AS MUST:
-        </t>
-
-        <ul>
-          <li>Reject URIs pointing to private/internal network addresses
-            (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16,
-            127.0.0.0/8, ::1, and link-local addresses);</li>
-          <li>Enforce HTTPS for all policy URIs;</li>
-          <li>Set strict timeouts and size limits on fetched content;</li>
-          <li>Validate that the fetched content is syntactically valid
-            in the declared policy language before any evaluation.</li>
-        </ul>
-      </section>
-
-      <section title="Policy Size Limits">
-        <t>
-          Policies embedded inline within authorization_details can
-          significantly increase token request and access token size.
+          Instances embedded inline within authorization_details can
+          increase token request and access token size.
           Implementations MUST enforce limits on:
         </t>
 
         <ul>
-          <li>Maximum policy source size (RECOMMENDED limit: 4 KB for inline policies).
+          <li>Maximum instance size (RECOMMENDED limit: 4 KB for inline instances).
             Note that JWT access tokens are typically carried in HTTP
             Authorization headers, where many proxies and load balancers
             enforce an 8 KB total header size limit;</li>
-          <li>Maximum policy complexity (e.g., nesting depth, number of rules);</li>
+          <li>Maximum instance complexity (e.g., nesting depth, number of
+            constraint entries);</li>
           <li>Total authorization_details payload size in token requests.</li>
         </ul>
 
         <t>
-          For policies exceeding these limits, clients SHOULD use
-          pre-registered policies referenced via <tt>policy_ref</tt>
-          rather than inline policy content.
+          For instances exceeding these limits, clients SHOULD use
+          pre-registered instances referenced via <tt>schema_ref</tt>
+          rather than inline instance content.
         </t>
       </section>
 
@@ -1696,7 +1736,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <li>
             <strong>Auth Server Verification</strong>: Agents MUST
             verify that the <tt>auth_server</tt> specified in the
-            <tt>policy_profile</tt> is trusted before submitting
+            <tt>schema_profile</tt> is trusted before submitting
             authorization requests. Verification SHOULD be performed
             by comparing the <tt>auth_server</tt> value against one
             of the following trust anchors: (1) the
@@ -1739,20 +1779,23 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
       <ul>
         <li>
-          <strong>Policy Content Privacy</strong>: Policies embedded
-          in <tt>authorization_details</tt> may reference user attributes
-          (e.g., <tt>input.user.tier</tt>, <tt>input.user.role</tt>).
-          When policies are carried in JWT access tokens, these attribute
-          references are visible to any party that can decode the token.
+          <strong>Instance Content Privacy</strong>: Schema instances
+          embedded in <tt>authorization_details</tt> may carry
+          identifying data (e.g., user identifiers in the
+          <tt>context</tt> field, or merchant and category values in
+          the <tt>boundary</tt>).
+          When instances are carried in JWT access tokens, this data
+          is visible to any party that can decode the token.
           Implementations SHOULD avoid embedding personally identifiable
-          information (PII) directly in policy content and instead
-          reference abstract attribute names that the Resource Server
-          resolves at evaluation time.
+          information (PII) directly in instance content and instead
+          use correlation identifiers (e.g.,
+          <tt>transaction_id</tt>) that the Resource Server or an
+          audit service resolves when needed.
         </li>
         <li>
           <strong>Constraint Disclosure</strong>: The
-          <tt>policy_profile</tt> returned in error responses reveals
-          authorization policy constraints to the requesting client.
+          <tt>schema_profile</tt> returned in error responses reveals
+          the required boundary constraints to the requesting client.
           While this disclosure is necessary for the reverse-guided
           authorization flow, resource servers SHOULD limit the
           information to what is strictly needed for the client to
@@ -1762,16 +1805,16 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </li>
         <li>
           <strong>Endpoint Exposure</strong>: The
-          <tt>auth_server</tt> field in <tt>policy_profile</tt> reveals
+          <tt>auth_server</tt> field in <tt>schema_profile</tt> reveals
           the Authorization Server's identifier. Deployments SHOULD
           use well-known identifiers rather than
           exposing internal service URLs.
         </li>
         <li>
           <strong>Behavioral Profiling</strong>: The sequence of
-          <tt>authorization_policy</tt> behavioral constraint policies submitted by a client may
+          schema instances submitted by a client may
           reveal the client's intent, capabilities, or decision-making
-          patterns. Authorization Servers SHOULD treat behavioral constraint policies
+          patterns. Authorization Servers SHOULD treat schema instances
           with the same confidentiality as other authorization request
           parameters and MUST NOT use them for purposes beyond
           authorization decision-making without explicit consent.
@@ -1789,32 +1832,32 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
         <dl>
           <dt>Type Name:</dt>
-          <dd>authorization_policy</dd>
+          <dd>transaction_authority</dd>
           <dt>Description:</dt>
           <dd>
-            A behavioral constraint policy for per-behavior
-            authorization verification, including policy content,
-            policy language identifier, entry point, and optional
-            evaluation context.
+            A domain-specific authorization schema instance defining
+            transaction behavioral boundaries (amount limits,
+            permitted operations, categories, merchants, and time
+            windows) for per-behavior authorization verification.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
           <dd>
-            <xref target="authorization-data-type"/> of this document
+            <xref target="schema-framework"/> of this document
           </dd>
         </dl>
       </section>
 
-      <section anchor="iana-policy-languages" title="Policy Language Types Registry">
+      <section anchor="iana-schema-types" title="Domain-Specific Authorization Schema Types Registry">
         <t>
           This specification establishes a new IANA registry titled
-          "Policy Language Types" for identifiers used in the
-          <tt>policy.language</tt> field of the
-          <tt>authorization_policy</tt> authorization data type.
-          The registry is intended to be extensible; new policy language
-          identifiers can be registered to enable interoperability
-          across implementations that use different policy languages.
+          "Domain-Specific Authorization Schema Types" for identifiers
+          used in the <tt>type</tt> field of schema instances carried
+          in <tt>authorization_details</tt>.
+          The registry is intended to be extensible; new schema type
+          identifiers can be registered to cover additional domains
+          and behavioral constraint vocabularies.
         </t>
 
         <t>
@@ -1831,15 +1874,18 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <ol>
-          <li>The proposed language identifier is syntactically
-            valid (lowercase ASCII string, no spaces, no leading
-            or trailing whitespace);</li>
+          <li>The proposed type identifier is syntactically
+            valid (lowercase ASCII string with optional underscore
+            separators, no spaces, no leading or trailing
+            whitespace);</li>
           <li>The referenced specification defines a complete
-            language profile that specifies policy syntax
-            requirements, entry point semantics, safety
-            restrictions, and policy engine integration patterns
-            consistent with the structure and profile requirements
+            schema: the full set of fields, their types and
+            formats, which fields are required, deny-by-default
+            semantics, and subset semantics for use in Token
+            Exchange, consistent with the framework requirements
             defined in <xref target="authorization-data-type"/>;</li>
+          <li>The schema carries structured data only and defines no
+            executable content;</li>
           <li>The identifier does not conflict with or confusingly
             resemble existing registrations;</li>
           <li>The change controller is clearly identified and
@@ -1851,10 +1897,10 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <table>
-          <name>Initial Policy Language Types Registry Contents</name>
+          <name>Initial Domain-Specific Authorization Schema Types Registry Contents</name>
           <thead>
             <tr>
-              <th>Language Identifier</th>
+              <th>Type Identifier</th>
               <th>Description</th>
               <th>Change Controller</th>
               <th>Reference</th>
@@ -1862,10 +1908,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </thead>
           <tbody>
             <tr>
-              <td>rego</td>
-              <td>Rego policy language, used with Open Policy Agent (OPA).</td>
+              <td>transaction_authority</td>
+              <td>Transactional behavioral boundaries (amount, operations,
+                category, merchant, time window) for agent authorization.</td>
               <td>IETF</td>
-              <td><xref target="rego-profile"/> of this document</td>
+              <td><xref target="schema-framework"/> of this document</td>
             </tr>
           </tbody>
         </table>
@@ -1875,18 +1922,16 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         </t>
 
         <ul>
-          <li>Language identifier (lowercase ASCII string, no spaces);</li>
-          <li>Description of the policy language;</li>
-          <li>Reference to the specification defining the language profile;</li>
+          <li>Type identifier (lowercase ASCII string, no spaces);</li>
+          <li>Description of the schema and its intended domain;</li>
+          <li>Reference to the specification defining the schema;</li>
           <li>Change controller.</li>
         </ul>
 
         <t>
-          Language profiles for additional policy languages (such as
-          Cedar <xref target="Cedar"/> or ALFA) are expected to be
-          registered via follow-up specifications that define the
-          corresponding language profile per the structure and
-          profile requirements defined in
+          Additional domain-specific authorization schemas are expected
+          to be registered via follow-up specifications that define the
+          schema per the framework requirements in
           <xref target="authorization-data-type"/>.
         </t>
       </section>
@@ -1900,17 +1945,17 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
         <dl>
           <dt>Claim Name:</dt>
-          <dd>policy_ref</dd>
+          <dd>schema_ref</dd>
           <dt>Claim Description:</dt>
           <dd>
-            A reference to a registered behavioral constraint
-            policy in JWT access tokens.
+            A reference to a registered, approved schema
+            instance in JWT access tokens.
           </dd>
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
           <dt>Specification Document:</dt>
           <dd>
-            <xref target="policy-ref-claim"/> of this document
+            <xref target="schema-ref-claim"/> of this document
           </dd>
         </dl>
       </section>
@@ -1933,9 +1978,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dd>The existing <tt>insufficient_scope</tt> error defined in
             <xref target="RFC6750"/> addresses scope insufficiency.
             <tt>insufficient_authorization</tt> (this specification) addresses the case where the
-            resource server returns structured policy constraints
-            (<tt>policy_profile</tt>) for clients capable of constructing
-            policy-based authorization requests.
+            resource server returns structured boundary constraints
+            (<tt>schema_profile</tt>) for clients capable of constructing
+            schema-based authorization requests.
           </dd>
           <dt>Reference:</dt>
           <dd>
@@ -1953,7 +1998,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 
         <dl>
           <dt>Parameter Name:</dt>
-          <dd>policy_profile</dd>
+          <dd>schema_profile</dd>
           <dt>Parameter Usage Location:</dt>
           <dd>
             <tt>WWW-Authenticate</tt> response header field, used in
@@ -1963,7 +2008,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           <dt>Parameter Description:</dt>
           <dd>
             A base64url-encoded JSON object containing structured
-            policy constraints and authorization requirements that
+            boundary constraint descriptors and authorization requirements that
             guide the client toward obtaining sufficient authorization.
             The structure is defined in <xref target="reverse-guided"/>
             of this document.
@@ -1979,7 +2024,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
         <t>
           RFC 6750 does not establish an IANA sub-registry for Bearer
           authentication scheme parameters. This section serves as the
-          specification reference for the <tt>policy_profile</tt> parameter.
+          specification reference for the <tt>schema_profile</tt> parameter.
         </t>
       </section>
     </section>
@@ -2030,16 +2075,6 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </front>
         </reference>
 
-        <reference anchor="Cedar" target="https://www.cedarpolicy.com/">
-          <front>
-            <title>Cedar Policy Language</title>
-            <author>
-              <organization>Amazon Web Services</organization>
-            </author>
-            <date year="2024"/>
-          </front>
-        </reference>
-
         <reference anchor="I-D.liu-oauth-chain-delegation" target="https://datatracker.ietf.org/doc/html/draft-liu-oauth-chain-delegation">
           <front>
             <title>Delegation Chain for OAuth 2.0</title>
@@ -2051,226 +2086,167 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
           </front>
           <seriesInfo name="Internet-Draft" value="draft-liu-oauth-chain-delegation"/>
         </reference>
+
+        <reference anchor="I-D.liu-oauth-authorization-evidence" target="https://datatracker.ietf.org/doc/html/draft-liu-oauth-authorization-evidence">
+          <front>
+            <title>Authorization Evidence and Audit Trail for OAuth 2.0 Access Tokens</title>
+            <author initials="D." surname="Liu"/>
+            <author initials="H." surname="Zhu"/>
+            <author initials="S." surname="Krishnan"/>
+            <author initials="A." surname="Parecki"/>
+            <date year="2026" month="June"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-liu-oauth-authorization-evidence"/>
+        </reference>
       </references>
     </references>
 
-    <section anchor="rego-profile" title="Rego Language Profile">
+    <section anchor="as-policy-review" title="AS-Side Policy Review">
       <t>
-        This appendix defines the Rego language profile for use with
-        the <tt>authorization_policy</tt> authorization data type.
-        Rego is the reference policy language used throughout this
-        specification. When the <tt>policy.language</tt> field is
-        set to "rego", the requirements in this appendix apply.
+        In this specification, policy languages are not part of the
+        wire protocol. Authorization requests and access tokens carry
+        domain-specific schema instances — structured data — as defined
+        in <xref target="schema-framework"/>. Policy languages appear,
+        if at all, only inside the Authorization Server, where they
+        implement the AS's review of submitted instances
+        (<xref target="policy-approval-basis"/>).
       </t>
 
-      <section title="Rego Policy Requirements">
+      <section title="Scope of AS Review Policies">
         <t>
-          Rego policies used with this specification MUST adhere to the
-          following requirements:
+          An AS review policy expresses the AS's approval principles:
+          per-client allowlists of behavioral patterns, organizational
+          limits (e.g., maximum transaction amounts per client class),
+          and rules requiring resource owner consent for specific
+          boundary combinations. When an instance is submitted, the AS
+          evaluates the instance's structured fields against these
+          review policies and approves or rejects the request.
         </t>
 
-        <ol>
-          <li>
-            Package Declaration: The policy MUST include a package
-            declaration. The recommended package name is "agent" or a
-            domain-specific namespace.
-          </li>
-          <li>
-            Default Deny (best practice): Policies are recommended to
-            include <tt>default allow = false</tt> to ensure
-            deny-by-default behavior. This is not enforced by AS
-            validation but is considered a security best practice for
-            policy authors.
-          </li>
-          <li>
-            Rego Syntax Version: The policy syntax follows Rego v1
-            as defined in the OPA documentation <xref target="Rego"/>.
-            Implementations MUST use a policy engine that accepts
-            Rego v1 syntax. Policy engines MAY additionally support
-            Rego v0 syntax through backward compatibility mode to
-            facilitate migration from existing v0 policy deployments.
-          </li>
-          <li>
-            Entry Point: For Rego policies, the <tt>entry_point</tt>
-            field identifies the rule name within the policy package
-            to be queried by the Policy Decision Point. When the
-            <tt>entry_point</tt> field is absent, the default value
-            is <tt>allow</tt>. For authorization decisions, the
-            entry point SHOULD be <tt>allow</tt>. The corresponding
-            rule MUST evaluate to a boolean value.
-          </li>
-        </ol>
-
-        <figure>
-          <artwork name="Minimal Rego policy" type="rego"><![CDATA[
-package agent
-
-default allow = false
-
-allow if {
-  # Authorization rules here
-  input.action == "read"
-  input.resource.owner == input.user.id
-}
-          ]]></artwork>
-        </figure>
+        <t>
+          AS review policies MUST NOT be transmitted to clients or
+          embedded in access tokens. They are an implementation detail
+          of the Authorization Server; the only normative artifacts on
+          the wire are the schema instance and, optionally, the
+          <tt>schema_ref</tt> identifier assigned by the AS. Because
+          the AS never executes client-supplied content and clients
+          never observe the review policies, the attack surface
+          associated with policy exchange is eliminated (see the
+          "No Executable Content" subsection of
+          <xref target="security"/>).
+        </t>
       </section>
 
-      <section title="Rego Safety Restrictions">
+      <section title="Example: Rego Review Policy">
         <t>
-          Although Rego is a declarative language, it supports recursive
-          rules, regular expressions, and built-in functions that may
-          lead to non-terminating or resource-intensive evaluations.
-          Maliciously crafted policies can exploit catastrophic
-          backtracking in regular expressions (e.g.,
-          <tt>regex.match("^(a+)+$", "aaa...!")</tt>) or trigger
-          combinatorial explosion in set operations. The following
-          Rego-specific restrictions apply:
-        </t>
-
-        <ul>
-          <li>Restrict dangerous built-in functions (e.g., <tt>http.send</tt>);</li>
-          <li>Restrict or sanitize regular expressions in policies to
-            prevent catastrophic backtracking (ReDoS);</li>
-          <li>Enforce recursion depth limits and set size bounds.</li>
-        </ul>
-      </section>
-
-      <section title="OPA Policy Engine Integration">
-        <t>
-          When using Rego as the policy language, the Resource Server
-          typically integrates with Open Policy Agent (OPA)
-          <xref target="OPA"/> as the policy engine. Common loading
-          mechanisms include:
-        </t>
-
-        <ul>
-          <li>OPA REST API: <tt>PUT /v1/policies/{id}</tt> to register
-            the policy, then query the Data API;</li>
-          <li>OPA Go Library: Load the policy programmatically using
-            the embedded OPA SDK;</li>
-          <li>OPA Compile API: Submit the policy and input together
-            for ad-hoc evaluation.</li>
-        </ul>
-
-        <t>
-          Once loaded, the RS queries the policy engine with the
-          request context as input. The following example shows the
-          <tt>input</tt> object as constructed by the RS (not as
-          submitted by the client). The RS merges the client-provided
-          <tt>context</tt> from the
-          <tt>authorization_policy</tt> object under the
-          <tt>input.context</tt> key, and augments it with
-          token-derived claims (e.g., <tt>user</tt>), request
-          attributes (e.g., <tt>action</tt>, <tt>resource</tt>), and
-          any other runtime data, as described in
-          <xref target="policy-context"/>:
+          The following non-normative example shows how an AS might
+          implement one review rule using Rego <xref target="Rego"/>
+          and Open Policy Agent (OPA) <xref target="OPA"/>. The rule
+          approves a <tt>transaction_authority</tt> instance only if
+          the requested amount limit is within the client's registered
+          maximum and consent is recorded when the amount exceeds a
+          consent threshold:
         </t>
 
         <figure>
-          <artwork name="OPA Policy Engine Query" type="json"><![CDATA[
-POST /v1/data/agent/allow HTTP/1.1
-Host: opa.example.com
-Content-Type: application/json
+          <artwork name="Example AS review policy (Rego)" type="rego"><![CDATA[
+package as.review
 
-{
-  "input": {
-    "user": {
-      "id": "user_12345",
-      "tier": "premium"
-    },
-    "action": "search_products",
-    "resource": {
-      "type": "product",
-      "id": "product_001"
-    },
-    "context": {
-      "user": {
-        "id": "user_12345",
-        "role": "analyst"
-      },
-      "source_ip": "192.0.2.45",
-      "machine_id": "workstation-7a3f"
-    }
-  }
-}
-          ]]></artwork>
-        </figure>
+default approve = false
 
-        <figure>
-          <artwork name="OPA Policy Engine Response" type="json"><![CDATA[
-{
-  "result": true
+approve if {
+  input.instance.type == "transaction_authority"
+  input.instance.boundary.total_amount_limit.value <= input.client.max_amount
+  (
+    input.instance.boundary.total_amount_limit.value <= 100
+    or input.consent_recorded == true
+  )
 }
           ]]></artwork>
         </figure>
 
         <t>
-          Note that when the OPA engine returns an empty object with
-          no <tt>result</tt> field (undefined), the RS SHOULD deny
-          with 403 Forbidden. Policies following the RECOMMENDED
-          <tt>default allow = false</tt> pattern will always produce
-          a defined boolean result.
+          Here <tt>input.instance</tt> is the schema instance
+          submitted by the client, <tt>input.client</tt> is the
+          client's registration metadata, and
+          <tt>input.consent_recorded</tt> reflects the outcome of the
+          resource owner interaction. Equivalent rules could be written
+          in any rule system; the choice of Rego is illustrative only.
         </t>
       </section>
     </section>
 
-    <section title="Example Policies">
-      <section title="Amount-Based Authorization">
+    <section title="Example Schema Instances">
+      <section title="Amount-Limited Transaction">
+        <t>
+          An agent authorized to search products and add items to the
+          cart, with purchases capped at 50 USD:
+        </t>
+
         <figure>
-          <artwork name="Amount policy" type="rego"><![CDATA[
-package agent
-
-default allow = false
-
-# Allow transactions up to $50
-allow if {
-  input.action == "purchase"
-  input.amount <= 50.0
-}
-
-# Allow cart modifications without amount limit
-allow if {
-  input.action == "add_to_cart"
+          <artwork name="Amount-limited instance" type="json"><![CDATA[
+{
+  "type": "transaction_authority",
+  "domain": "ecommerce",
+  "boundary": {
+    "total_amount_limit": { "value": 50, "currency": "USD" },
+    "operations": ["ecommerce.search", "ecommerce.cart.add",
+                   "ecommerce.purchase"]
+  },
+  "subset_rule": "strict",
+  "actions": ["search", "cart.add", "purchase"]
 }
           ]]></artwork>
         </figure>
       </section>
 
       <section title="Time-Window Authorization">
+        <t>
+          An agent authorized to submit orders only within a defined
+          24-hour window:
+        </t>
+
         <figure>
-          <artwork name="Time window policy" type="rego"><![CDATA[
-package agent
-
-default allow = false
-
-# Allow during business hours
-allow if {
-  input.action == "submit_order"
-  hour := time.clock(time.now_ns())[0]
-  hour >= 9
-  hour < 18
+          <artwork name="Time-window instance" type="json"><![CDATA[
+{
+  "type": "transaction_authority",
+  "domain": "ecommerce",
+  "boundary": {
+    "operations": ["ecommerce.order.submit"],
+    "time_window": {
+      "start": "2026-08-20T09:00:00Z",
+      "end": "2026-08-21T09:00:00Z"
+    }
+  },
+  "actions": ["order.submit"]
 }
           ]]></artwork>
         </figure>
       </section>
 
-      <section title="Role-Based Authorization">
+      <section title="Merchant- and Category-Restricted Authority">
+        <t>
+          An agent restricted to a single merchant and a single product
+          category, correlated with a consent record via
+          <tt>transaction_id</tt>
+          (<xref target="I-D.liu-oauth-authorization-evidence"/>):
+        </t>
+
         <figure>
-          <artwork name="Role-based policy" type="rego"><![CDATA[
-package agent
-
-default allow = false
-
-# Premium users can access all features
-allow if {
-  input.user.tier == "premium"
-}
-
-# Standard users limited to basic actions
-allow if {
-  input.user.tier == "standard"
-  input.action == "read"
+          <artwork name="Merchant-restricted instance" type="json"><![CDATA[
+{
+  "type": "transaction_authority",
+  "domain": "ecommerce",
+  "transaction_id": "urn:uuid:txn-def-456",
+  "boundary": {
+    "total_amount_limit": { "value": 200, "currency": "EUR" },
+    "operations": ["ecommerce.purchase"],
+    "category": ["electronics"],
+    "merchant": ["https://shop.example.com"]
+  },
+  "subset_rule": "strict",
+  "actions": ["purchase"],
+  "locations": ["https://api.shop.example.com"]
 }
           ]]></artwork>
         </figure>
@@ -2285,7 +2261,7 @@ allow if {
         The authors also thank the OAuth WG community, including
         Jeff Lombardo, David Brossard, Yaron Sheffer, Yaron Zehavi,
         and Suresh Krishnan, for their collaborative input on the
-        language-agnostic binding approach.
+        domain-specific schema approach.
       </t>
     </section>
   </back>
