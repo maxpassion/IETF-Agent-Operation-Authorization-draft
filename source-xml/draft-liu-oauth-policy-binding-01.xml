@@ -17,7 +17,7 @@
   version="3">
 
   <front>
-    <title abbrev="Schema Binding in OAuth">Domain-Specific Authorization Schema Binding for OAuth 2.0</title>
+    <title abbrev="Policy Binding in OAuth">Policy Language Binding for OAuth 2.0 Authorization</title>
     <seriesInfo name="Internet-Draft" value="draft-liu-oauth-policy-binding-01"/>
 
     <author fullname="Dapeng Liu" initials="D." surname="Liu">
