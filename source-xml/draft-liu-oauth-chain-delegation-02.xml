@@ -66,21 +66,21 @@
         confirmation.  This specification defines the
         <tt>delegation_chain</tt> JWT claim as a structured companion
         to <tt>act</tt>: an ordered array of delegation records
-        capturing the Authorization Server's attestation, the
-        authorization constraints delegated at each hop (expressed as
-        <tt>scope</tt>, with an opaque reference for deployments that
-        use structured authorization constraints), and an optional
-        delegator cryptographic confirmation.  <tt>act</tt> and
-        <tt>delegation_chain</tt> together provide runtime
-        authorization and verifiable delegation lineage.  The
-        specification defines the validation rules a Resource Server
-        applies to the chain, the Token Exchange flow through which
-        chains are extended, and how a chain survives delegation
-        across trust domain boundaries.  For multi-hop chains, each
-        record carries a <tt>prev_record_hash</tt> value that
-        cryptographically binds the chain's ordering, and the
-        specification states explicitly which ordering guarantees
-        this mechanism does and does not provide.
+        capturing the authorization constraints delegated at each hop
+        (expressed as <tt>scope</tt>, with an opaque reference for
+        deployments that use structured authorization constraints),
+        each record carrying the delegating agent's cryptographic
+        confirmation.  The companion <tt>root_authorization_ref</tt> claim
+        references the original user authorization from which the
+        chain derives.  <tt>act</tt> and <tt>delegation_chain</tt>
+        together provide runtime authorization and verifiable
+        delegation lineage.  The specification defines the validation
+        rules a Resource Server applies to the chain, the Token
+        Exchange flow through which chains are extended, and how a
+        chain crosses trust domain boundaries with the JWT
+        authorization grant of OAuth identity chaining, in which each
+        record additionally carries the attestation of the
+        Authorization Server that created it.
       </t>
     </abstract>
   </front>
@@ -138,11 +138,13 @@
         provides runtime actor identification for authorization decisions,
         <tt>delegation_chain</tt> records the full delegation history as an
         ordered array of delegation records.  Each record captures the
-        AS's attestation and the authorization constraints delegated at
-        that hop, and MAY additionally carry the delegator's cryptographic
-        confirmation,
-        so that neither the AS nor any delegating agent can
-        unilaterally construct or deny a delegation record.  The two claims coexist in the same token:
+        authorization constraints delegated at that hop and carries the
+        delegator's cryptographic confirmation, so that neither the
+        Authorization Server nor any delegating agent can unilaterally
+        construct or deny a delegation record.  The token also carries a
+        <tt>root_authorization_ref</tt> claim referencing the original user
+        authorization from which the chain derives, so that downstream
+        verifiers can check that no hop exceeds it.  The claims coexist in the same token:
         <tt>act</tt> identifies the current actor for the Resource
         Server, and <tt>delegation_chain</tt> records how the
         authorization was delegated, step by step, for verification
@@ -287,14 +289,35 @@
         </t>
 
         <t>
+          These properties cannot be added to <tt>act</tt> itself.  The
+          <tt>act</tt> claim carries no authorization content: it records
+          who acted on whose behalf, but not what authorization was
+          granted at each hop.  Its processing model, as defined by
+          <xref target="RFC8693"/>, is an AS-attested identity
+          statement: an implementation that understands <tt>act</tt>
+          validates the actor chain as issued by the Authorization
+          Server and would ignore additional members carrying per-hop
+          signatures or constraints, silently accepting a token whose
+          delegation evidence it did not check.  Defining per-hop
+          evidence inside <tt>act</tt> would therefore change the
+          meaning of an existing, deployed claim, which is a matter
+          for the base specification rather than for an extension.
+          The delegation lineage is consequently defined as a
+          separate claim, and <tt>act</tt> retains its RFC 8693
+          semantics unchanged.
+        </t>
+
+        <t>
           The <tt>delegation_chain</tt> claim complements <tt>act</tt> by
           recording the delegation lineage as a structured array of
-          records.  Each record captures, when present, the AS's per-hop
-          attestation (<tt>as_signature</tt>), the authorization
-          constraints applied at that hop (<tt>scope</tt>, and, when
-          present, <tt>delegated_policy_ref</tt>), and the delegator's own
-          cryptographic proof (<tt>delegator_signature</tt>).  This
-          enables:
+          records.  Each record captures the authorization constraints
+          applied at that hop (<tt>scope</tt>, and, when present,
+          <tt>policy_ref</tt>) and the delegator's own
+          cryptographic proof (<tt>delegator_signature</tt>), which is
+          REQUIRED on every record.  Records created by an
+          Authorization Server other than the issuer of the token
+          carrying the chain additionally carry that AS's attestation
+          (<tt>as_signature</tt>).  This enables:
         </t>
 
         <ul>
@@ -305,27 +328,32 @@
             lineage and enables scope narrowing verification.
           </li>
           <li>
-            <strong>Delegator proof:</strong> The optional
+            <strong>Delegator proof:</strong> The
             <tt>delegator_signature</tt> on each record provides
             independent evidence of each delegator's consent, enabling
             non-repudiation that the AS alone cannot provide.
           </li>
           <li>
-            <strong>User interaction:</strong> The delegation flow
-            supports optional user consent interaction
-            (<xref target="delegation-interaction"/>) at each hop,
-            which is outside the scope of <tt>act</tt>.
+            <strong>Root authorization reference:</strong> The
+            <tt>root_authorization_ref</tt> claim references the original
+            user authorization, enabling downstream verifiers to check
+            that no hop exceeds it.
           </li>
         </ul>
 
         <t>
-          In a token carrying both claims, <tt>act</tt> identifies the
+          A token that carries <tt>delegation_chain</tt> MAY also carry
+          a flat <tt>act</tt> claim for compatibility with Resource
+          Servers that implement <xref target="RFC8693"/>.  In a token
+          carrying both claims, <tt>act</tt> identifies the
           current actor for the Resource Server's authorization decision,
           while <tt>delegation_chain</tt> provides the structured delegation
           record from the current actor back to the original human principal.
           The <tt>delegatee_id</tt> of the most recent delegation record
           (index 0) MUST match the <tt>act.sub</tt> value, ensuring
-          continuity between the two claims.
+          continuity between the two claims.  The current delegatee is
+          identified by <tt>delegation_chain</tt> record 0 whether or
+          not <tt>act</tt> is present.
         </t>
 
         <t>
@@ -356,10 +384,10 @@
           party.  <tt>may_act</tt> and <tt>delegation_chain</tt> are
           complementary: an Authorization Server MAY use
           <tt>may_act</tt> in an issued token to pre-authorize
-          specific delegatees for a subsequent delegation hop, and a
-          delegation request naming a delegatee matching
-          <tt>may_act</tt> is a candidate for the no-interaction path
-          of <xref target="protocol-flow"/>.  The
+          specific delegatees for a subsequent delegation hop, in
+          which case a delegation request naming a delegatee matching
+          <tt>may_act</tt> is a candidate for authorization without
+          further permission checks.  The
           <tt>delegation_chain</tt> record then captures the hop that
           <tt>may_act</tt> enabled.  Whether a given delegation is
           permitted is determined by AS policy, expressed through
@@ -397,14 +425,15 @@
             <strong>Constraint narrowing enforcement:</strong> Each
             delegation hop carries a <tt>scope</tt> equal to or
             narrower than its predecessor; structured constraints
-            (<tt>delegated_policy_ref</tt>) are attested by the
+            (<tt>policy_ref</tt>) are attested by the
             issuing AS when present;
           </li>
           <li>
-            <strong>Optional dual-signature security:</strong>
-            Both the AS and the delegating agent can sign each delegation
-            record, preventing unilateral forgery; deployments that omit
-            <tt>delegator_signature</tt> rely on AS signature alone;
+            <strong>Per-hop signatures:</strong>
+            The delegating agent signs each delegation record, and
+            records that cross a domain boundary additionally carry
+            the creating AS's attestation, preventing unilateral
+            forgery;
           </li>
           <li>
             <strong>Agent Identifier URIs:</strong> Resolvable URI-based
@@ -438,10 +467,10 @@
           representation.  When delegation crosses a trust domain boundary,
           each delegation record captures the transcribed authorization
           constraints (scope, and when present
-          <tt>delegated_policy_ref</tt>) and the cryptographic evidence
-          of the transcribing parties (the AS via
-          <tt>as_signature</tt> and the delegator via
-          <tt>delegator_signature</tt>, each when present).  This
+          <tt>policy_ref</tt>) and the cryptographic evidence
+          of the transcribing parties (the delegator via
+          <tt>delegator_signature</tt>, and the AS that created the
+          record via <tt>as_signature</tt>).  This
           enables the receiving domain to verify
           <em>what</em> was transcribed, <em>who authorized the
           transcription</em>, and under what constraints, which addresses the
@@ -538,13 +567,12 @@
           for agent identifiers: WIT URIs (<tt>wit://</tt>) and SPIFFE
           IDs (<tt>spiffe://</tt>).
           The identifier MUST be resolvable to a verifiable public key
-          for signature verification when
-          <tt>delegator_signature</tt> is present.
+          for signature verification.
         </dd>
       </dl>
     </section>
 
-    <section anchor="delegation-chain-claim" title="The delegation_chain Claim">
+    <section anchor="delegation-chain-claim" title="The delegation_chain and root_authorization_ref Claims">
       <section title="Claim Definition">
         <dl>
           <dt>Claim Name:</dt>
@@ -565,18 +593,22 @@
         <t>
           The <tt>delegation_chain</tt> is an ordered array of delegation records,
           from most recent to earliest. Each record represents one delegation hop.
+          A token carrying a <tt>delegation_chain</tt> claim also carries the
+          <tt>root_authorization_ref</tt> claim (<xref target="root-authorization-ref-claim"/>).
         </t>
 
         <t>
           The following example shows a
+          token fragment with the root authorization reference, and a
           delegation record with WIT-based agent identifiers, a
-          delegated scope, a policy reference, a root evidence
-          reference, and dual signatures:
+          delegated scope, a policy reference, and the record
+          signatures:
         </t>
 
         <figure>
           <artwork name="Delegation record example" type="json"><![CDATA[
 {
+  "root_authorization_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "delegation_chain": [
     {
       "delegator_id": "wit://agent-a.example/sha256.aaa111...",
@@ -584,9 +616,7 @@
       "as_id": "https://as.example.com",
       "scope": "inventory:read",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
-      "operation_summary": "Delegate inventory check for item 123",
+      "policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
     }
@@ -596,9 +626,56 @@
         </figure>
       </section>
 
+      <section anchor="root-authorization-ref-claim" title="The root_authorization_ref Claim">
+        <dl>
+          <dt>Claim Name:</dt>
+          <dd>root_authorization_ref</dd>
+
+          <dt>Claim Type:</dt>
+          <dd>String</dd>
+
+          <dt>Usage:</dt>
+          <dd>Access tokens (JWT format)</dd>
+
+          <dt>Specification:</dt>
+          <dd><xref target="RFC7519"/> (JWT)</dd>
+        </dl>
+
+        <t>
+          The <tt>root_authorization_ref</tt> claim is an opaque identifier
+          referencing the root authorization event: the original
+          authorization granted by the human principal from which all
+          delegations in the chain derive.  It MUST be present in
+          every access token that carries a <tt>delegation_chain</tt>
+          claim.  The chain records how authorization was delegated
+          between agents; the root authorization itself is not
+          recorded as a chain entry, because the delegator of every
+          chain record is an agent with a resolvable key, whereas the
+          root authorization originates from the human principal
+          through the initial OAuth flow.  The <tt>root_authorization_ref</tt>
+          claim is the pointer that anchors the chain to that origin.
+        </t>
+
+        <t>
+          The format of the identifier and the mechanism for resolving
+          it are deployment-specific: deployments using a structured
+          authorization evidence model SHOULD set this value to the
+          identifier of the root token's evidence claim; other
+          deployments MAY use any stable, unique identifier (e.g., a
+          consent record ID or an audit log entry reference) that
+          enables post-hoc retrieval of the original authorization
+          context.  This specification treats the value as opaque.
+          When the AS issues a delegated token, it propagates the
+          <tt>root_authorization_ref</tt> claim from the subject token, and
+          the receiving AS of a cross-domain flow propagates it from
+          the JWT authorization grant, so that every token in the
+          lineage anchors to the same root authorization.
+        </t>
+      </section>
+
       <section anchor="delegation-lifecycle" title="Delegation Lifecycle">
         <t>
-          A delegation record transitions through four phases during its lifecycle:
+          A delegation record transitions through three phases during its lifecycle:
         </t>
 
         <ol>
@@ -606,35 +683,17 @@
             <strong>Delegation Proposal Phase:</strong> The delegating agent
             creates a delegation proposal that includes the delegatee
             identity, the delegated scope, and, when structured
-            constraints are used, a reference to them and the
-            operation context.
-          </li>
-
-          <li>
-            <strong>Delegation Interaction Phase (CONDITIONAL):</strong>
-            When the Authorization Server determines that user interaction is
-            required before the delegation can be authorized (for example,
-            when delegating to a new agent for the first time, when the
-            delegation involves high-risk operations, or when the delegation
-            crosses trust domain boundaries), the AS returns a
-            <tt>delegation_interaction_required</tt> response (see
-            <xref target="delegation-interaction"/>).
-            The delegating agent launches the interaction URI so the user can
-            review and approve the delegation.  Upon user approval, the agent
-            retries the delegation request.  This phase is skipped when the AS
-            determines that no additional user interaction is needed (e.g., the
-            delegation is covered by a standing authorization or the policy has
-            been pre-approved).  Implementations that do not require
-            user interaction MAY omit this phase entirely.
+            constraints are used, a reference to them, and signs the
+            prospective record with the key that its
+            <tt>delegator_id</tt> resolves to.
           </li>
 
           <li>
             <strong>Delegation Enforcement Phase:</strong> The Authorization
             Server validates the delegation request, verifies the delegator's
-            token, confirms that any required user interaction has been
-            completed, verifies the delegator's signature on the
-            <tt>delegation_proposal</tt> when present, and signs the
-            delegation record upon successful
+            token, verifies the delegator's signature on the
+            <tt>delegation_proposal</tt>, and issues the delegation
+            record upon successful
             validation.  For the first delegation (User to Agent A), the AS
             MAY additionally verify the user's identity using an identity
             assertion grant
@@ -642,7 +701,7 @@
           </li>
 
           <li>
-            <strong>Chain Propagation Phase:</strong> The signed delegation
+            <strong>Chain Propagation Phase:</strong> The delegation
             record is embedded into an access token's
             <tt>delegation_chain</tt> claim, enabling multi-hop propagation
             within or across trust domains.
@@ -650,9 +709,13 @@
         </ol>
 
         <t>
-          This four-phase model cryptographically binds user
-          authorization, agent identity, and policy constraints at
-          every hop, with explicit user interaction when required.
+          This three-phase model cryptographically binds the root
+          authorization reference, agent identities, and policy
+          constraints at every hop.  Whether the Authorization Server
+          requires user consent before authorizing a delegation hop is
+          AS policy and is out of scope of this specification; the
+          mechanism for obtaining such consent, when required, is
+          likewise out of scope.
         </t>
       </section>
 
@@ -720,7 +783,7 @@
               </td>
             </tr>
             <tr>
-              <td>delegated_policy_ref</td>
+              <td>policy_ref</td>
               <td>string</td>
               <td>OPTIONAL</td>
               <td>
@@ -730,7 +793,7 @@
                 The format and resolution mechanism of the reference
                 are deployment-specific; this specification treats
                 the value as opaque (the same treatment as
-                <tt>root_evidence_ref</tt>).  The referenced
+                <tt>root_authorization_ref</tt>).  The referenced
                 constraints MUST NOT expand the delegator's
                 authorization; this is enforced by the Authorization
                 Server at issuance time and attested by the record's
@@ -739,96 +802,55 @@
               </td>
             </tr>
             <tr>
-              <td>prev_record_hash</td>
-              <td>string</td>
-              <td>OPTIONAL</td>
-              <td>
-                The SHA-256 hash of the canonical serialization (per
-                <xref target="RFC8785"/>) of
-                the previous (earlier-in-chain) delegation record,
-                i.e., the record at the next higher array index.
-                MUST be present on every record except the earliest
-                (highest-index) record when the chain contains more
-                than one record; MAY be omitted on
-                single-record chains, where there is no earlier
-                record to bind.  See <xref target="chain-ordering"/>
-                for the computation and verification rules.
-              </td>
-            </tr>
-            <tr>
-              <td>operation_summary</td>
-              <td>string</td>
-              <td>OPTIONAL</td>
-              <td>Human-readable description of delegated operation.</td>
-            </tr>
-            <tr>
-              <td>root_evidence_ref</td>
-              <td>string</td>
-              <td>CONDITIONAL</td>
-              <td>
-                An opaque identifier referencing the root authorization
-                event (the original consent granted by the human
-                principal from which all delegations in the chain
-                derive).  This field MUST be present for the first
-                delegation (User to Agent A) when structured evidence
-                is used and
-                SHOULD be propagated through the chain.  The format of
-                the identifier and the mechanism for resolving it are
-                deployment-specific: deployments using a structured
-                authorization evidence model SHOULD set this value to
-                the identifier of the root token's evidence claim;
-                other deployments MAY use any stable,
-                unique identifier (e.g., a consent record ID or an
-                audit log entry reference) that enables post-hoc
-                retrieval of the original authorization context.  Implementations not using structured authorization evidence MAY omit this field.
-              </td>
-            </tr>
-            <tr>
               <td>delegator_signature</td>
               <td>string</td>
-              <td>RECOMMENDED</td>
+              <td>REQUIRED</td>
               <td>
                 Cryptographic signature from the delegating agent's
-                private key over this delegation record.  This provides
-                dual-signature security alongside
-                <tt>as_signature</tt>, preventing a malicious AS from
-                forging unauthorized delegations and ensuring
-                non-repudiation.  Implementations SHOULD
-                include this field on every delegation record.  It MAY be
-                omitted when the AS is the sole trust anchor and the
-                deployment does not require independent delegator
-                non-repudiation.
+                private key over this delegation record.  Every
+                delegation record MUST carry this field: it provides
+                independent evidence that the delegator authorized
+                this specific delegation, which the Authorization
+                Server alone cannot attest, and enables
+                non-repudiation.  Because the field is REQUIRED, its
+                absence is unambiguous evidence of an invalid record
+                rather than a deployment choice.  The signature uses
+                the private key that the record's
+                <tt>delegator_id</tt> resolves to (see the Key
+                Resolution section of this specification).
               </td>
             </tr>
             <tr>
               <td>as_id</td>
               <td>string</td>
-              <td>REQUIRED</td>
+              <td>CONDITIONAL</td>
               <td>
                 An identifier for the Authorization Server that
-                created this delegation record.  This value identifies
-                the issuer of the record's
-                <tt>as_signature</tt>.  In
-                cross-domain chains where records may originate from
-                different Authorization Servers, the <tt>as_id</tt>
-                enables the Resource Server to select the correct
-                public key for <tt>as_signature</tt> verification.  In
-                single-domain chains, <tt>as_id</tt> matches the
-                <tt>iss</tt> claim of the token.
+                created this delegation record.  REQUIRED when
+                <tt>as_signature</tt> is present, where it identifies
+                the issuer of that signature and enables the
+                verifier to select the correct public key.  In
+                single-domain chains where <tt>as_signature</tt> is
+                omitted, the token's <tt>iss</tt> claim already
+                identifies the creating AS and this field MAY be
+                omitted.
               </td>
             </tr>
             <tr>
               <td>as_signature</td>
               <td>string</td>
-              <td>RECOMMENDED</td>
+              <td>CONDITIONAL</td>
               <td>
-                AS signature over this delegation record. When all
-                delegation hops occur within a single trust domain under
-                one Authorization Server, the AS's signature over the
-                issued token already attests to the entire chain and this
-                per-hop signature MAY be omitted. It is RECOMMENDED when
-                delegation crosses trust domain boundaries, so the
-                receiving domain can independently verify each hop.
+                Signature of the Authorization Server that created
+                this record, over the same field set as
+                <tt>delegator_signature</tt>.  REQUIRED when the
+                record was created by an AS other than the issuer of
+                the token carrying the chain (cross-domain chains),
+                so that the receiving domain can independently verify
+                each foreign hop and hold the creating AS accountable
+                for it.  When the record's AS is the token's issuer,
+                the token's own signature already attests to the
+                record and this field MAY be omitted.
               </td>
             </tr>
           </tbody>
@@ -841,7 +863,7 @@
           so that scope narrowing along the chain is verifiable by
           any holder of the token.  Deployments that use a structured
           constraint model additionally carry
-          <tt>delegated_policy_ref</tt>, an opaque reference to the
+          <tt>policy_ref</tt>, an opaque reference to the
           approved constraints.  This specification does not define
           the format, resolution, or comparison of the referenced
           constraints; narrowing with respect to the delegator's
@@ -890,8 +912,9 @@
         </ul>
 
         <t>
-          The <tt>as_signature</tt> and <tt>delegator_signature</tt>, when
-          present, MUST be computed over the same set of fields.
+          The <tt>delegator_signature</tt> and, when present, the
+          <tt>as_signature</tt> MUST be computed over the same set of
+          fields.
           The signature is a JWS (<xref target="RFC7515"/>) compact
           serialization. The JWS payload is a JSON object
           containing exactly the following fields (omitting OPTIONAL
@@ -908,24 +931,8 @@
           <li><tt>as_id</tt></li>
           <li><tt>delegation_timestamp</tt></li>
           <li><tt>scope</tt> (if present)</li>
-          <li><tt>delegated_policy_ref</tt> (if present)</li>
-          <li><tt>prev_record_hash</tt> (if present)</li>
-          <li><tt>operation_summary</tt> (if present)</li>
-          <li><tt>root_evidence_ref</tt> (if present)</li>
+          <li><tt>policy_ref</tt> (if present)</li>
         </ul>
-
-        <t>
-          The <tt>prev_record_hash</tt> value, when present, is included
-          in the signed field set above.  It is computed over the
-          canonical serialization of the earlier-in-chain record: the
-          JSON object consisting of exactly the fields listed above,
-          canonicalized using the JSON Canonicalization Scheme (JCS,
-          <xref target="RFC8785"/>), and hashed with SHA-256.  The
-          digest is encoded using base64url without padding
-          (<xref target="RFC7515"/>, Section 2).  Both
-          signature fields are excluded from the hash input, as they
-          are excluded from their respective signature computations.
-        </t>
 
         <t>
           Both signature fields MUST be excluded from their respective
@@ -940,48 +947,41 @@
         </t>
 
         <t>
-          When the <tt>delegator_signature</tt> is present (RECOMMENDED),
-          it uses the delegating agent's agent-identifier-bound
-          private key, while <tt>as_signature</tt> uses the Authorization Server's
-          signing key. This dual-signature approach, when both signatures are
-          present, ensures:
+          The two signatures serve distinct purposes.  The
+          <tt>delegator_signature</tt>, which is REQUIRED on every
+          record, uses the delegating agent's
+          agent-identifier-bound private key and provides:
         </t>
 
         <ul>
           <li>
-            <strong>Malicious AS Prevention:</strong> A compromised AS cannot 
+            <strong>Malicious AS Prevention:</strong> A compromised AS cannot
             unilaterally forge delegations without the delegator's consent;
           </li>
           <li>
-            <strong>Non-Repudiation:</strong> The delegator cannot deny having 
-            authorized the delegation;
-          </li>
-          <li>
-            <strong>Complete Trust Chain:</strong> User → AS → Delegator → Delegatee.
+            <strong>Non-Repudiation:</strong> The delegator cannot deny having
+            authorized the delegation.
           </li>
         </ul>
 
         <t>
-          The need for per-hop signatures depends on deployment scope.
-          When all delegation hops occur within a single trust domain
-          under one Authorization Server, the AS's signature over the
-          issued token already attests to the entire delegation chain,
-          and per-hop <tt>as_signature</tt> and
-          <tt>delegator_signature</tt> MAY be omitted without loss of
-          integrity. Per-hop signatures become valuable when delegation
-          crosses trust domain boundaries, where the receiving domain
-          must independently verify each hop's authorization, or when
-          non-repudiation from the delegator is required for compliance
-          or audit. This keeps the mechanism lightweight for
-          intra-domain deployments and preserves stronger guarantees
-          for cross-domain agent delegation.
+          The <tt>as_signature</tt> uses the creating Authorization
+          Server's signing key.  It is REQUIRED only on records
+          created by an AS other than the token's issuer: in
+          single-domain chains, the token-level signature of the
+          issuing AS attests to every record in the chain, so
+          per-record <tt>as_signature</tt> would duplicate that
+          attestation.  In cross-domain chains, it provides the
+          originating AS's witness attestation for each foreign hop,
+          enabling the receiving domain to verify that hop
+          independently of the transcribing AS.
         </t>
       </section>
 
-      <section title="Key Resolution for Agent Identifiers">
+      <section anchor="key-resolution" title="Key Resolution for Agent Identifiers">
         <t>
-          The <tt>delegator_signature</tt> (and any verification of the
-          delegatee's identity) requires the relying party to resolve
+          Verification of the <tt>delegator_signature</tt> (and of the
+          delegatee's key binding) requires the relying party to resolve
           the agent identifier to a verifiable public key.  The
           resolution mechanism depends on the URI scheme used in the
           <tt>delegator_id</tt> or <tt>delegatee_id</tt> field:
@@ -1052,43 +1052,33 @@ wit://<authority>/<agent-identifier>
         </t>
 
         <t>
-          Ordering alone is a syntactic convention; an array of records
-          carries no cryptographic binding between a record and its
-          predecessor.  The <tt>prev_record_hash</tt> field provides that
-          binding.  For every record at index <tt>i &lt; N</tt> in a chain
-          of length <tt>N+1</tt>, the Resource Server MUST verify that
-          <tt>record[i].prev_record_hash</tt> equals the SHA-256 hash of
-          the canonical serialization of <tt>record[i+1]</tt>, as defined
-          in <xref target="delegation-chain-claim"/> (JCS per
-          <xref target="RFC8785"/>).  If any
-          <tt>prev_record_hash</tt> is missing on a multi-record chain,
-          or does not match the computed hash of its predecessor, the
-          chain is invalid and the Resource Server MUST reject the token
-          with an <tt>invalid_delegation_chain</tt> error.
-        </t>
-
-        <t>
-          The per-hop hash binding and the token-level JWT signature
-          provide defense in depth rather than duplicating each other.
-          The token-level signature
-          covers the chain as a whole: any modification, removal,
-          reordering, or splicing of records invalidates it, but it
-          attests only that some AS signed this exact array.  The
-          <tt>prev_record_hash</tt> binding holds independently of the
-          issuing AS's key: because each record's hash is covered by that
-          record's own signatures, a spliced or reordered chain fails
-          hash verification even in scenarios where the token-level
-          signature is not the property in question (e.g., when records
-          from two different chains are combined, or when a chain is
-          re-embedded into a newly issued token by an AS other than the
-          original issuer).
+          The integrity of the array as a whole is provided by the
+          token-level JWT signature: the signature of the AS that
+          issued the token covers the <tt>delegation_chain</tt> claim
+          in its exact serialized form, so any modification,
+          removal, reordering, or splicing of records invalidates the
+          token.  The integrity of each individual record is provided
+          by its signatures: the <tt>delegator_signature</tt>, which
+          is REQUIRED on every record, covers the hop's delegator,
+          delegatee, scope, and timestamp, and the
+          <tt>as_signature</tt>, which is REQUIRED on records created
+          by a foreign AS, covers the same fields with the creating
+          AS's key.  The hops are bound into a single path by the
+          continuity rule that <tt>record[i].delegatee_id</tt> MUST
+          equal <tt>record[i-1].delegator_id</tt>
+          (<xref target="rs-validation"/>): both identifiers are
+          covered by the respective records' signatures, so a
+          sequence that combines records from different chains
+          fails either signature verification or the continuity
+          check.  A chain that fails these checks is invalid, and
+          the Resource Server MUST reject the token with an
+          <tt>invalid_delegation_chain</tt> error.
         </t>
       </section>
 
       <section anchor="ordering-semantics" title="Ordering Verification Semantics">
         <t>
-          The <tt>delegation_timestamp</tt> and
-          <tt>root_evidence_ref</tt> fields jointly provide ordering
+          The <tt>delegation_timestamp</tt> field provides ordering
           evidence for the delegation chain.  This section states
           explicitly which levels of ordering assurance the mechanism
           provides, and which it does not.
@@ -1104,15 +1094,13 @@ wit://<authority>/<agent-identifier>
             specification provides.
           </li>
           <li>
-            <strong>Cross-party attestation:</strong> When per-record
-            signatures are present, each hop's <tt>as_signature</tt>
-            is produced by an Authorization Server that is independent
-            of the delegating agent at that hop, so the ordering
-            evidence of a hop cannot be forged by the party whose
-            conduct is at issue at that hop.  When per-record
-            signatures are omitted (single-domain deployments), this
-            property is carried by the token-level signature of the
-            issuing AS instead.  This corresponds to the
+            <strong>Cross-party attestation:</strong> Each hop's
+            ordering evidence carries a signature from a party other
+            than the one whose conduct is at issue at that hop: the
+            <tt>delegator_signature</tt> from the delegating agent,
+            and, on records that cross a domain boundary, the
+            <tt>as_signature</tt> from the creating Authorization
+            Server.  This corresponds to the
             independently verifiable property discussed for agent
             action determinability
             (<xref target="I-D.wadkins-agentproto-action-determinability"/>).
@@ -1145,69 +1133,6 @@ wit://<authority>/<agent-identifier>
           preconditions still held at the moment of execution.
         </t>
       </section>
-
-      <section anchor="chain-by-reference" title="Chain by Reference">
-        <t>
-          Long delegation chains inflate the size of the JWT access
-          token (see <xref target="delegation-depth-limits"/>).  For
-          deployments where token size is a constraint, this
-          specification defines the <tt>delegation_chain_ref</tt> JWT
-          claim: an opaque URI identifying the full delegation chain
-          stored at the issuing Authorization Server.  When the
-          <tt>delegation_chain_ref</tt> claim is present in an access
-          token, the <tt>delegation_chain</tt> claim is omitted from
-          that token.
-        </t>
-
-        <t>
-          The <tt>delegation_chain_ref</tt> value is opaque to the
-          Resource Server; its resolution mechanism is
-          deployment-specific.  A Resource Server typically retrieves
-          the chain via Token Introspection
-          (<xref target="RFC7662"/>) or a deployment-defined
-          endpoint over TLS.  The retrieved representation is a
-          <tt>delegation_chain</tt> claim value as defined in
-          <xref target="delegation-chain-claim"/>, and the Resource
-          Server applies the validation rules of
-          <xref target="rs-validation"/> to the retrieved chain
-          unchanged.  The RS MUST ensure the retrieved chain
-          corresponds to the presented token; when the chain is
-          retrieved through introspection, the response is scoped to
-          the token under validation by
-          <xref target="RFC7662"/> itself.
-        </t>
-
-        <t>
-          The by-reference form trades the stateless property of JWT
-          access tokens for a smaller payload: the AS MUST retain the
-          stored chain and keep the token introspectable for the
-          lifetime of the token.  In particular, an AS that would
-          otherwise issue self-contained JWTs it need not remember MUST
-          NOT issue <tt>delegation_chain_ref</tt> tokens it cannot
-          later resolve.  The
-          <tt>delegation_chain_ref</tt> value MUST reference a chain
-          retrievable from the AS that issued the token carrying the
-          claim: in cross-domain flows (<xref target="cross-domain"/>),
-          that is the receiving AS after chain transcription, not an
-          upstream AS in the original domain, so that the Resource
-          Server only needs a trust relationship with the AS in its own
-          domain.
-        </t>
-
-        <t>
-          An AS SHOULD issue the token with
-          <tt>delegation_chain_ref</tt> instead of the inline
-          <tt>delegation_chain</tt> claim when the serialized chain
-          exceeds an implementation-defined size threshold.  As
-          guidance, chains longer than three records, or whose
-          serialized size approaches typical HTTP header limits, are
-          candidates for the by-reference form.  This keeps the token
-          payload constant regardless of chain depth, at the cost of
-          one additional round-trip for chain retrieval and an
-          operational dependency on AS availability at validation
-          time.
-        </t>
-      </section>
     </section>
 
     <section anchor="delegation-interaction" title="Delegation Token Exchange">
@@ -1216,96 +1141,67 @@ wit://<authority>/<agent-identifier>
         OAuth 2.0 Token Exchange
         (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>):
         the delegating agent presents its token together with the
-        delegatee's identity and the requested scope, the AS validates
-        the request, and issues a new token for the delegatee carrying
-        the extended <tt>delegation_chain</tt>.  The flow has one
-        branch: when the AS determines that user consent is required
-        for this hop, it responds with a
-        <tt>delegation_interaction_required</tt> error, the user approves the
-        delegation at the interaction URI, and the agent retries the
-        request; when no consent is required, the AS issues directly
-        (<xref target="protocol-flow"/>).  The figure below shows the
-        full flow including the interaction branch.
+        delegatee's identity, the delegator-signed delegation
+        proposal, and the requested scope; the AS validates the
+        request and issues a new token for the delegatee carrying
+        the extended <tt>delegation_chain</tt>.  Whether the AS
+        requires user consent before authorizing a delegation hop is
+        AS policy and is out of scope of this specification; the
+        mechanism for obtaining such consent, when required, is
+        likewise out of scope.  The figure below shows the flow.
       </t>
 
       <figure>
         <artwork name="Delegation Token Exchange Flow" type="ascii-art"><![CDATA[
-+--------+       +---------+       +--------+       +---------+       +---------+
-|  User  |       | Agent A |       |   AS   |       | Agent B |       |   RS    |
-+--------+       +---------+       +--------+       +---------+       +---------+
-    |                 |                 |                |                 | 
-    | (1) Initial     |                 |                |                 | 
-    |  Authorization  |                 |                |                 | 
-    |  (OAuth flow)   |                 |                |                 |
-    |---------------> |                 |                |                 |
-    |                 |                 |                |                 |
-    |                 | (2) Token A     |                |                 |
-    |                 |  (root, no      |                |                 | 
-    |                 |   chain)        |                |                 | 
-    |                 |<----------------|                |                 | 
-    |                 |                 |                |                 | 
-    |                 | (3) Token Exchange (delegation)  |                 | 
-    |                 |---------------->|                |                 | 
-    |                 |  - subject_token                 |                 | 
-    |                 |  - delegatee_id                  |                 | 
-    |                 |  - authorization_details         |                 | 
-    |                 |                 |                |                 | 
-    |                 | (4) AS determines user interaction required        | 
-    |                 |     delegation_interaction_required (error)       | 
-    |                 |     interaction_uri              |                 | 
-    |                 |     interval=5                   |                 | 
-    |                 |<----------------|                |                 | 
-    |                 |                 |                |                 | 
-    | (5) Launch      |                 |                |                 | 
-    |  interaction    |                 |                |                 | 
-    |<----------------|                 |                |                 | 
-    |                 |                 |                |                 | 
-    | (6) Review &    |                 |                |                 | 
-    |  Approve        |                 |                |                 | 
-    |  delegation     |                 |                |                 | 
-    |---------------------------------->|                |                 | 
-    |                 |                 |                |                 | 
-    |                 | (7) Redirect    |                |                 | 
-    |                 |<----------------|                |                 | 
-    |                 |                 |                |                 | 
-    |                 | (8) Retry Token Exchange         |                 | 
-    |                 |---------------->|                |                 | 
-    |                 |                 |                |                 | 
-    |                 |                 | (9) Validate   |                 | 
-    |                 |                 | - Interaction  |                 | 
-    |                 |                 |   completed    |                 | 
-    |                 |                 | - Token A valid|                 | 
-    |                 |                 | - Scope subset |                 | 
-    |                 |                 |                |                 | 
-    |                 |                 | (10) Issue Token B               |
-    |                 |<----------------|                |                 |
-    |                 |  with delegation_chain           |                 |
-    |                 | (10.5) Transfer to Agent B       |                 |
-    |                 |--------------------------------->|                 |
-    |                 |                 |                |                 | 
-    |                 |                 |                | (11) API Request| 
-    |                 |                 |                |---------------->| 
-    |                 |                 |                |                 | 
-    |                 |                 |                |  (12) Validate  | 
-    |                 |                 |                |   chain         | 
-    |                 |                 |                |<----------------| 
+ User          Agent A            AS           Agent B            RS
+   |               |               |               |               |
+   | (1) Initial authorization     |               |               |
+   |   (OAuth flow)|               |               |               |
+   |-------------->|               |               |               |
+   |               |               |               |               |
+   |               | (2) Token A   |               |               |
+   |               |   (root, no chain)            |               |
+   |               |<--------------|               |               |
+   |               |               |               |               |
+   |               | (3) Token Exchange            |               |
+   |               |   (delegation)|               |               |
+   |               |   - subject_token             |               |
+   |               |   - delegatee_id              |               |
+   |               |   - delegation_proposal       |               |
+   |               |-------------->|               |               |
+   |               |               |               |               |
+   |               |               | (4) Validate  |               |
+   |               |               | - Token A valid               |
+   |               |               | - proposal signature          |
+   |               |               | - scope subset|               |
+   |               |               |               |               |
+   |               | (5) Issue Token B             |               |
+   |               |   with delegation_chain       |               |
+   |               |<--------------|               |               |
+   |               |               |               |               |
+   |               | (5.5) Transfer to Agent B     |               |
+   |               |------------------------------>|               |
+   |               |               |               |               |
+   |               |               |               | (6) API request
+   |               |               |               |-------------->|
+   |               |               |               |               |
+   |               |               |               | (7) Validate  |
+   |               |               |               |     chain     |
+   |               |               |               |               |
         ]]></artwork>
       </figure>
 
       <t>
         Steps (1) and (2) are a standard OAuth flow: Agent A obtains
         the root authorization from the user, and the resulting token
-        carries no <tt>delegation_chain</tt>.  Steps (11) and (12) are
+        carries no <tt>delegation_chain</tt>.  Steps (6) and (7) are
         ordinary API usage: Agent B presents the delegated token to the
         RS, which validates it as defined in
         <xref target="rs-validation"/>.  The normative content of this
         flow is the sequence between them: the delegation request
-        (<xref target="step3-delegation-request"/>), the
-        <tt>delegation_interaction_required</tt> response
-        (<xref target="when-interaction-required"/>), the retry
-        semantics (<xref target="step8-retry"/>), the AS validation
+        (<xref target="step3-delegation-request"/>), the AS validation
         rules, and token issuance.  A step-by-step walkthrough of the
-        twelve steps shown in the figure, including the full HTTP
+        steps shown in the figure, including the full HTTP
         request and response examples, is provided in
         <xref target="step-by-step-walkthrough"/>.
       </t>
@@ -1341,24 +1237,24 @@ wit://<authority>/<agent-identifier>
 
           <dt>delegation_proposal:</dt>
           <dd>
-            OPTIONAL.  A JWS (<xref target="RFC7515"/>) whose payload
+            REQUIRED.  A JWS (<xref target="RFC7515"/>) whose payload
             is the prospective delegation record for this hop: the
             JSON object containing every field of the final
             <tt>delegation_chain</tt> record except the
             <tt>delegator_signature</tt> and <tt>as_signature</tt>
             fields.  The delegating agent signs the canonical
             serialization (JCS, <xref target="RFC8785"/>) of that
-            object, the same byte string covered by the
-            <tt>prev_record_hash</tt> computation
-            (<xref target="chain-ordering"/>), with the private key
-            that the record's <tt>delegator_id</tt> resolves to.  This
-            parameter is the mechanism by which the record's
-            <tt>delegator_signature</tt> field is produced: upon
-            successful validation, the AS embeds the verified
-            signature into the <tt>delegator_signature</tt> field of
-            the record it places in the issued token, alongside its
-            own <tt>as_signature</tt> when per-hop AS attestation is
-            used.
+            object, the same byte string covered by the record
+            signature computation
+            (<xref target="delegation-chain-claim"/>), with the
+            private key that the record's <tt>delegator_id</tt>
+            resolves to.  This parameter is the mechanism by which
+            the record's <tt>delegator_signature</tt> field is
+            produced: upon successful validation, the AS embeds the
+            verified signature into the <tt>delegator_signature</tt>
+            field of the record it places in the issued token,
+            alongside its own <tt>as_signature</tt> when the record
+            requires one.
           </dd>
         </dl>
 
@@ -1415,9 +1311,8 @@ wit://<authority>/<agent-identifier>
             (Agent B);
           </li>
           <li>
-            <tt>delegation_proposal</tt> (OPTIONAL): The
-            delegator-signed prospective record, when delegator
-            non-repudiation is used (see above);
+            <tt>delegation_proposal</tt>: The delegator-signed
+            prospective record for this hop (see above);
           </li>
           <li>
             <tt>scope</tt> (OPTIONAL): Requested scope for the
@@ -1454,89 +1349,7 @@ wit://<authority>/<agent-identifier>
             <tt>resource</tt> or <tt>audience</tt> is REQUIRED when the
             delegation targets an agent in a different trust domain.
           </li>
-          <li>
-            <tt>interaction_callback_uri</tt> (OPTIONAL): The URI to which the AS will
-            redirect the user's browser after a delegation interaction is
-            complete, as specified in
-            <xref target="when-interaction-required"/>.
-            This parameter is used in conjunction with the
-            <tt>delegation_interaction_required</tt> response to signal
-            the client that user interaction has been completed.
-          </li>
         </ul>
-      </section>
-
-      <section anchor="when-interaction-required" title="User Interaction Required">
-        <t>
-          When the Authorization Server determines that user interaction
-          is required (see
-          <xref target="interaction-trigger-criteria"/> for the
-          decision criteria), the AS responds with a
-          <tt>delegation_interaction_required</tt> error containing:
-        </t>
-        <ul>
-          <li><tt>interaction_uri</tt>: The URI where the user reviews and approves the delegation;</li>
-          <li><tt>interval</tt>: The minimum polling interval in seconds (default: 5);</li>
-          <li><tt>expires_in</tt>: The number of seconds until the interaction session expires.</li>
-        </ul>
-
-        <t>
-          This specification defines
-          the interaction response mechanism for delegation Token Exchange
-          requests
-          (<xref target="RFC8693"/>, <tt>grant_type=token-exchange</tt>).
-          The error codes defined here carry a
-          <tt>delegation_</tt> prefix
-          (<tt>delegation_interaction_required</tt>,
-          <tt>delegation_interaction_pending</tt>): the unprefixed
-          <tt>interaction_required</tt> name is already registered in
-          the OAuth Extensions Error Registry by OpenID Connect
-          Core 1.0, and this specification does not re-register it.
-          The AS associates the interaction session with the Token Exchange
-          request parameters (including the <tt>subject_token</tt>,
-          <tt>delegatee_id</tt>, and requested delegation policy) so that upon
-          user approval, the same Token Exchange request can be retried to
-          obtain the delegated token.
-        </t>
-      </section>
-
-      <section anchor="step8-retry" title="Retry Token Exchange">
-        <t>
-          The delegating agent launches the <tt>interaction_uri</tt> in
-          the user's browser, where the AS presents the delegation
-          details (delegatee identity, delegated policy and scope,
-          operation summary, and whether the delegation crosses trust
-          domain boundaries) for review.  Upon approval, the agent
-          retries the original Token Exchange request with the same
-          parameters; the AS recognizes the associated interaction
-          session and proceeds with validation.  If the client provided
-          an <tt>interaction_callback_uri</tt>, the AS redirects the
-          user's browser to that URI as a signal that the interaction
-          is complete.
-        </t>
-
-        <t>
-          While the interaction is pending, subsequent Token Exchange requests
-          from the delegating agent with the same parameters SHOULD return a
-          <tt>delegation_interaction_pending</tt> error. The agent MUST wait at least
-          the number of seconds specified by the <tt>interval</tt> parameter
-          between polling requests.  If the client polls faster than the
-          <tt>interval</tt> allows, the AS SHOULD respond with
-          <tt>delegation_interaction_pending</tt> and MAY include an increased
-          <tt>interval</tt> value in the response to signal the client
-          to slow down.
-        </t>
-
-        <t>
-          The interaction session expires after the number of seconds
-          indicated by <tt>expires_in</tt>.  Once the interaction
-          session has expired without user approval, the AS MUST
-          reject subsequent retries of the delegation request with an
-          <tt>invalid_request</tt> error, and the delegating agent
-          MUST stop polling: retrying the delegation requires a new
-          delegation request, which starts a fresh interaction
-          session if interaction is again required.
-        </t>
       </section>
 
       <section title="AS Validation">
@@ -1545,13 +1358,6 @@ wit://<authority>/<agent-identifier>
         </t>
 
         <ol>
-          <li>
-            Interaction Completion (CONDITIONAL): When user interaction
-            was required (see <xref target="when-interaction-required"/>),
-            verify that it has been completed and approved for this
-            delegation request. This step is skipped when the AS
-            determines that no user interaction is needed.
-          </li>
           <li>
             Token Validity: Verify Agent A's token is valid and
             not revoked.
@@ -1586,10 +1392,10 @@ wit://<authority>/<agent-identifier>
             confirm the delegatee is authentic and currently active.
           </li>
           <li>
-            Proposal Consistency (CONDITIONAL): When the request
-            carries a <tt>delegation_proposal</tt> parameter, verify
-            its signature using the public key resolved from the
-            proposed record's <tt>delegator_id</tt>, confirm that the
+            Proposal Consistency: Verify the
+            <tt>delegation_proposal</tt> signature using the public
+            key resolved from the proposed record's
+            <tt>delegator_id</tt>, confirm that the
             <tt>delegator_id</tt> identifies the current holder of the
             subject token, and confirm that the proposed record is
             consistent with the request parameters
@@ -1608,13 +1414,8 @@ wit://<authority>/<agent-identifier>
             Upstream Chain Validation (CONDITIONAL): When the subject
             token contains a <tt>delegation_chain</tt> claim, verify
             the chain's continuity, signatures, and scope narrowing
-            as defined in <xref target="rs-validation"/>.  When the
-            subject token instead carries a
-            <tt>delegation_chain_ref</tt> claim
-            (<xref target="chain-by-reference"/>), the AS MUST first
-            resolve the referenced chain from its own records before
-            performing the same validation, since the new chain is
-            extended from the resolved records.  If validation fails,
+            as defined in <xref target="rs-validation"/>.  If
+            validation fails,
             reject the request with an
             <tt>invalid_delegation_chain</tt> error.
           </li>
@@ -1692,66 +1493,11 @@ wit://<authority>/<agent-identifier>
           that model: the delegated token is bound to the delegatee's
           key, which presents no proof at the token endpoint, and the
           AS obtains the delegatee's public key by resolving
-          <tt>delegatee_id</tt> (see the Key Resolution section of
-          <xref target="delegation-chain-claim"/>).  The delegating
+          <tt>delegatee_id</tt> (see <xref target="key-resolution"/>).  The delegating
           agent's own DPoP proof, when present, authenticates the
-          request and protects its integrity; it does not determine
-          the issued token's key binding.  Resource Servers verify
-          the delegatee's DPoP proofs against the <tt>cnf</tt> claim
-          as usual.
-        </t>
-      </section>
-
-      <section anchor="interaction-trigger-criteria" title="When to Require Interaction">
-        <t>
-          The Authorization Server has discretion in determining when
-          the interaction branch is triggered.  As guidance, AS
-          implementations SHOULD require interaction when the
-          delegatee has not been previously authorized by the user,
-          when the delegated operations are classified as high-risk,
-          or when the delegation hop crosses a trust domain boundary
-          without a pre-established cross-domain trust agreement
-          covering the delegation pattern.  Interaction MAY be
-          skipped when the user has previously granted a standing
-          authorization that explicitly covers the delegation
-          pattern, when the subject token's <tt>may_act</tt> claim
-          (<xref target="RFC8693"/>, Section 4.1) authorizes the
-          named delegatee, or when the delegated authorization is
-          equal to or more restrictive than a previously
-          user-approved delegation to the same delegatee.
-        </t>
-
-        <t>
-          The decision policy itself, including who determines when user
-          consent is required and how consent lifecycles are recorded,
-          is out of scope of this specification; only the interaction
-          trigger mechanism through which the AS surfaces that decision
-          to the client is defined here.
-        </t>
-      </section>
-
-      <section anchor="protocol-flow" title="Delegation without User Interaction">
-        <t>
-          When no user interaction is required (for example, the
-          delegation is covered by a standing authorization, or the
-          delegated authorization is equal to or more restrictive
-          than a previously user-approved delegation, per
-          <xref target="interaction-trigger-criteria"/>), the AS
-          responds to the Token Exchange request directly with the
-          delegated token, bypassing the
-          <tt>delegation_interaction_required</tt> step.  The request format,
-          parameters, AS validation rules, and token issuance are
-          identical to those defined above in this section; the only
-          difference is that issuance proceeds without the
-          interaction branch.
-        </t>
-
-        <t>
-          Authorization Servers SHOULD log all decisions to skip user
-          interaction as part of their audit log.  The specific
-          mechanism for recording skip decisions is deployment-specific:
-          implementations MAY record them in an application-specific
-          audit log or other deployment-specific evidence model.
+          request; it does not determine the issued token's key
+          binding.  Resource Servers verify the delegatee's DPoP
+          proofs against the <tt>cnf</tt> claim as usual.
         </t>
       </section>
     </section>
@@ -1761,42 +1507,36 @@ wit://<authority>/<agent-identifier>
       </t>
 
       <t>
-        When delegator non-repudiation is used, the delegator's
-        signature over the new record is produced before the
-        request: the delegating agent signs the prospective record
-        and conveys it in the <tt>delegation_proposal</tt>
-        parameter of the Token Exchange request
-        (<xref target="step3-delegation-request"/>); the AS
+        The delegator's signature over the new record is produced
+        before the request: the delegating agent signs the
+        prospective record and conveys it in the
+        <tt>delegation_proposal</tt> parameter of the Token Exchange
+        request (<xref target="step3-delegation-request"/>); the AS
         verifies it as part of request validation and embeds it as
-        the record's <tt>delegator_signature</tt>.  The
-        <tt>as_signature</tt> is applied by the AS upon successful
-        validation.
+        the record's <tt>delegator_signature</tt>.  The AS applies
+        its own <tt>as_signature</tt> to the record when the record
+        is created for a token that will be consumed in another
+        trust domain; within a single trust domain, the token-level
+        signature of the issuing AS suffices.  The AS propagates the
+        <tt>root_authorization_ref</tt> claim from the subject token into
+        the issued token unchanged.
       </t>
 
-      <section title="Evidence Propagation">
+      <section title="Root Authorization Reference Propagation">
         <t>
-          When the AS issues a delegated token within the same trust
-          domain and structured authorization evidence is used, it
-          SHOULD propagate the <tt>evidence</tt>
-          claim from the subject token (or root
-          token) into the newly issued delegated token.  This ensures that Resource Servers can verify the
-          original user consent without needing to retrieve the root
-          token separately.  When evidence is propagated, the
-          <tt>root_evidence_ref</tt> field in each delegation record
-          SHOULD match the <tt>evidence.id</tt> value in the propagated
-          evidence claim.  For cross-domain evidence propagation, see
-          <xref target="cross-domain"/>.
-        </t>
-
-        <t>
-          Implementations not using structured authorization evidence
-          are not required to carry <tt>evidence</tt>
-          claims.  In
-          deployments that do not use structured authorization evidence,
-          the <tt>root_evidence_ref</tt> field (when present) serves as
-          an opaque reference to the original authorization event,
-          resolvable through deployment-specific mechanisms such as an
-          audit log query or a consent management API.
+          The <tt>root_authorization_ref</tt> claim is propagated with the
+          chain: when the AS issues a delegated token within the same
+          trust domain, it copies the claim from the subject token;
+          when the receiving AS of a cross-domain flow issues a local
+          token, it copies the claim from the JWT authorization grant
+          (<xref target="cross-domain"/>).  Every token in the
+          lineage therefore anchors to the same root authorization,
+          and a verifier can retrieve the original authorization
+          context through the deployment-specific resolution
+          mechanism of the reference (an audit log query, a consent
+          management API, or, in deployments using a structured
+          authorization evidence model, the root token's evidence
+          claim).
         </t>
       </section>
 
@@ -1810,6 +1550,7 @@ wit://<authority>/<agent-identifier>
         <figure>
           <artwork name="First delegation (extended)" type="json"><![CDATA[
 {
+  "root_authorization_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "delegation_chain": [
     {
       "delegator_id": "wit://agent-a.example/sha256.aaa111...",
@@ -1817,9 +1558,7 @@ wit://<authority>/<agent-identifier>
       "as_id": "https://as.example.com",
       "scope": "cart:read inventory:read",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
-      "operation_summary": "Delegate cart and inventory operations",
+      "policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
     }
@@ -1829,12 +1568,12 @@ wit://<authority>/<agent-identifier>
         </figure>
 
         <t>
-          A minimal equivalent would carry only
+          A single-domain, scope-only record would carry only
           <tt>delegator_id</tt>, <tt>delegatee_id</tt>,
-          <tt>as_id</tt>, <tt>scope</tt>,
-          <tt>delegation_timestamp</tt>, <tt>operation_summary</tt>,
-          and <tt>as_signature</tt>, omitting the policy and
-          evidence references and the delegator signature.
+          <tt>scope</tt>, <tt>delegation_timestamp</tt>, and
+          <tt>delegator_signature</tt>, omitting the policy
+          reference and the <tt>as_signature</tt>, whose role is
+          carried by the token-level signature of the issuing AS.
         </t>
       </section>
 
@@ -1842,13 +1581,13 @@ wit://<authority>/<agent-identifier>
         <t>
           If Agent B further delegates to Agent C, the AS prepends a new
           record.  The following shows an <strong>extended</strong>
-          two-hop chain.  The new record's
-          <tt>prev_record_hash</tt> binds it to the earlier record:
+          two-hop chain:
         </t>
 
         <figure>
           <artwork name="Multi-hop delegation (extended)" type="json"><![CDATA[
 {
+  "root_authorization_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "delegation_chain": [
     {
       "delegator_id": "wit://agent-b.example/sha256.bbb222...",
@@ -1856,10 +1595,7 @@ wit://<authority>/<agent-identifier>
       "as_id": "https://as.example.com",
       "scope": "inventory:read",
       "delegation_timestamp": 1734517800,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:0c9d8e7f-6a5b-4d3c-2b1a-0f9e8d7c6b5a",
-      "prev_record_hash": "VlVUh49BLR07-qdyqmTuI-02HiBW5FDScaECWJeTp7I",
-      "operation_summary": "Check inventory for item 123",
+      "policy_ref": "urn:uuid:0c9d8e7f-6a5b-4d3c-2b1a-0f9e8d7c6b5a",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
     },
@@ -1869,9 +1605,7 @@ wit://<authority>/<agent-identifier>
       "as_id": "https://as.example.com",
       "scope": "cart:read inventory:read",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
-      "operation_summary": "Delegate cart and inventory operations",
+      "policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD1...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
     }
@@ -1882,11 +1616,7 @@ wit://<authority>/<agent-identifier>
 
         <t>
           With scope-based delegation only, each record would
-          omit <tt>delegated_policy_ref</tt>,
-          <tt>delegator_signature</tt>, and
-          <tt>root_evidence_ref</tt>, but the prepended record would
-          still carry <tt>prev_record_hash</tt>, as it is REQUIRED on
-          multi-record chains.  The scope narrowing
+          omit <tt>policy_ref</tt>.  The scope narrowing
           (<tt>cart:read inventory:read</tt> to
           <tt>inventory:read</tt>) is expressed by each record's
           <tt>scope</tt> field and the delegated token's
@@ -1936,6 +1666,31 @@ wit://<authority>/<agent-identifier>
         </li>
       </ul>
 
+      <section anchor="jag-extension" title="Extension of the JWT Authorization Grant">
+        <t>
+          The JWT authorization grant defined by
+          <xref target="I-D.ietf-oauth-identity-chaining"/> is extended
+          with two claims.  The grant MAY carry the
+          <tt>delegation_chain</tt> and <tt>root_authorization_ref</tt>
+          claims defined in <xref target="delegation-chain-claim"/>.
+          An Authorization Server receiving such a grant MUST process
+          the two claims in accordance with
+          <xref target="cross-domain-trust"/> and MUST preserve them
+          verbatim in the access token it issues, as described in
+          <xref target="claims-transcription"/>.  Everything else
+          about the grant, including its issuance, audience binding,
+          and validation, is defined by
+          <xref target="I-D.ietf-oauth-identity-chaining"/> and is
+          unaffected by this specification.  The claims are defined so
+          that they can also be carried by tokens issued without the
+          JWT authorization grant mechanism, for example tokens
+          issued through a direct Token Exchange
+          (<xref target="delegation-interaction"/>); no validation
+          rule in this specification depends on how the token reached
+          its issuer.
+        </t>
+      </section>
+
       <section title="Cross-Domain Delegation Flow">
         <t>
           Consider an agent in Trust Domain A that needs to delegate a subset
@@ -1943,42 +1698,39 @@ wit://<authority>/<agent-identifier>
         </t>
 
         <figure>
-          <artwork name="Cross-Domain Delegation Flow" type="ascii-art"><![CDATA[
-+-------+  +-------+  +-------+  +-------+  +-------+       +-------+
-| User  |  |Agent A|  | AS-A  |  |Agent B|  | AS-B  |       | RS-B  |
-+-------+  +-------+  +-------+  +-------+  +-------+       +-------+
-     |          |          |          |          |              |   
-     | (1) Auth |          |          |          |              |   
-     |--------->|          |          |          |              |   
-     |          |          |          |          |              |   
-     |          | (2) Token Exchange  |          |              |   
-     |          |  (delegation +      |          |              |   
-     |          |   resource=AS-B)    |          |              |   
-     |          |--------->|          |          |              |   
-     |          |          |          |          |              |   
-     |          | (3) JWT  |          |          |              |   
-     |          | Authoriz |          |          |              |   
-     |          | Grant    |          |          |              |   
-     |          |<---------|          |          |              |    
-     |          |          |          |          |              |   
-     |          | (3.5) Agent A transfers JWT Grant to Agent B  |
-     |          |-------------------->|          |              |
-     |          |          |          |          |              |
-     |          |          |          | (4) Present JWT Grant   |
-     |          |          |          |--------->|              |  
-     |          |          |          |          |              |
-     |          |          |          |          |(5) Validate  | 
-     |          |          |          |          |- JWT signature|
-     |          |          |          |          |- delegation  |
-     |          |          |          |          |- policy      |
-     |          |          |          |          |              |   
-     |          |          |          |          |(6) Access    |   
-     |          |          |          |          |  Token       |   
-     |          |          |          |<---------|              |   
-     |          |          |          |          |              |   
-     |          |          |          |(7) API Req              |   
-     |          |          |          |------------------------>|   
-     |          |          |          |          |              |   
+          <artwork name="Cross-Domain Delegation Flow (First Hop)" type="ascii-art"><![CDATA[
+               Domain A                                Domain B
+ User          Agent A           AS-A          Agent B           AS-B
+   |               |               |               |               |
+   | (1) initial authorization     |               |               |
+   |    (root authorization)       |               |               |
+   |-------------->|               |               |               |
+   |               |               |               |               |
+   |               | (2) Token Exchange            |               |
+   |               |   resource=AS-B               |               |
+   |               |   delegatee_id=Agent B        |               |
+   |               |   delegation_proposal         |               |
+   |               |-------------->|               |               |
+   |               |               |               |               |
+   |               | (3) JWT authorization grant   |               |
+   |               |   delegation_chain: [A->B]    |               |
+   |               |   root_authorization_ref      |               |
+   |               |   aud: AS-B   |               |               |
+   |               |<--------------|               |               |
+   |               |               |               |               |
+   |               | (4) out-of-band transfer      |               |
+   |               |------------------------------>|               |
+   |               |               |               |               |
+   |               |               |               | (5) Token Exchange
+   |               |               |               |-------------->|
+   |               |               |               |               |
+   |               |               |               | (6) validate  |
+   |               |               |               | grant and chain
+   |               |               |               |               |
+   |               |               |               | (7) access token
+   |               |               |               | chain preserved
+   |               |               |               |<--------------|
+   |               |               |               |               |
           ]]></artwork>
         </figure>
 
@@ -1991,16 +1743,18 @@ wit://<authority>/<agent-identifier>
             Agent A initiates a delegation Token Exchange with AS-A,
             including the <tt>resource</tt> parameter set to AS-B's
             identifier (as defined in
-            <xref target="I-D.ietf-oauth-identity-chaining"/>) and the
-            <tt>delegatee_id</tt> parameter identifying Agent B. This
+            <xref target="I-D.ietf-oauth-identity-chaining"/>), the
+            <tt>delegatee_id</tt> parameter identifying Agent B, and the
+            <tt>delegation_proposal</tt> parameter carrying Agent A's
+            signature over the prospective delegation record. This
             signals that the delegation targets an agent in Trust Domain B.
           </li>
           <li>
-            AS-A validates the delegation, creates a delegation record,
-            and returns a JWT authorization grant containing the
-            <tt>delegation_chain</tt> claim. If user interaction is
-            required, the interaction flow described in <xref target="delegation-interaction"/> is
-            used before this step.
+            AS-A validates the delegation, creates a delegation record
+            carrying its <tt>as_signature</tt>, and returns a JWT
+            authorization grant containing the
+            <tt>delegation_chain</tt> and <tt>root_authorization_ref</tt>
+            claims.
           </li>
           <li>
             Agent A transfers the JWT authorization grant to Agent B
@@ -2025,21 +1779,25 @@ wit://<authority>/<agent-identifier>
           </li>
           <li>
             AS-B issues an access token to Agent B for Trust Domain B,
-            preserving the <tt>delegation_chain</tt> claim from the
+            preserving the <tt>delegation_chain</tt> and
+            <tt>root_authorization_ref</tt> claims from the
             JWT authorization grant, with <tt>act.sub</tt> set to
             Agent B's identifier and, consistent with the Token
             Issuance section of
             <xref target="delegation-interaction"/>, the token
             sender-constrained to Agent B's key.
           </li>
-          <li>
-            Agent B uses the access token to access resources in Trust
-            Domain B.
-          </li>
         </ol>
+
+        <t>
+          Agent B then uses the access token to access resources in Trust
+          Domain B.  When Agent B delegates further across another trust
+          domain boundary, the pattern repeats; the second hop is shown
+          in <xref target="multi-domain-extension"/>.
+        </t>
       </section>
 
-      <section title="Cross-Domain Trust Requirements">
+      <section anchor="cross-domain-trust" title="Cross-Domain Trust Requirements">
         <t>
           For cross-domain delegation to function, the following trust
           requirements MUST be satisfied:
@@ -2047,9 +1805,12 @@ wit://<authority>/<agent-identifier>
 
         <ul>
           <li>
-            <strong>AS Trust Relationship:</strong> AS-B MUST trust AS-A's
-            signing key to verify <tt>as_signature</tt> on delegation records
-            issued by AS-A. This trust relationship is typically established
+            <strong>AS Trust Relationship:</strong> Records created by
+            AS-A for a cross-domain delegation carry
+            <tt>as_signature</tt> (REQUIRED for records created by an
+            AS other than the token's issuer), so AS-B MUST trust
+            AS-A's signing key to verify those records.  This trust
+            relationship is typically established
             through key exchange or by publishing AS-A's public keys via
             Authorization Server Metadata (<xref target="RFC8414"/>).
           </li>
@@ -2073,23 +1834,25 @@ wit://<authority>/<agent-identifier>
             delegation is usable only by the named delegatee.
           </li>
           <li>
-            <strong>Evidence Propagation:</strong> AS-B SHOULD propagate the
-            <tt>evidence</tt> claim from the JWT
-            authorization grant, enabling Resource Servers in Trust Domain B
-            to verify the original user consent without contacting AS-A.
-            This is a SHOULD rather than a MUST because cross-domain
-            evidence propagation may be constrained by data minimization
-            policies, privacy regulations, or trust agreements between
-            domains. When evidence is not propagated, Resource Servers in
-            Trust Domain B MUST rely on back-channel verification with AS-A
-            or AS-B to validate the original user consent.
+            <strong>Root Authorization Reference Propagation:</strong>
+            AS-B MUST propagate the <tt>root_authorization_ref</tt> claim
+            from the JWT authorization grant, so that Resource
+            Servers in Trust Domain B can anchor the chain to the
+            original user authorization.  Deployments using a
+            structured authorization evidence model MAY additionally
+            propagate the root token's evidence claim, subject to
+            data minimization policies, privacy regulations, or
+            trust agreements between domains; when it is not
+            propagated, the <tt>root_authorization_ref</tt> value remains
+            the anchor, resolvable through deployment-specific
+            back-channel mechanisms.
           </li>
           <li>
             <strong>Constraint Enforcement:</strong> AS-B MUST enforce that
             the delegated <tt>scope</tt> is equal to or narrower than
             the scope in the JWT authorization grant; scope expansion
             across domain boundaries is not permitted.  When the
-            <tt>delegated_policy_ref</tt> field is present, AS-B
+            <tt>policy_ref</tt> field is present, AS-B
             relies on the originating AS's issuance-time attestation
             of the referenced constraints (carried in the record's
             <tt>as_signature</tt>), or resolves and compares the
@@ -2099,7 +1862,7 @@ wit://<authority>/<agent-identifier>
         </ul>
       </section>
 
-      <section title="Multi-Domain Chain Extension">
+      <section anchor="multi-domain-extension" title="Multi-Domain Chain Extension">
         <t>
           When a delegation chain spans multiple domains, each domain's AS
           may add delegation records to the chain. The cross-domain transport
@@ -2107,6 +1870,99 @@ wit://<authority>/<agent-identifier>
           Grant) at each domain boundary, while the <tt>delegation_chain</tt>
           accumulates records from all domains.
         </t>
+        <t>
+          A second hop, from Agent B in Trust Domain B to an agent in
+          Trust Domain C, proceeds symmetrically:
+        </t>
+
+        <figure>
+          <artwork name="Cross-Domain Delegation Flow (Second Hop)" type="ascii-art"><![CDATA[
+        Domain B                              Domain C
+ Agent B          AS-B         Agent C          AS-C           RS-C
+     |              |              |              |              |
+     | (1) Token Exchange          |              |              |
+     |   resource=AS-C             |              |              |
+     |   delegation_proposal       |              |              |
+     |------------->|              |              |              |
+     |              |              |              |              |
+     | (2) JWT authorization grant |              |              |
+     |   chain: [B->C, A->B]       |              |              |
+     |   root_authorization_ref    |              |              |
+     |<-------------|              |              |              |
+     |              |              |              |              |
+     | (3) out-of-band transfer    |              |              |
+     |---------------------------->|              |              |
+     |              |              |              |              |
+     |              |              | (4) Token Exchange          |
+     |              |              |------------->|              |
+     |              |              |              |              |
+     |              |              |              | (5) validate |
+     |              |              |              | grant and chain
+     |              |              |              |              |
+     |              |              | (6) access token            |
+     |              |              | chain preserved             |
+     |              |              |<-------------|              |
+     |              |              |              |              |
+     |              |              | (7) API request             |
+     |              |              |---------------------------->|
+     |              |              |              |              |
+     |              |              |              | (8) validate chain
+     |              |              |              | and root anchor
+     |              |              |              |              |
+          ]]></artwork>
+        </figure>
+
+        <ol>
+          <li>
+            Agent B initiates a delegation Token Exchange with AS-B, with
+            the <tt>resource</tt> parameter set to AS-C's identifier, the
+            <tt>delegatee_id</tt> parameter identifying Agent C, and the
+            <tt>delegation_proposal</tt> parameter carrying Agent B's
+            signature over the prospective delegation record.
+          </li>
+          <li>
+            AS-B validates the delegation, creates the delegation record
+            for this hop carrying its <tt>as_signature</tt>, and returns a
+            JWT authorization grant for AS-C whose <tt>delegation_chain</tt>
+            contains both records (AS-A's record preserved verbatim) and
+            whose <tt>root_authorization_ref</tt> is propagated from the
+            original authorization.
+          </li>
+          <li>
+            Agent B transfers the JWT authorization grant to Agent C
+            through an out-of-band mechanism.
+          </li>
+          <li>
+            Agent C presents the JWT authorization grant to AS-C using
+            the JWT Bearer grant type (<xref target="RFC7523"/>),
+            authenticating itself to AS-C; AS-C verifies that the
+            authenticated presenter is the delegatee named by the most
+            recent delegation record of the grant's
+            <tt>delegation_chain</tt>.
+          </li>
+          <li>
+            AS-C validates the JWT grant signature and the full
+            <tt>delegation_chain</tt>, including the <tt>as_signature</tt>
+            on each record created by a foreign AS (here, both AS-A's and
+            AS-B's records), and confirms scope narrowing across the
+            whole chain.
+          </li>
+          <li>
+            AS-C issues Agent C a local access token preserving the
+            <tt>delegation_chain</tt> and <tt>root_authorization_ref</tt>
+            claims verbatim, with <tt>act.sub</tt> set to Agent C's
+            identifier and the token sender-constrained to Agent C's
+            key.
+          </li>
+          <li>
+            Agent C presents the access token to RS-C.
+          </li>
+          <li>
+            RS-C validates the <tt>delegation_chain</tt> as defined in
+            <xref target="rs-validation"/> and enforces the resulting
+            decision.
+          </li>
+        </ol>
 
         <t>
           Resource Servers validating a cross-domain delegation chain MUST:
@@ -2114,9 +1970,11 @@ wit://<authority>/<agent-identifier>
 
         <ul>
           <li>
-            Verify <tt>as_signature</tt> on each delegation record using the
-            signing key of the AS identified by the record's
-            <tt>as_id</tt> field (which may differ across records);
+            Verify the <tt>delegator_signature</tt> on each delegation
+            record, and the <tt>as_signature</tt> on each record that
+            carries one, using the signing key of the AS identified by
+            that record's <tt>as_id</tt> field (which may differ across
+            records);
           </li>
           <li>
             Verify trust relationships between all ASes referenced in the chain;
@@ -2127,7 +1985,7 @@ wit://<authority>/<agent-identifier>
         </ul>
       </section>
 
-      <section title="Claims Transcription for Delegation">
+      <section anchor="claims-transcription" title="Claims Transcription for Delegation">
         <t>
           Section 2.5 of <xref target="I-D.ietf-oauth-identity-chaining"/>
           describes Claims Transcription (the process by which Authorization
@@ -2137,11 +1995,11 @@ wit://<authority>/<agent-identifier>
           representation: when delegation crosses a trust domain boundary,
           each delegation record captures the transcribed authorization
           constraints (scope, and when present
-          <tt>delegated_policy_ref</tt>), the identity mapping (delegator and
-          delegatee identifiers), and the cryptographic evidence of both the
-          originating AS (the AS that created the record,
-          <tt>as_signature</tt>) and, when present, the
-          delegating agent (<tt>delegator_signature</tt>).
+          <tt>policy_ref</tt>), the identity mapping (delegator and
+          delegatee identifiers), and the cryptographic evidence of the
+          delegating agent (<tt>delegator_signature</tt>) and of the
+          originating AS that created the record
+          (<tt>as_signature</tt>).
         </t>
 
         <t>
@@ -2168,91 +2026,96 @@ wit://<authority>/<agent-identifier>
 
       <section title="Signature Verification">
         <t>
-          For each record in the chain, verify the
-          <tt>as_signature</tt>, when present, using the public key of
-          the AS identified by the record's <tt>as_id</tt> field.  In
-          single-domain chains, <tt>as_id</tt> matches the token's
-          <tt>iss</tt> claim.  In cross-domain chains, different records
-          may carry different <tt>as_id</tt> values, and the Resource
-          Server MUST select the corresponding AS public key for each
-          record.  In cross-domain chains, the Resource Server does not
-          need to verify that upstream records' <tt>as_id</tt> values
-          match the current token's <tt>iss</tt> claim; the
-          <tt>as_id</tt> is used solely to select the correct public
-          key for <tt>as_signature</tt> verification.  When the
-          <tt>as_signature</tt> is present, verification ensures:
+          For each record in the chain, the Resource Server MUST verify
+          the <tt>delegator_signature</tt> using the public key of the
+          delegating agent identified by the record's
+          <tt>delegator_id</tt> field, resolved as described in
+          <xref target="key-resolution"/>.  A record without a
+          <tt>delegator_signature</tt>, or with a
+          <tt>delegator_signature</tt> that does not verify, makes the
+          <tt>delegation_chain</tt> invalid, and the Resource Server
+          MUST reject the token.
+        </t>
+
+        <t>
+          When a record was created by an AS other than the AS that
+          issued the token, the record MUST carry an
+          <tt>as_signature</tt>, and the Resource Server MUST verify it
+          using the public key of the AS identified by the record's
+          <tt>as_id</tt> field.  In single-domain chains, every record
+          is created by the token's issuer, <tt>as_id</tt> matches the
+          token's <tt>iss</tt> claim, and the <tt>as_signature</tt> is
+          typically omitted: the token-level JWT signature already
+          attests to every record in the chain.  In cross-domain
+          chains, different records may carry different
+          <tt>as_id</tt> values, and the Resource Server MUST select
+          the corresponding AS public key for each record.  The
+          Resource Server does not need to verify that upstream
+          records' <tt>as_id</tt> values match the current token's
+          <tt>iss</tt> claim; the <tt>as_id</tt> is used solely to
+          select the correct public key for <tt>as_signature</tt>
+          verification.
+        </t>
+
+        <t>
+          Signature verification ensures:
         </t>
 
         <ul>
-          <li>The delegation was authorized by the AS;</li>
-          <li>The record has not been tampered with;</li>
-          <li>The delegation metadata is authentic.</li>
+          <li>The delegation was authorized by the delegating agent;</li>
+          <li>The delegation was witnessed by the originating AS, for
+          records that carry an <tt>as_signature</tt>;</li>
+          <li>The record has not been tampered with.</li>
         </ul>
-
-        <t>
-          When <tt>as_signature</tt> is omitted on a record, the
-          record's integrity is still protected by the token-level JWT
-          signature, which covers the entire
-          <tt>delegation_chain</tt> claim as a single unit.  Omitting
-          <tt>as_signature</tt> is typical in single-domain
-          deployments where the token issuer's signature already
-          attests to every record; per-record
-          <tt>as_signature</tt> is RECOMMENDED in cross-domain or
-          multi-AS deployments where independent per-hop attestation
-          adds assurance.
-        </t>
       </section>
 
       <section title="Root Authorization Anchor">
         <t>
-          The last record in the chain (highest index) represents the earliest
-          delegation. Its <tt>delegator_id</tt> identifies the agent that holds
-          the root authorization (the token directly authorized by the user).
+          Every token that carries a <tt>delegation_chain</tt> claim
+          also carries a <tt>root_authorization_ref</tt> claim, which
+          points to the original authorization event in which the
+          user authorized the root agent.  The last record in the
+          chain (highest index) represents the earliest delegation,
+          and its <tt>delegator_id</tt> identifies the root agent.
+          The authorization of the root agent by the user is not a
+          delegation record and is not represented in the chain; it
+          is anchored by the <tt>root_authorization_ref</tt> claim.
         </t>
 
         <t>
           The Resource Server SHOULD verify the root authorization
           anchor.  Since the RS typically observes only the delegated
-          token (which carries the <tt>delegation_chain</tt>), it does
-          not have direct access to the root token.  Verification can
-          be performed through one or more of the following means:
+          token, it does not have direct access to the original
+          authorization event.  The <tt>root_authorization_ref</tt> value
+          is opaque to this specification; its resolution and
+          validation are deployment-specific.  Verification can be
+          performed through one or more of the following means:
         </t>
 
         <ul>
           <li>
+            Resolving the <tt>root_authorization_ref</tt> through
+            deployment-specific mechanisms, for example to a consent
+            record or an audit log entry, and confirming that the
+            referenced authorization event is valid and has not been
+            revoked;
+          </li>
+          <li>
             Using token introspection
-            (<xref target="RFC7662"/>) to confirm that the earliest
-            delegator (identified by the <tt>delegator_id</tt> of
-            the last chain record) holds a valid, non-revoked root
-            token issued by a trusted AS;
+            (<xref target="RFC7662"/>) to confirm that the root agent
+            (identified by the <tt>delegator_id</tt> of the last
+            chain record) holds a valid, non-revoked root
+            authorization issued by a trusted AS;
           </li>
           <li>
             Relying on the structural integrity of the
             <tt>delegation_chain</tt> itself: the AS that issued the
-            delegated token has already verified the root token's
-            validity at issuance time, and, when present, the
-            <tt>as_signature</tt> on each record attests to that
-            verification.  Even without per-record
-            <tt>as_signature</tt>, the token-level JWT signature
-            covers the entire <tt>delegation_chain</tt> array,
-            binding the issuance attestation to the token as a whole.
+            delegated token has already verified the upstream chain,
+            and the token-level JWT signature covers the entire
+            <tt>delegation_chain</tt> array, binding the issuance
+            attestation to the token as a whole.
           </li>
         </ul>
-
-        <t>
-          In deployments using structured authorization evidence,
-          the Resource Server SHOULD additionally
-          verify that the root token contains a valid <tt>evidence</tt>
-          claim, providing cryptographic
-          proof of user consent.  The resolution and validation rules
-          for <tt>root_evidence_ref</tt> and the <tt>evidence</tt> claim
-          are deployment-specific; this document treats the
-          reference as opaque.  Deployments that do not carry
-          structured evidence MAY rely on the
-          <tt>root_evidence_ref</tt> field as an opaque pointer to the
-          original authorization event, resolvable through
-          deployment-specific mechanisms.
-        </t>
 
         <t>
           If the RS cannot establish confidence in the root authorization
@@ -2261,70 +2124,43 @@ wit://<authority>/<agent-identifier>
         </t>
       </section>
 
-      <section title="Dual-Signature Verification">
+      <section title="Delegator and AS Attestations">
         <t>
-          For each delegation record, when the
-          <tt>as_signature</tt> field is present, the Resource Server
-          SHOULD verify it using the Authorization Server's public
-          key.  When the <tt>delegator_signature</tt> field is
-          present, the Resource Server SHOULD additionally verify it
-          using the delegating agent's public key (resolved as
-          described in the Key Resolution section above).  In
-          single-domain deployments where the token issuer's JWT
-          signature already covers every record, per-record
-          <tt>as_signature</tt> verification is not required; the
-          token-level signature provides sufficient integrity.
+          The two signatures serve distinct purposes and are
+          evaluated independently.  The
+          <tt>delegator_signature</tt> is present on every record:
+          it is the delegating agent's own attestation of the
+          delegation, and it is what prevents a malicious or
+          compromised AS from forging a delegation the delegating
+          agent never made.  The <tt>as_signature</tt>, when present,
+          is the originating AS's attestation that it processed the
+          delegation request, validated the upstream chain, and
+          created the record; it is REQUIRED on records created by
+          an AS other than the AS that issued the token.
         </t>
 
         <ul>
           <li>
-            <strong>AS Signature (SHOULD when present):</strong>
-            Confirms the delegation was authorized by the AS and the
-            record has not been tampered with;
+            <strong>Delegator Signature:</strong>
+            Confirms the delegating agent explicitly authorized this
+            delegation, providing non-repudiation of each hop and
+            protection against record forgery by a compromised AS;
           </li>
           <li>
-            <strong>Delegator Signature (SHOULD when present):</strong>
-            Confirms the delegator explicitly consented to this
-            delegation, providing non-repudiation.
+            <strong>AS Signature:</strong>
+            Confirms the originating AS witnessed the delegation and
+            created the record, providing an independent attestation
+            for hops that cross a trust domain boundary.
           </li>
         </ul>
 
         <t>
-          When both signatures are present and verified, the
-          dual-signature mechanism prevents:
-        </t>
-
-        <ul>
-          <li>
-            A malicious AS from unilaterally forging delegations;
-          </li>
-          <li>
-            Delegators from denying authorized delegations (non-repudiation);
-          </li>
-          <li>
-            Unauthorized privilege escalation through compromised components.
-          </li>
-        </ul>
-
-        <t>
-          Deployments that rely solely on
-          <tt>as_signature</tt> accept the AS as the single trust
-          anchor for delegation records.  This is appropriate when the
-          AS is operated by a trusted authority and the deployment does
-          not require independent delegator non-repudiation.
-        </t>
-
-        <t>
-          Deployments that omit <tt>as_signature</tt> on some or all
-          records rely on the token-level JWT signature as the sole
-          integrity mechanism for the <tt>delegation_chain</tt> array.
-          This is appropriate in single-domain deployments where one
-          AS issues the token and attests to every delegation record
-          through its token-level signature; it is also the minimal
-          configuration that retains chain integrity, tamper
-          detection, record removal detection, and reorder detection,
-          as those properties are enforced by the token-level
-          signature covering the array as a whole.
+          Because the <tt>delegator_signature</tt> is mandatory, the
+          Resource Server never relies on the issuing AS as the sole
+          attester of a delegation.  Every hop carries the delegating
+          agent's own signature, and the AS attestation supplements
+          it exactly where the record's creator is not the token's
+          issuer.
         </t>
       </section>
 
@@ -2414,7 +2250,7 @@ wit://<authority>/<agent-identifier>
           </li>
           <li>
             <strong>Structured constraints (CONDITIONAL):</strong>
-            When <tt>delegated_policy_ref</tt> is present, the
+            When <tt>policy_ref</tt> is present, the
             Resource Server relies on the Authorization Server's
             issuance-time validation of the referenced constraints,
             attested by <tt>as_signature</tt> when present and by the
@@ -2469,7 +2305,9 @@ wit://<authority>/<agent-identifier>
           </li>
           <li>
             The human principal (end user) is trusted to make informed
-            authorization decisions during consent and interaction flows.
+            authorization decisions.  Whether and how the Authorization
+            Server obtains the user's consent for a delegation is AS
+            policy and is out of scope of this specification.
           </li>
         </ul>
 
@@ -2491,12 +2329,12 @@ wit://<authority>/<agent-identifier>
           </li>
           <li>
             A <strong>compromised AS</strong> may attempt to forge
-            delegation records without the delegator's consent.  When
-            the dual-signature mechanism (delegator + AS) is used, it
-            mitigates this threat; deployments that rely solely on
-            <tt>as_signature</tt> accept the AS as the sole trust anchor
-            and must ensure AS compromise detection through other
-            operational controls.
+            delegation records without the delegator's consent.  The
+            mandatory <tt>delegator_signature</tt> on every record
+            mitigates this threat: a forged record does not verify
+            against the delegating agent's key.  On records created by
+            a foreign AS, the <tt>as_signature</tt> provides the
+            additional attestation of the AS that created the record.
           </li>
           <li>
             A <strong>network attacker</strong> may attempt to intercept or
@@ -2531,20 +2369,20 @@ wit://<authority>/<agent-identifier>
         <ul>
           <li>
             <strong>Integrity:</strong> Each delegation record is
-            cryptographically signed by the AS (and, when present, the
-            delegator), preventing undetected modification.
+            cryptographically signed by the delegator, and by the AS
+            that created it when the record crosses a trust domain
+            boundary, preventing undetected modification.
           </li>
           <li>
-            <strong>Non-repudiation (CONDITIONAL):</strong> When the
-            <tt>delegator_signature</tt> is present, it provides
+            <strong>Non-repudiation:</strong> The
+            <tt>delegator_signature</tt> on every record provides
             independent evidence that the delegation was explicitly
-            authorized by the delegator.  When omitted, deployments
-            rely on AS audit logs for non-repudiation.
+            authorized by the delegator.
           </li>
           <li>
             <strong>Scope compliance:</strong> Mandatory scope
             narrowing at each hop prevents privilege escalation through
-            the chain.  When the <tt>delegated_policy_ref</tt> field is
+            the chain.  When the <tt>policy_ref</tt> field is
             present, the referenced constraints provide
             additional fine-grained enforcement attested at issuance
             time.
@@ -2571,31 +2409,35 @@ wit://<authority>/<agent-identifier>
 
       <section title="Chain Integrity">
         <t>
-          Chain integrity is primarily ensured by the token-level JWT
+          Chain integrity is ensured jointly by the token-level JWT
           signature, which covers the entire
-          <tt>delegation_chain</tt> claim as a single unit.  When the
-          per-record <tt>as_signature</tt> is present, it provides an
-          additional layer of per-hop attestation.  These
-          mechanisms enforce chain integrity through the following
-          properties:
+          <tt>delegation_chain</tt> claim in its exact serialized
+          form, and by the per-record
+          <tt>delegator_signature</tt>, which is REQUIRED on every
+          record.  Records created by an AS other than the token's
+          issuer additionally carry that AS's
+          <tt>as_signature</tt>.  These mechanisms enforce chain
+          integrity through the following properties:
         </t>
 
         <ul>
           <li>
-            <strong>Forgery prevention:</strong> Agents cannot forge
-            delegation records.  The token-level JWT signature
-            requires the AS's private signing key, which agents do
-            not possess; when <tt>as_signature</tt> is present, it
-            adds an independent per-record attestation that also
-            requires the AS's key.
+            <strong>Forgery prevention:</strong> Neither a malicious
+            agent nor a compromised AS can forge a delegation record:
+            creating a valid record requires the delegating agent's
+            signature over the record's fields, and a record created
+            by a foreign AS additionally requires that AS's
+            <tt>as_signature</tt>.
           </li>
           <li>
             <strong>Tamper detection:</strong> Agents cannot modify
             existing records because any change to the signed fields
             (including <tt>delegator_id</tt>, <tt>delegatee_id</tt>,
-            <tt>scope</tt>, and <tt>delegated_policy_ref</tt>)
-            invalidates the token-level JWT signature, and, when
-            present, the record-level <tt>as_signature</tt> as well.
+            <tt>delegation_timestamp</tt>, <tt>scope</tt>, and
+            <tt>policy_ref</tt>) invalidates the record's
+            <tt>delegator_signature</tt>, the
+            <tt>as_signature</tt> when present, and the token-level
+            JWT signature.
           </li>
           <li>
             <strong>Record removal detection:</strong> Agents cannot
@@ -2613,13 +2455,15 @@ wit://<authority>/<agent-identifier>
         </ul>
 
         <t>
-          The four properties above hold for every deployment,
-          including the minimal single-domain configuration in which
-          <tt>as_signature</tt> is omitted on all records.  Adding
-          per-record <tt>as_signature</tt> in cross-domain or
-          multi-AS deployments strengthens forgery prevention and
-          tamper detection by providing independent per-hop
-          attestation that survives token re-issuance.
+          The four properties above hold for every deployment: the
+          <tt>delegator_signature</tt> is mandatory on every record,
+          and the token-level signature covers the array as a whole.
+          In single-domain deployments, records typically omit the
+          <tt>as_signature</tt>, since the token issuer attests to
+          every record through the token-level signature.  In
+          cross-domain deployments, the <tt>as_signature</tt> on
+          foreign records adds independent per-hop attestation that
+          survives token re-issuance.
         </t>
 
         <t>
@@ -2636,8 +2480,8 @@ wit://<authority>/<agent-identifier>
         <t>
           A malicious agent may attempt to present a token with a truncated
           or empty <tt>delegation_chain</tt> to hide intermediate delegation
-          hops. For example, an agent holding a token with chain
-          [A→B→C] (three records: C←B, B←A, User→A) could attempt to
+          hops. For example, an agent holding a token whose chain
+          represents A→B→C (two records: C←B and B←A) could attempt to
           present only the most recent record [C←B] or an empty chain,
           thereby concealing the earlier hops from the Resource Server.
         </t>
@@ -2678,27 +2522,26 @@ wit://<authority>/<agent-identifier>
 
         <ul>
           <li>
-            <strong>Reordering:</strong> Both defenses apply.  The
-            token-level JWT signature covers the array in its exact
-            serialized form, so any reordering invalidates it.
-            Independently, the <tt>prev_record_hash</tt> binding
-            (<xref target="chain-ordering"/>) fails for any reordered
-            sequence, because each record's hash is covered by that
-            record's own signatures and therefore cannot be recomputed
-            by the attacker to match a different predecessor.
+            <strong>Reordering:</strong> The token-level JWT signature
+            covers the array in its exact serialized form, so any
+            reordering invalidates it.  Independently, the continuity
+            rule of <xref target="chain-ordering"/> fails for a
+            reordered sequence: each record binds its
+            <tt>delegator_id</tt> and <tt>delegatee_id</tt> under the
+            delegator's signature, so an attacker cannot rewire a
+            record to a different predecessor or successor.
           </li>
           <li>
             <strong>Splicing:</strong> A spliced sequence combines
-            records that were each signed, but over a sequence that
-            never existed.  The token-level signature rejects it
-            outright.  If the splice is re-embedded into a newly
-            issued token (for example, by a malicious AS in a
-            cross-domain flow), the <tt>prev_record_hash</tt>
-            verification at the splice point fails: the record before
-            the splice point hashes its true predecessor, not the
-            spliced one.  This is the specific scenario in which the
-            per-hop hash binding adds assurance beyond the
-            token-level signature.
+            records that were each individually signed, but into a
+            path that never existed.  The token-level signature
+            rejects it outright.  If a splice is re-embedded into a
+            newly issued token, which only a malicious or compromised
+            AS can do, the continuity check fails at the splice point
+            unless the AS can also obtain a genuine
+            <tt>delegator_signature</tt> binding the two chains, and
+            a token that embeds a broken chain is attributable to the
+            AS that issued it.
           </li>
         </ul>
 
@@ -2710,20 +2553,21 @@ wit://<authority>/<agent-identifier>
           forging the ordering evidence of its own hop;
           commit-time enforcement is not provided by this
           specification and is out of scope.  Implementations
-          MUST NOT rely on <tt>prev_record_hash</tt> verification
-          in place of execution-time checks.
+          MUST NOT rely on chain validation in place of
+          execution-time checks.
         </t>
       </section>
 
       <section title="Policy Reference Substitution">
         <t>
-          When <tt>delegated_policy_ref</tt> is used, an attacker who
+          When <tt>policy_ref</tt> is used, an attacker who
           can modify a record might substitute the reference to point
           to different (broader) constraints.  This attack is
           prevented by the record's signatures: the reference is part
           of the signed field set, so any substitution invalidates
-          <tt>delegator_signature</tt> and <tt>as_signature</tt> when
-          present, and always invalidates the token-level signature.
+          the record's <tt>delegator_signature</tt>, the
+          <tt>as_signature</tt> when present, and the token-level
+          signature.
         </t>
 
         <t>
@@ -2745,9 +2589,9 @@ wit://<authority>/<agent-identifier>
           JWT (JWS, <xref target="RFC7515"/>) are Base64URL-encoded and
           readable by any party that obtains the token, including the
           full delegation topology (all agent identities), policy
-          references (<tt>delegated_policy_ref</tt>), operation
-          descriptions (<tt>operation_summary</tt>), and authorization
-          event references (<tt>root_evidence_ref</tt>).
+          references (<tt>policy_ref</tt>), and the
+          authorization event reference
+          (<tt>root_authorization_ref</tt>).
         </t>
 
         <t>
@@ -2756,19 +2600,16 @@ wit://<authority>/<agent-identifier>
           encrypted using JWE (<xref target="RFC7516"/>) with nested
           JWT processing (<tt>JWE(JWS(payload))</tt>), so that only the
           intended Resource Server can read the delegation chain
-          contents.  In cross-domain deployments, JWE encryption or the
-          chain-by-reference pattern (see below) should be used to
-          prevent downstream domains from reading upstream delegation
-          records.
+          contents.  In cross-domain deployments, JWE encryption
+          should be used to prevent downstream domains from reading
+          upstream delegation records.
         </t>
 
         <t>
           Deployments should determine the minimum amount of
           information necessary for delegation validation and include
           only such claims in delegation records.  The
-          <tt>operation_summary</tt> field should contain only the
-          minimum text necessary for authorization decisions.  The
-          constraints referenced by <tt>delegated_policy_ref</tt>
+          constraints referenced by <tt>policy_ref</tt>
           should be scoped to the specific
           operations being delegated.  Agent identifiers
           (<tt>delegator_id</tt>, <tt>delegatee_id</tt>) can be
@@ -2778,13 +2619,9 @@ wit://<authority>/<agent-identifier>
         </t>
 
         <t>
-          Additionally, implementations may use the
-          <tt>delegation_chain_ref</tt> claim (<xref target="chain-by-reference"/>) to replace the inline chain with
-          an opaque URI, retrieving the full chain via introspection
-          (<xref target="RFC7662"/>) over a TLS-protected channel.
           The RECOMMENDED short token lifetime (5 to 15 minutes,
-          see <xref target="token-protection"/>) limits the exposure window of
-          any leaked delegation records.
+          see <xref target="token-protection"/>) limits the exposure
+          window of any leaked delegation records.
         </t>
       </section>
 
@@ -2957,21 +2794,9 @@ wit://<authority>/<agent-identifier>
             <tt>delegation_chain</tt> on demand;
           </li>
           <li>
-            <strong>Chain by reference:</strong> Instead of embedding
-            the full <tt>delegation_chain</tt> in the JWT, issue a
-            compact token carrying only a
-            <tt>delegation_chain_ref</tt> claim (a URI pointing to the
-            full chain stored at the AS), as defined in
-            <xref target="chain-by-reference"/>.  The
-            Resource Server retrieves the chain via introspection or a
-            dedicated endpoint.  This approach keeps the token payload
-            constant regardless of chain depth, at the cost of an
-            additional round-trip for chain retrieval;
-          </li>
-          <li>
             <strong>Policy references:</strong> Carry structured
             constraints by reference
-            (<tt>delegated_policy_ref</tt>) rather than embedding
+            (<tt>policy_ref</tt>) rather than embedding
             constraint content in the delegation records, as this
             specification defines.
           </li>
@@ -2989,7 +2814,10 @@ wit://<authority>/<agent-identifier>
             <strong>AS Key Trust and Record Attribution:</strong>
             Resource Servers in each trust domain must be able to
             verify <tt>as_signature</tt> on delegation records issued
-            by Authorization Servers in other trust domains.  Each
+            by Authorization Servers in other trust domains.
+            Delegation records created by an AS in another trust
+            domain MUST carry that AS's <tt>as_signature</tt>, and
+            Resource Servers MUST verify it.  Each
             delegation record carries an <tt>as_id</tt> field that
             identifies the AS that created it, enabling the Resource
             Server to select the correct public key for signature
@@ -3145,14 +2973,8 @@ wit://<authority>/<agent-identifier>
 
         <ul>
           <li>
-            The <tt>operation_summary</tt> field is OPTIONAL and should
-            contain only the minimum information necessary for
-            authorization decisions, not detailed descriptions of user
-            intent or behavior.
-          </li>
-          <li>
             The constraints referenced by
-            <tt>delegated_policy_ref</tt> should be scoped to the
+            <tt>policy_ref</tt> should be scoped to the
             specific operations being delegated, not include broader
             context about the user's overall authorization.
           </li>
@@ -3182,11 +3004,13 @@ wit://<authority>/<agent-identifier>
             <xref target="I-D.ietf-oauth-identity-chaining"/>.
           </li>
           <li>
-            The <tt>evidence</tt> claim may contain details about the user's
-            consent interaction (e.g., displayed content, session context,
-            channel). Downstream domains receive this information. ASes
-            should minimize the evidence payload or apply domain-specific
-            filtering before cross-domain propagation.
+            The <tt>root_authorization_ref</tt> claim is opaque in this
+            specification, but in deployments where it is resolvable,
+            resolution may expose details of the original consent
+            interaction (e.g., displayed content, session context,
+            channel).  ASes should limit who may resolve the
+            reference and should minimize the information returned
+            by resolution.
           </li>
           <li>
             The complete delegation chain reveals the full topology of agent
@@ -3198,10 +3022,12 @@ wit://<authority>/<agent-identifier>
 
       <section title="User Consent Transparency">
         <t>
-          When the interaction branch is triggered (as described
-          in <xref target="delegation-interaction"/>), the user is presented
-          with delegation details for review and approval. Implementations
-          should ensure that the consent UI clearly communicates:
+          Whether an Authorization Server requires user consent
+          before authorizing a delegation hop is AS policy and is out
+          of scope of this specification
+          (<xref target="delegation-interaction"/>).  Deployments that
+          do require consent should ensure that the consent
+          interaction clearly communicates:
         </t>
 
         <ul>
@@ -3226,9 +3052,12 @@ wit://<authority>/<agent-identifier>
 
           <dt>Claim Description:</dt>
           <dd>
-            An ordered array of AS-signed delegation records tracing
-            agent-to-agent authorization transfers, enabling end-to-end
-            validation of delegation lineage.
+            An ordered array of delegation records tracing
+            agent-to-agent authorization transfers, each record signed
+            by the delegating agent and, for records created by an
+            Authorization Server other than the token's issuer, by
+            that Authorization Server, enabling end-to-end validation
+            of delegation lineage.
           </dd>
 
           <dt>Change Controller:</dt>
@@ -3240,21 +3069,21 @@ wit://<authority>/<agent-identifier>
 
         <dl>
           <dt>Claim Name:</dt>
-          <dd>delegation_chain_ref</dd>
+          <dd>root_authorization_ref</dd>
 
           <dt>Claim Description:</dt>
           <dd>
-            An opaque URI identifying the full delegation chain stored
-            at the issuing Authorization Server, used in place of the
-            inline <tt>delegation_chain</tt> claim when token size is
-            a constraint.
+            An opaque reference to the original user authorization
+            event from which a delegation chain derives, carried in
+            every token that contains a <tt>delegation_chain</tt>
+            claim.
           </dd>
 
           <dt>Change Controller:</dt>
           <dd>IETF</dd>
 
           <dt>Specification Document:</dt>
-          <dd><xref target="chain-by-reference"/> of this document</dd>
+          <dd><xref target="root-authorization-ref-claim"/> of this document</dd>
         </dl>
       </section>
 
@@ -3293,39 +3122,6 @@ wit://<authority>/<agent-identifier>
           <dd><xref target="step3-delegation-request"/> of this document</dd>
         </dl>
 
-        <dl>
-          <dt>Parameter Name:</dt>
-          <dd>interaction_callback_uri</dd>
-
-          <dt>Parameter Usage Location:</dt>
-          <dd>token request</dd>
-
-          <dt>Change Controller:</dt>
-          <dd>IETF</dd>
-
-          <dt>Reference:</dt>
-          <dd><xref target="step3-delegation-request"/> of this document</dd>
-        </dl>
-
-        <t>
-          The <tt>interaction_callback_uri</tt> parameter is used in
-          the delegation Token Exchange request context
-          (<xref target="step3-delegation-request"/>) to receive a
-          redirect callback upon completion of user interaction.
-          This specification registers the parameter for use with the
-          Token Exchange grant type
-          (<tt>grant_type=token-exchange</tt>).
-        </t>
-
-        <t>
-          The <tt>delegation_interaction_required</tt> error response defined in
-          <xref target="when-interaction-required"/> carries the
-          response parameters <tt>interaction_uri</tt>,
-          <tt>interval</tt>, and <tt>expires_in</tt>.  These are error
-          response fields specific to the delegation Token Exchange
-          flow; they are not registered in the "OAuth Parameters"
-          registry, which covers token endpoint request parameters.
-        </t>
       </section>
 
       <section title="OAuth Error Registration">
@@ -3377,43 +3173,6 @@ wit://<authority>/<agent-identifier>
           <dt>Reference:</dt>
           <dd><xref target="delegation-depth-limits"/> of this document</dd>
 
-          <dt>Name:</dt>
-          <dd>delegation_interaction_required</dd>
-          <dt>Error Usage Location:</dt>
-          <dd>Token endpoint error response for delegation Token
-            Exchange requests.
-          </dd>
-          <dt>Related Error Codes:</dt>
-          <dd>The <tt>interaction_required</tt> name is already
-            registered in this registry by OpenID Connect Core 1.0
-            (authorization endpoint usage); the
-            <tt>delegation_</tt> prefix avoids that collision.  This
-            registration covers
-            the Token Exchange grant type
-            (<tt>grant_type=token-exchange</tt>) defined in
-            <xref target="RFC8693"/>.
-          </dd>
-          <dt>Reference:</dt>
-          <dd><xref target="when-interaction-required"/> of this
-            document</dd>
-
-          <dt>Name:</dt>
-          <dd>delegation_interaction_pending</dd>
-          <dt>Error Usage Location:</dt>
-          <dd>Token endpoint error response for delegation Token
-            Exchange requests.
-          </dd>
-          <dt>Related Error Codes:</dt>
-          <dd>Indicates that a previously initiated interaction session
-            is still pending; the client SHOULD retry after at least the
-            number of seconds specified by the <tt>interval</tt>
-            parameter.  Corresponds in function to the
-            <tt>authorization_pending</tt> error registered by
-            <xref target="RFC8628"/> (and reused by the CIBA poll mode),
-            adapted to Token Exchange request semantics.
-          </dd>
-          <dt>Reference:</dt>
-          <dd><xref target="step8-retry"/> of this document</dd>
         </dl>
       </section>
     </section>
@@ -3448,7 +3207,6 @@ wit://<authority>/<agent-identifier>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7521.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7662.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8414.xml"/>
-        <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8628.xml"/>
         <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9449.xml"/>
 
         <xi:include href="https://datatracker.ietf.org/doc/bibxml3/draft-ietf-oauth-identity-assertion-authz-grant.xml"/>
@@ -3483,6 +3241,7 @@ wit://<authority>/<agent-identifier>
   "cnf": {
     "jkt": "PUjs0x126V9V7DasmuHIf4TtMm6zuzKn9BUETSWyEew"
   },
+  "root_authorization_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "delegation_chain": [
     {
       "delegator_id": "wit://agent-b.example/sha256.bbb222...",
@@ -3490,10 +3249,7 @@ wit://<authority>/<agent-identifier>
       "as_id": "https://as.example.com",
       "scope": "inventory:read",
       "delegation_timestamp": 1734517800,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:0c9d8e7f-6a5b-4d3c-2b1a-0f9e8d7c6b5a",
-      "prev_record_hash": "VlVUh49BLR07-qdyqmTuI-02HiBW5FDScaECWJeTp7I",
-      "operation_summary": "Check inventory for item 123",
+      "policy_ref": "urn:uuid:0c9d8e7f-6a5b-4d3c-2b1a-0f9e8d7c6b5a",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD2...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDy..."
     },
@@ -3503,9 +3259,7 @@ wit://<authority>/<agent-identifier>
       "as_id": "https://as.example.com",
       "scope": "cart:read inventory:read",
       "delegation_timestamp": 1734516900,
-      "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "delegated_policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
-      "operation_summary": "Delegate cart and inventory operations",
+      "policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
       "delegator_signature": "eyJhbGciOiJFUzI1NiJ9..MEYCIQD1...",
       "as_signature": "eyJhbGciOiJSUzI1NiJ9..MEUCIQDx..."
     }
@@ -3530,40 +3284,46 @@ wit://<authority>/<agent-identifier>
           → inventory:read, expressed in both the token's
           <tt>scope</tt> claim and each record's <tt>scope</tt>
           field</li>
-        <li>Per-hop cryptographic binding: the B→C record's
-          <tt>prev_record_hash</tt> linking it to the A→B record</li>
+        <li>A token-level <tt>root_authorization_ref</tt> claim anchoring
+          the chain to the original user authorization</li>
         <li>Sender-constraining <tt>cnf</tt> claim binding the token
           to Agent C's key</li>
       </ul>
 
       <t>
-        The <tt>root_evidence_ref</tt> and
-        <tt>delegated_policy_ref</tt> values are opaque references:
-        the former points to the original user consent event, the
-        latter to the structured authorization
-        constraints approved for that hop.  Neither is resolved or
-        interpreted by this specification; deployments MAY omit
-        both, in which case the delegated authorization is expressed
-        solely by <tt>scope</tt>.
+        The <tt>root_authorization_ref</tt> and
+        <tt>policy_ref</tt> values are opaque references:
+        the former points to the original user authorization event,
+        the latter to the structured authorization constraints
+        approved for that hop.  Neither is resolved or interpreted by
+        this specification.  <tt>root_authorization_ref</tt> is REQUIRED
+        whenever <tt>delegation_chain</tt> is present;
+        <tt>policy_ref</tt> MAY be omitted, in which case
+        the delegated authorization is expressed solely by
+        <tt>scope</tt>.
       </t>
 
       <t>
-        The <tt>prev_record_hash</tt> of the first record is the
-        base64url-encoded SHA-256 digest of the JCS
-        (<xref target="RFC8785"/>) canonical serialization of the
-        second record with both signature fields removed; the exact
-        hash input and digest are given in
+        This example is single-domain: both records were created by
+        the AS that issued the token, so the
+        <tt>as_signature</tt> fields are optional attestations; in a
+        cross-domain token, records created by a foreign AS carry a
+        REQUIRED <tt>as_signature</tt> from that AS
+        (<xref target="cross-domain"/>).  The
+        <tt>delegator_signature</tt> on each record is computed over
+        the JCS (<xref target="RFC8785"/>) canonical serialization of
+        the record's signed field set; the canonical form and a
+        worked example are given in
         <xref target="test-vectors"/>.
       </t>
     </section>
 
     <section anchor="step-by-step-walkthrough" title="Step-by-Step Delegation Token Exchange Walkthrough (Informative)">
       <t>
-        This appendix walks through the twelve steps of the flow in
-        <xref target="delegation-interaction"/>, including the interaction
-        branch, the full HTTP request and response examples, and the
-        delegation without interaction variant.  It is informative; the
-        normative requirements are stated in the referenced sections.
+        This appendix walks through the seven steps of the flow in
+        <xref target="delegation-interaction"/>, including the full
+        HTTP request example.  It is informative; the normative
+        requirements are stated in the referenced sections.
       </t>
 
       <t>
@@ -3592,111 +3352,61 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 &requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Ajwt
 &scope=cart%3Aread
 &delegatee_id=wit%3A%2F%2Fagent-b.example%2Fsha256.bbb222...
+&delegation_proposal=eyJhbGciOiJFUzI1NiJ9..MEYCIQD1...
         ]]></artwork>
       </figure>
 
       <t>
-        Deployments using structured constraints would additionally
-        carry them via <tt>authorization_details</tt>; the structure
-        is deployment-specific and out of scope of this
-        specification.  Deployments using delegator non-repudiation
-        would additionally carry the <tt>delegation_proposal</tt>
-        parameter containing the delegator-signed prospective record
-        (see <xref target="step3-delegation-request"/>).
+        The <tt>delegation_proposal</tt> parameter carries the
+        delegator-signed prospective record, whose signature is the
+        same byte string that becomes the record's
+        <tt>delegator_signature</tt>
+        (<xref target="step3-delegation-request"/>).  Deployments
+        using structured constraints would additionally carry them
+        via <tt>authorization_details</tt>; the structure is
+        deployment-specific and out of scope of this specification.
       </t>
 
       <t>
-        <strong>Step 4, Interaction required:</strong> The AS
-        determines that user interaction is required (see
-        <xref target="interaction-trigger-criteria"/>) and responds
-        with an <tt>delegation_interaction_required</tt> error:
-      </t>
-
-      <figure>
-        <artwork name="Interaction Required Response" type="http"><![CDATA[
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-Cache-Control: no-store
-
-{
-  "error": "delegation_interaction_required",
-  "error_description": "User interaction is required before this delegation can be authorized",
-  "interaction_uri": "https://as.example.com/delegation/consent?session=abc123",
-  "interval": 5,
-  "expires_in": 600
-}
-        ]]></artwork>
-      </figure>
-
-      <t>
-        <strong>Steps 5-6, User review and approval:</strong> Agent A
-        launches the <tt>interaction_uri</tt> in the user's browser.
-        The AS presents the delegation details (delegatee identity,
-        delegated policy and scope, operation summary, and whether the
-        delegation crosses trust domain boundaries).  The user reviews
-        and approves or denies the delegation request.
-      </t>
-
-      <t>
-        <strong>Step 7, Redirect:</strong> If the client provided an
-        <tt>interaction_callback_uri</tt>, the AS redirects the user's
-        browser to that URI to signal that the interaction is
-        complete.
-      </t>
-
-      <t>
-        <strong>Step 8, Retry:</strong> Agent A retries the original
-        Token Exchange request with the same parameters.  While the
-        interaction is pending, retries return
-        <tt>delegation_interaction_pending</tt>; the agent polls
-        respecting the <tt>interval</tt>, and the retry after user
-        approval yields the delegated token.  Once
-        <tt>expires_in</tt> elapses without approval, the agent stops
-        polling.
-      </t>
-
-      <t>
-        <strong>Step 9, Validation:</strong> The AS performs the
+        <strong>Step 4, Validation:</strong> The AS performs the
         validations listed in <xref target="delegation-interaction"/>
-        (interaction completion, token validity, delegation
-        permission, scope subset, delegatee authentication, chain
-        depth, upstream chain validation, request freshness).
+        (token validity, delegation permission, scope subset,
+        delegatee authentication, proposal consistency, chain depth,
+        upstream chain validation, request freshness).
       </t>
 
       <t>
-        <strong>Step 10, Token issuance:</strong> The AS issues the
+        <strong>Step 5, Token issuance:</strong> The AS issues the
         delegated token for Agent B, with <tt>sub</tt> unchanged,
         <tt>act</tt> set to Agent B's identity, the
         <tt>delegation_chain</tt> extended with a new record for this
-        hop, and reduced scope.
+        hop, the token-level <tt>root_authorization_ref</tt> claim
+        propagated from the subject token, and reduced scope.
       </t>
 
       <t>
-        <strong>Steps 11-12, API request and validation:</strong>
+        <strong>Step 5.5, Transfer:</strong> Agent A delivers the
+        delegated token to Agent B through an out-of-band mechanism
+        (e.g., a secure internal channel).
+      </t>
+
+      <t>
+        <strong>Steps 6-7, API request and validation:</strong>
         Agent B uses the delegated token to access the Resource
         Server.  The RS validates the token and verifies the
         <tt>delegation_chain</tt> as defined in
         <xref target="rs-validation"/>.
       </t>
-
-      <t>
-        When the AS determines that no user interaction is required
-        (<xref target="protocol-flow"/>), steps 4 through 8 are
-        skipped: the AS responds to the step 3 request directly with
-        the delegated token of step 10, and steps 11-12 proceed
-        unchanged.
-      </t>
     </section>
 
     <section anchor="test-vectors" title="Test Vectors (Informative)">
       <t>
-        This appendix provides a test vector for the
-        <tt>prev_record_hash</tt> computation, using the earlier
-        record (Agent A → Agent B) of the two-hop chain in
-        <xref target="complete-example"/> as the hashed record.  The
-        hash input is that record with both signature fields
-        (<tt>delegator_signature</tt> and <tt>as_signature</tt>)
-        removed:
+        This appendix provides a test vector for the JCS canonical
+        serialization over which the <tt>delegator_signature</tt>
+        and, when present, the <tt>as_signature</tt> are computed.
+        The input is the signed field set of the earlier record
+        (Agent A → Agent B) of the two-hop chain in
+        <xref target="complete-example"/>:
       </t>
 
       <figure>
@@ -3707,9 +3417,7 @@ Cache-Control: no-store
   "as_id": "https://as.example.com",
   "scope": "cart:read inventory:read",
   "delegation_timestamp": 1734516900,
-  "root_evidence_ref": "urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "delegated_policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f",
-  "operation_summary": "Delegate cart and inventory operations"
+  "policy_ref": "urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f"
 }
         ]]></artwork>
       </figure>
@@ -3723,29 +3431,18 @@ Cache-Control: no-store
 
       <figure>
         <artwork name="JCS canonical serialization (single line)" type="json"><![CDATA[
-{"as_id":"https://as.example.com","delegated_policy_ref":"urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f","delegatee_id":"wit://agent-b.example/sha256.bbb222...","delegation_timestamp":1734516900,"delegator_id":"wit://agent-a.example/sha256.aaa111...","operation_summary":"Delegate cart and inventory operations","root_evidence_ref":"urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890","scope":"cart:read inventory:read"}
+{"as_id":"https://as.example.com","delegatee_id":"wit://agent-b.example/sha256.bbb222...","delegation_timestamp":1734516900,"delegator_id":"wit://agent-a.example/sha256.aaa111...","policy_ref":"urn:uuid:7f6e5d4c-3b2a-4c5d-8e9f-0a1b2c3d4e5f","scope":"cart:read inventory:read"}
         ]]></artwork>
       </figure>
 
       <t>
-        The SHA-256 digest of these bytes, encoded as unpadded
-        base64url, is the <tt>prev_record_hash</tt> value carried by
-        the later (Agent B → Agent C) record:
-      </t>
-
-      <figure>
-        <artwork name="prev_record_hash test vector" type="plain"><![CDATA[
-SHA-256 digest (hex):
-  565554878f412d1d3bfaa772aa64ee23ed361e2056e450d271a102589793a7b2
-SHA-256 digest (base64url):
-  VlVUh49BLR07-qdyqmTuI-02HiBW5FDScaECWJeTp7I
-        ]]></artwork>
-      </figure>
-
-      <t>
-        Implementations can verify their JCS serialization and hash
-        computation by reproducing this digest from the input record
-        above.
+        The <tt>delegator_signature</tt> of that record is the JWS
+        computed over exactly these bytes with Agent A's signing key;
+        the <tt>as_signature</tt>, when the record requires one, is
+        the JWS computed over the same bytes with the AS's signing
+        key (<xref target="delegation-chain-claim"/>).
+        Implementations can verify their JCS serialization by
+        reproducing the canonical form above from the input record.
       </t>
     </section>
 
@@ -3758,15 +3455,17 @@ SHA-256 digest (base64url):
       </t>
 
       <t>
-        Each delegation hop is represented as a separate JWT access token
-        issued and signed by the Authorization Server.  The delegating
-        agent MAY additionally provide a <tt>delegator_signature</tt>
-        within the <tt>delegation_chain</tt> record for dual-signature
-        non-repudiation (RECOMMENDED).
+        Every token that carries a <tt>delegation_chain</tt> claim
+        also carries the token-level <tt>root_authorization_ref</tt>
+        claim.  Each delegation record carries a REQUIRED
+        <tt>delegator_signature</tt> from the delegating agent;
+        records created by an Authorization Server other than the
+        token's issuer additionally carry that AS's
+        <tt>as_signature</tt>.
       </t>
 
       <t>
-        <strong>Token structure (per hop):</strong>
+        <strong>Token structure:</strong>
       </t>
       <ul>
         <li><tt>iss</tt>: Authorization Server identifier</li>
@@ -3774,6 +3473,9 @@ SHA-256 digest (base64url):
         <li><tt>act.sub</tt>: delegatee agent identifier</li>
         <li><tt>scope</tt>: delegated scope (equal to or narrower
             than the delegator's)</li>
+        <li><tt>root_authorization_ref</tt>: reference to the original
+            user authorization event (REQUIRED with
+            <tt>delegation_chain</tt>)</li>
         <li><tt>delegation_chain</tt>: accumulated delegation records</li>
         <li><tt>cnf</tt>: delegatee key binding, when the token is
             sender-constrained (<xref target="RFC7800"/>)</li>
@@ -3787,19 +3489,19 @@ SHA-256 digest (base64url):
         <li>Verify token-level JWT signature against <tt>iss</tt></li>
         <li>Verify presenter possession when a <tt>cnf</tt> claim is
             present, according to the confirmation method (MUST)</li>
-        <li>Verify <tt>as_signature</tt> on each delegation record, when
-            present, using the key of the AS identified by the record's
-            <tt>as_id</tt> (SHOULD; in single-domain deployments the
-            token-level signature suffices)</li>
-        <li>Verify <tt>delegator_signature</tt> when present (SHOULD)</li>
+        <li>Verify the <tt>delegator_signature</tt> on every
+            delegation record, using the delegating agent's key
+            resolved from its <tt>delegator_id</tt> (MUST; reject
+            with <tt>invalid_delegation_chain</tt> if missing or
+            invalid)</li>
+        <li>Verify the <tt>as_signature</tt> on records created by an
+            AS other than the token's issuer, using the key of the
+            AS identified by the record's <tt>as_id</tt> (MUST)</li>
         <li>Check chain continuity:
             <tt>record[i].delegatee_id == record[i-1].delegator_id</tt></li>
-        <li>Verify <tt>prev_record_hash</tt> linkage on multi-record
-            chains: <tt>record[i].prev_record_hash</tt> equals the
-            SHA-256 hash of the canonical serialization (per
-            <xref target="RFC8785"/>) of <tt>record[i+1]</tt> (MUST;
-            reject with <tt>invalid_delegation_chain</tt> if missing
-            or mismatched)</li>
+        <li>Check that the <tt>root_authorization_ref</tt> claim is
+            present (MUST) and verify the root authorization anchor
+            as described in <xref target="rs-validation"/></li>
         <li>Check <tt>act.sub == record[0].delegatee_id</tt>, and that
             <tt>act</tt> carries no nested <tt>act</tt> claim
             (<xref target="rel-act"/>)</li>
@@ -3808,11 +3510,9 @@ SHA-256 digest (base64url):
             is a subset of <tt>record[i+1].scope</tt> for every
             <tt>i &gt; 0</tt>, and the token's <tt>scope</tt> claim
             is a subset of <tt>record[0].scope</tt>; treat
-            <tt>delegated_policy_ref</tt> as opaque (narrowing of
+            <tt>policy_ref</tt> as opaque (narrowing of
             structured constraints is attested by the AS at issuance
             time, not verified by the RS)</li>
-        <li>Verify root authorization anchor
-            (see Section <xref target="rs-validation" format="counter"/>)</li>
         <li>Check agent identifier status (revocation / expiration)</li>
       </ol>
 
@@ -3834,7 +3534,7 @@ SHA-256 digest (base64url):
           <strong>Structured constraints carried by reference:</strong>
           The inline <tt>delegated_policy</tt> object (previously
           carrying Rego policy content) is replaced by the opaque
-          <tt>delegated_policy_ref</tt> field.  The structure and
+          <tt>policy_ref</tt> field.  The structure and
           resolution of referenced constraints are
           deployment-specific and out of scope; the Resource Server
           treats the value as opaque, and any format defined by a
@@ -3861,39 +3561,71 @@ SHA-256 digest (base64url):
           <tt>cnf</tt> is present.
         </li>
         <li>
-          <strong>Chain by reference:</strong> The
-          <tt>delegation_chain_ref</tt> claim is defined for
-          deployments where token size is a constraint; the full
-          chain is retrieved via introspection and validated with
-          the same rules.
+          <strong>root_authorization_ref as a token-level claim:</strong>
+          The per-record <tt>root_evidence_ref</tt> field of -01 is
+          replaced by a token-level claim, renamed
+          <tt>root_authorization_ref</tt>, REQUIRED in every token
+          that carries a <tt>delegation_chain</tt>.
+          The hop in which the user authorized the root agent is not
+          a delegation record; the claim anchors the chain to that
+          authorization event.
         </li>
         <li>
-          <strong>Unified Token Exchange section:</strong> The
-          former "Delegation without User Interaction" section is
-          merged into "Delegation Token Exchange" as a subsection;
-          user interaction is presented as a branch of the single
-          flow, and the interaction trigger criteria are condensed.
+          <strong>Field rename:</strong> The record field
+          <tt>delegated_policy_ref</tt> of -01 is renamed
+          <tt>policy_ref</tt>.
         </li>
         <li>
-          <strong><tt>prev_record_hash</tt> encoding and test
-          vectors:</strong> The digest encoding is pinned to
-          unpadded base64url, and an informative test vector for the
-          hash computation is provided.
+          <strong>Mandatory delegator signature and scoped AS
+          attestation:</strong> The <tt>delegator_signature</tt> is
+          REQUIRED on every record, and the
+          <tt>delegation_proposal</tt> request parameter is REQUIRED,
+          so a record without a valid delegator signature is
+          unambiguously invalid.  The <tt>as_signature</tt> is
+          REQUIRED only when the record was created by an AS other
+          than the token's issuer, with <tt>as_id</tt> REQUIRED
+          whenever <tt>as_signature</tt> is present.  The signed
+          field set is narrowed to <tt>delegator_id</tt>,
+          <tt>delegatee_id</tt>, <tt>as_id</tt>,
+          <tt>delegation_timestamp</tt>, <tt>scope</tt>, and, when
+          present, <tt>policy_ref</tt>.
         </li>
         <li>
-          <strong>Error code naming and RFC 8693 alignment:</strong>
-          The interaction error codes are renamed to
-          <tt>delegation_interaction_required</tt> and
-          <tt>delegation_interaction_pending</tt> to avoid collisions
-          with registered names; a delegation request MUST NOT
-          combine <tt>delegatee_id</tt> with <tt>actor_token</tt>,
-          and the issued token's <tt>act</tt> claim is pinned to a
-          single <tt>act.sub</tt> value without nesting, the actor
-          lineage being carried by <tt>delegation_chain</tt>.  The
-          relationship to the <tt>may_act</tt> claim, the audience
-          semantics of the delegated token, the interaction session
-          expiry behavior, and chain resolution for
-          <tt>delegation_chain_ref</tt> subject tokens are specified.
+          <strong>Removal of the hash chain, operation_summary, and
+          chain by reference:</strong> The <tt>prev_record_hash</tt>
+          field and the JCS hash-chaining of records are removed;
+          chain integrity now rests on the token-level signature,
+          the per-record signatures, and the continuity rule.  The
+          <tt>operation_summary</tt> field is removed for data
+          minimization.  The <tt>delegation_chain_ref</tt> claim and
+          the chain-by-reference mechanism are removed.
+        </li>
+        <li>
+          <strong>User interaction mechanism removed:</strong> The
+          interaction branch of the delegation Token Exchange flow
+          (the <tt>delegation_interaction_required</tt> and
+          <tt>delegation_interaction_pending</tt> errors,
+          <tt>interaction_uri</tt>, polling, and the
+          <tt>interaction_callback_uri</tt> parameter) is removed
+          along with its IANA registrations.  Whether the AS
+          requires user consent before authorizing a delegation hop
+          is AS policy and is out of scope of this specification.
+        </li>
+        <li>
+          <strong>Test vectors:</strong> The informative test vector
+          now covers the JCS (<xref target="RFC8785"/>)
+          canonicalization of the record's signed field set, over
+          which both signatures are computed.
+        </li>
+        <li>
+          <strong>RFC 8693 alignment:</strong> A delegation request
+          MUST NOT combine <tt>delegatee_id</tt> with
+          <tt>actor_token</tt>, and the issued token's
+          <tt>act</tt> claim is pinned to a single
+          <tt>act.sub</tt> value without nesting, the actor lineage
+          being carried by <tt>delegation_chain</tt>.  The
+          relationship to the <tt>may_act</tt> claim and the
+          audience semantics of the delegated token are specified.
         </li>
         <li>
           <strong>Delegator signature production and cross-domain
@@ -3913,7 +3645,10 @@ SHA-256 digest (base64url):
           Grant explicitly leaves open (actor_token processing,
           authorization propagation across downstream hops, and
           agent-to-agent delegation), and states where the two
-          specifications compose.
+          specifications compose; the cross-domain section defines
+          the extension of the JWT authorization grant with the
+          <tt>delegation_chain</tt> and
+          <tt>root_authorization_ref</tt> claims.
         </li>
         <li>
           <strong>Editorial:</strong> All examples are unified on
